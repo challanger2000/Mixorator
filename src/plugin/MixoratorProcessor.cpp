@@ -20,6 +20,24 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
     return Steinberg::kResultOk;
 }
 
+Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::ProcessSetup& setup)
+{
+    const auto result = AudioEffect::setupProcessing(setup);
+    if (result != Steinberg::kResultOk)
+        return result;
+
+    analysis_.prepare(setup.sampleRate);
+    return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
+{
+    if (state)
+        analysis_.reset();
+
+    return AudioEffect::setActive(state);
+}
+
 Steinberg::tresult PLUGIN_API Processor::setBusArrangements(
     Steinberg::Vst::SpeakerArrangement* inputs,
     Steinberg::int32 numIns,
@@ -55,6 +73,8 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
+        analysis_.process(const_cast<const float* const*>(input.channelBuffers32), input.numChannels, data.numSamples);
+
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
             const auto* in = input.channelBuffers32[ch];
@@ -68,6 +88,8 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
+        analysis_.process(const_cast<const double* const*>(input.channelBuffers64), input.numChannels, data.numSamples);
+
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
             const auto* in = input.channelBuffers64[ch];
