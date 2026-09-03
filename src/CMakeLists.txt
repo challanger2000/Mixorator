@@ -1,4 +1,5 @@
 set(MIXORATOR_SOURCES
+    plugin/entry.cpp
     plugin/MixoratorProcessor.cpp
     plugin/MixoratorProcessor.h
 )
