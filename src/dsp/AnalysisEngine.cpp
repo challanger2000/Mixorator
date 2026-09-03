@@ -145,7 +145,7 @@ void AnalysisEngine::pushWindowSample(std::vector<double>& ring,
 }
 
 template <typename Sample>
-void AnalysisEngine::processBlock(const Sample* const* channels, int numChannels, int numSamples) noexcept
+void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int numSamples) noexcept
 {
     if (!channels || numChannels <= 0 || numSamples <= 0 || momentaryRing_.empty() || shortTermRing_.empty())
         return;
@@ -200,12 +200,12 @@ void AnalysisEngine::processBlock(const Sample* const* channels, int numChannels
     samplePeakDbfs_.store(peakDb, std::memory_order_relaxed);
 }
 
-void AnalysisEngine::process(const float* const* channels, int numChannels, int numSamples) noexcept
+void AnalysisEngine::process(float* const* channels, int numChannels, int numSamples) noexcept
 {
     processBlock(channels, numChannels, numSamples);
 }
 
-void AnalysisEngine::process(const double* const* channels, int numChannels, int numSamples) noexcept
+void AnalysisEngine::process(double* const* channels, int numChannels, int numSamples) noexcept
 {
     processBlock(channels, numChannels, numSamples);
 }
