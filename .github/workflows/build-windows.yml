@@ -1,0 +1,33 @@
+name: Build Windows VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --target Mixorator --parallel
+
+      - name: Locate VST3
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path build -Recurse -Filter Mixorator.vst3 | Select-Object -First 1
+          if (-not $plugin) { throw "Mixorator.vst3 not found" }
+          "VST3_PATH=$($plugin.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mixorator-Windows-VST3
+          path: ${{ env.VST3_PATH }}
