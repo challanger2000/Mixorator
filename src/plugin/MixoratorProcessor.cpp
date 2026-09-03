@@ -73,7 +73,7 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
-        analysis_.process(const_cast<const float* const*>(input.channelBuffers32), input.numChannels, data.numSamples);
+        analysis_.process(input.channelBuffers32, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
@@ -88,7 +88,7 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
-        analysis_.process(const_cast<const double* const*>(input.channelBuffers64), input.numChannels, data.numSamples);
+        analysis_.process(input.channelBuffers64, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
