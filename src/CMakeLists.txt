@@ -1,4 +1,6 @@
 set(MIXORATOR_SOURCES
+    dsp/AnalysisEngine.cpp
+    dsp/AnalysisEngine.h
     plugin/entry.cpp
     plugin/MixoratorIDs.h
     plugin/MixoratorProcessor.cpp
