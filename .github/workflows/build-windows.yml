@@ -17,15 +17,17 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --target Mixorator --parallel
 
-      - name: Locate VST3
+      - name: Stage VST3 bundle
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem -Path build -Recurse -Filter Mixorator.vst3 | Select-Object -First 1
-          if (-not $plugin) { throw "Mixorator.vst3 not found" }
-          "VST3_PATH=$($plugin.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter Mixorator.vst3 | Select-Object -First 1
+          if (-not $plugin) { throw "Mixorator.vst3 bundle not found" }
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item -Path $plugin.FullName -Destination artifact -Recurse -Force
+          if (-not (Test-Path "artifact\Mixorator.vst3\Contents")) { throw "Staged VST3 bundle is incomplete" }
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
           name: Mixorator-Windows-VST3
-          path: ${{ env.VST3_PATH }}
+          path: artifact
