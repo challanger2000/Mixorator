@@ -4,6 +4,7 @@
 #include "MixoratorProcessor.h"
 
 #define stringPluginName "Mixorator"
+#define stringPluginVersion "0.1.0"
 
 BEGIN_FACTORY_DEF("challanger2000", "https://github.com/challanger2000/Mixorator", "")
 
@@ -14,7 +15,7 @@ DEF_CLASS2(
     stringPluginName,
     Steinberg::Vst::kDistributable,
     "Fx|Analyzer",
-    FULL_VERSION_STR,
+    stringPluginVersion,
     kVstVersionString,
     Mixorator::Processor::createInstance)
 
@@ -25,7 +26,7 @@ DEF_CLASS2(
     "Mixorator Controller",
     0,
     "",
-    FULL_VERSION_STR,
+    stringPluginVersion,
     kVstVersionString,
     Mixorator::Controller::createInstance)
 
