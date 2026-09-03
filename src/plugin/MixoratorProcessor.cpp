@@ -1,17 +1,16 @@
 #include "MixoratorProcessor.h"
-
-#include "pluginterfaces/vst/ivstparameterchanges.h"
+#include "MixoratorIDs.h"
 
 namespace Mixorator
 {
 Processor::Processor()
 {
-    setControllerClass(Steinberg::FUID(0, 0, 0, 0));
+    setControllerClass(kControllerUID);
 }
 
 Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context)
 {
-    auto result = AudioEffect::initialize(context);
+    const auto result = AudioEffect::initialize(context);
     if (result != Steinberg::kResultOk)
         return result;
 
@@ -37,41 +36,51 @@ Steinberg::tresult PLUGIN_API Processor::setBusArrangements(
     return Steinberg::kResultFalse;
 }
 
+Steinberg::tresult PLUGIN_API Processor::canProcessSampleSize(Steinberg::int32 symbolicSampleSize)
+{
+    return (symbolicSampleSize == Steinberg::Vst::kSample32 ||
+            symbolicSampleSize == Steinberg::Vst::kSample64)
+               ? Steinberg::kResultTrue
+               : Steinberg::kResultFalse;
+}
+
 Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& data)
 {
-    if (data.numInputs == 0 || data.numOutputs == 0)
+    if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
         return Steinberg::kResultOk;
 
     auto& input = data.inputs[0];
     auto& output = data.outputs[0];
+    const auto channels = input.numChannels < output.numChannels ? input.numChannels : output.numChannels;
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
-        for (Steinberg::int32 ch = 0; ch < input.numChannels && ch < output.numChannels; ++ch)
+        for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
-            auto* in = input.channelBuffers32[ch];
+            const auto* in = input.channelBuffers32[ch];
             auto* out = output.channelBuffers32[ch];
-            if (in != out)
-            {
-                for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
-                    out[i] = in[i];
-            }
+            if (!in || !out || in == out)
+                continue;
+
+            for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
+                out[i] = in[i];
         }
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
-        for (Steinberg::int32 ch = 0; ch < input.numChannels && ch < output.numChannels; ++ch)
+        for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
-            auto* in = input.channelBuffers64[ch];
+            const auto* in = input.channelBuffers64[ch];
             auto* out = output.channelBuffers64[ch];
-            if (in != out)
-            {
-                for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
-                    out[i] = in[i];
-            }
+            if (!in || !out || in == out)
+                continue;
+
+            for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
+                out[i] = in[i];
         }
     }
 
+    output.silenceFlags = input.silenceFlags;
     return Steinberg::kResultOk;
 }
 }
