@@ -1,4 +1,6 @@
 #include "public.sdk/source/main/pluginfactory.h"
+#include "MixoratorController.h"
+#include "MixoratorIDs.h"
 #include "MixoratorProcessor.h"
 
 #define stringPluginName "Mixorator"
@@ -6,7 +8,7 @@
 BEGIN_FACTORY_DEF("challanger2000", "https://github.com/challanger2000/Mixorator", "")
 
 DEF_CLASS2(
-    INLINE_UID_FROM_FUID(Steinberg::FUID(0x4D69786F, 0x7261746F, 0x72000000, 0x00000001)),
+    INLINE_UID_FROM_FUID(Mixorator::kProcessorUID),
     Steinberg::PClassInfo::kManyInstances,
     kVstAudioEffectClass,
     stringPluginName,
@@ -15,5 +17,16 @@ DEF_CLASS2(
     FULL_VERSION_STR,
     kVstVersionString,
     Mixorator::Processor::createInstance)
+
+DEF_CLASS2(
+    INLINE_UID_FROM_FUID(Mixorator::kControllerUID),
+    Steinberg::PClassInfo::kManyInstances,
+    kVstComponentControllerClass,
+    "Mixorator Controller",
+    0,
+    "",
+    FULL_VERSION_STR,
+    kVstVersionString,
+    Mixorator::Controller::createInstance)
 
 END_FACTORY
