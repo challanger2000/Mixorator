@@ -12,8 +12,8 @@ public:
     void prepare(double sampleRate);
     void reset();
 
-    void process(const float* const* channels, int numChannels, int numSamples) noexcept;
-    void process(const double* const* channels, int numChannels, int numSamples) noexcept;
+    void process(float* const* channels, int numChannels, int numSamples) noexcept;
+    void process(double* const* channels, int numChannels, int numSamples) noexcept;
 
     double samplePeakDbfs() const noexcept { return samplePeakDbfs_.load(std::memory_order_relaxed); }
     double momentaryLufs() const noexcept { return momentaryLufs_.load(std::memory_order_relaxed); }
@@ -39,7 +39,7 @@ private:
     };
 
     template <typename Sample>
-    void processBlock(const Sample* const* channels, int numChannels, int numSamples) noexcept;
+    void processBlock(Sample* const* channels, int numChannels, int numSamples) noexcept;
 
     static Biquad makeKWeightingShelf(double sampleRate) noexcept;
     static Biquad makeKWeightingHighPass(double sampleRate) noexcept;
