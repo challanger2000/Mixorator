@@ -14,7 +14,13 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build
+      - name: Build tests
+        run: cmake --build build --config Release --target MixoratorTests --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Build plugin
         run: cmake --build build --config Release --target Mixorator --parallel
 
       - name: Stage VST3 bundle
