@@ -134,7 +134,7 @@ void AnalysisEngine::reset()
     for (auto& filter : highPass_)
         filter.clear();
     for (auto& channelHistory : truePeakHistory_)
-        std::fill(std::begin(channelHistory), std::end(channelHistory), 0.0);
+        std::fill(channelHistory, channelHistory + 12, 0.0);
 
     samplePeakDbfs_.store(-1000.0, std::memory_order_relaxed);
     truePeakDbtp_.store(-1000.0, std::memory_order_relaxed);
@@ -167,6 +167,9 @@ void AnalysisEngine::processTruePeakSample(int channel, double sample) noexcept
     for (int i = 11; i > 0; --i)
         history[i] = history[i - 1];
     history[0] = sample;
+
+    // By definition the reconstructed waveform includes the original sample positions.
+    truePeakLinear_ = std::max(truePeakLinear_, std::abs(sample));
 
     for (int phase = 0; phase < 4; ++phase)
     {
