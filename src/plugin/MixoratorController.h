@@ -38,6 +38,9 @@ public:
         Steinberg::Vst::DataExchangeBlock* blocks,
         Steinberg::TBool onBackgroundThread) override;
 
+    Steinberg::tresult requestLiveAnalysis() noexcept;
+    Steinberg::tresult requestFinalAnalysis() noexcept;
+
     bool hasAnalysisPacket() const noexcept { return hasPacket_; }
     bool hasDefinitiveFinalSnapshot() const noexcept
     {
@@ -52,6 +55,7 @@ public:
         Analysis::Era era) const noexcept;
 
 private:
+    Steinberg::tresult requestAnalysisState(Steinberg::int64 state) noexcept;
     void requestFinalSnapshot(std::uint64_t generation) noexcept;
     bool consumeFinalSnapshotMessage(Steinberg::Vst::IMessage* message) noexcept;
 
