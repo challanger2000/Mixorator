@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace Mixorator::DSP
@@ -17,12 +18,16 @@ public:
 
     double samplePeakDbfs() const noexcept { return samplePeakDbfs_.load(std::memory_order_relaxed); }
     double truePeakDbtp() const noexcept { return truePeakDbtp_.load(std::memory_order_relaxed); }
+    double rmsDbfs() const noexcept { return rmsDbfs_.load(std::memory_order_relaxed); }
+    double crestFactorDb() const noexcept { return crestFactorDb_.load(std::memory_order_relaxed); }
     double momentaryLufs() const noexcept { return momentaryLufs_.load(std::memory_order_relaxed); }
     double shortTermLufs() const noexcept { return shortTermLufs_.load(std::memory_order_relaxed); }
 
-    // Intentionally not called from the audio thread. Integrated loudness requires
-    // applying the BS.1770 absolute and relative gates across the stored 400 ms blocks.
+    // These calculations are intentionally not called from the audio thread.
+    // Integrated loudness applies the BS.1770 gates across stored 400 ms blocks;
+    // PLR is defined here as programme true peak minus integrated loudness.
     double calculateIntegratedLufs() const noexcept;
+    double calculatePlrDb() const noexcept;
 
 private:
     struct Biquad
@@ -80,9 +85,16 @@ private:
     double truePeakHistory_[2][12] {};
     double truePeakLinear_ {0.0};
 
+    // Programme-wide unweighted RMS energy for Crest Factor. Stereo channels are
+    // treated as individual samples so the metric remains independent of channel count.
+    long double rmsSumSquares_ {0.0L};
+    std::uint64_t rmsSampleCount_ {0};
+
     double samplePeakLinear_ {0.0};
     std::atomic<double> samplePeakDbfs_ {-1000.0};
     std::atomic<double> truePeakDbtp_ {-1000.0};
+    std::atomic<double> rmsDbfs_ {-1000.0};
+    std::atomic<double> crestFactorDb_ {0.0};
     std::atomic<double> momentaryLufs_ {-1000.0};
     std::atomic<double> shortTermLufs_ {-1000.0};
 };
