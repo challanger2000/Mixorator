@@ -94,6 +94,13 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Pop,Era::Modern).styleScore<=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Pop,Era::Modern).styleScore)return fail("MIX profile is not distinct from MASTER");
 }
 {
+ Metrics m=cleanMetrics();m.integratedLufs=-10;m.plrDb=9;m.lraLu=5;m.tonalPercent={{60,20,15,5}};
+ const auto techno=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Techno,Era::Modern);
+ const auto acoustic=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::AcousticFolk,Era::Modern);
+ if(techno.styleScore<=acoustic.styleScore+5.0)return fail("Genre-aware tonal balance did not distinguish bass-heavy Techno from Acoustic/Folk");
+ if(!approx(techno.technicalScore,acoustic.technicalScore,1e-9))return fail("Tonal style scoring contaminated technical safety");
+}
+{
  Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);if(a.technicalScore>=50||a.overallScore>=50)return fail("Critical technical faults were averaged away");
 }
