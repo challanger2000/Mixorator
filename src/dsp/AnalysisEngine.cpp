@@ -13,6 +13,23 @@ constexpr double kLoudnessOffset = -0.691;
 constexpr double kAbsoluteGateLufs = -70.0;
 constexpr double kRelativeGateLu = 10.0;
 constexpr double kMinimumEnergy = 1.0e-20;
+
+// ITU-R BS.1770 Annex 2 example coefficients for a 48th-order,
+// 4-phase FIR interpolator. Floating-point processing needs no initial 12.04 dB attenuation.
+constexpr double kTruePeakFir[12][4] = {
+    { 0.0017089843750, -0.0291748046875, -0.0189208984375, -0.0083007812500 },
+    { 0.0109863281250,  0.0292968750000,  0.0330810546875,  0.0148925781250 },
+    {-0.0196533203125, -0.0517578125000, -0.0582275390625, -0.0266113281250 },
+    { 0.0332031250000,  0.0891113281250,  0.1015625000000,  0.0476074218750 },
+    {-0.0594482421875, -0.1665039062500, -0.2003173828125, -0.1022949218750 },
+    { 0.1373291015625,  0.4650878906250,  0.7797851562500,  0.9721679687500 },
+    { 0.9721679687500,  0.7797851562500,  0.4650878906250,  0.1373291015625 },
+    {-0.1022949218750, -0.2003173828125, -0.1665039062500, -0.0594482421875 },
+    { 0.0476074218750,  0.1015625000000,  0.0891113281250,  0.0332031250000 },
+    {-0.0266113281250, -0.0582275390625, -0.0517578125000, -0.0196533203125 },
+    { 0.0148925781250,  0.0330810546875,  0.0292968750000,  0.0109863281250 },
+    {-0.0083007812500, -0.0189208984375, -0.0291748046875,  0.0017089843750 }
+};
 }
 
 double AnalysisEngine::Biquad::process(double x) noexcept
@@ -31,8 +48,6 @@ void AnalysisEngine::Biquad::clear() noexcept
 
 AnalysisEngine::Biquad AnalysisEngine::makeKWeightingShelf(double sampleRate) noexcept
 {
-    // Parameters that reproduce ITU-R BS.1770's 48 kHz stage-1 coefficients,
-    // transformed for the active sample rate.
     constexpr double gainDb = 3.999843853973347;
     constexpr double f0 = 1681.974450955533;
     constexpr double q = 0.7071752369554196;
@@ -54,8 +69,6 @@ AnalysisEngine::Biquad AnalysisEngine::makeKWeightingShelf(double sampleRate) no
 
 AnalysisEngine::Biquad AnalysisEngine::makeKWeightingHighPass(double sampleRate) noexcept
 {
-    // Parameters that reproduce ITU-R BS.1770's 48 kHz stage-2 coefficients,
-    // transformed for the active sample rate.
     constexpr double f0 = 38.13547087602444;
     constexpr double q = 0.5003270373238773;
 
@@ -114,13 +127,17 @@ void AnalysisEngine::reset()
     samplesSinceBlock_ = 0;
     loudnessBlockCount_ = 0;
     samplePeakLinear_ = 0.0;
+    truePeakLinear_ = 0.0;
 
     for (auto& filter : shelf_)
         filter.clear();
     for (auto& filter : highPass_)
         filter.clear();
+    for (auto& channelHistory : truePeakHistory_)
+        std::fill(std::begin(channelHistory), std::end(channelHistory), 0.0);
 
     samplePeakDbfs_.store(-1000.0, std::memory_order_relaxed);
+    truePeakDbtp_.store(-1000.0, std::memory_order_relaxed);
     momentaryLufs_.store(-1000.0, std::memory_order_relaxed);
     shortTermLufs_.store(-1000.0, std::memory_order_relaxed);
 }
@@ -144,6 +161,23 @@ void AnalysisEngine::pushWindowSample(std::vector<double>& ring,
     writeIndex = (writeIndex + 1) % ring.size();
 }
 
+void AnalysisEngine::processTruePeakSample(int channel, double sample) noexcept
+{
+    auto& history = truePeakHistory_[channel];
+    for (int i = 11; i > 0; --i)
+        history[i] = history[i - 1];
+    history[0] = sample;
+
+    for (int phase = 0; phase < 4; ++phase)
+    {
+        double interpolated = 0.0;
+        for (int tap = 0; tap < 12; ++tap)
+            interpolated += history[tap] * kTruePeakFir[tap][phase];
+
+        truePeakLinear_ = std::max(truePeakLinear_, std::abs(interpolated));
+    }
+}
+
 template <typename Sample>
 void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int numSamples) noexcept
 {
@@ -163,6 +197,7 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
 
             const double sample = static_cast<double>(channels[ch][i]);
             samplePeakLinear_ = std::max(samplePeakLinear_, std::abs(sample));
+            processTruePeakSample(ch, sample);
 
             double filtered = shelf_[ch].process(sample);
             filtered = highPass_[ch].process(filtered);
@@ -197,7 +232,12 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
     const double peakDb = samplePeakLinear_ > 0.0
                               ? 20.0 * std::log10(samplePeakLinear_)
                               : -std::numeric_limits<double>::infinity();
+    const double truePeakDb = truePeakLinear_ > 0.0
+                                  ? 20.0 * std::log10(truePeakLinear_)
+                                  : -std::numeric_limits<double>::infinity();
+
     samplePeakDbfs_.store(peakDb, std::memory_order_relaxed);
+    truePeakDbtp_.store(truePeakDb, std::memory_order_relaxed);
 }
 
 void AnalysisEngine::process(float* const* channels, int numChannels, int numSamples) noexcept
