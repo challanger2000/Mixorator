@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../analysis/AssessmentModel.h"
+#include "pluginterfaces/vst/ivstdataexchange.h"
 
 #include <cstdint>
 #include <type_traits>
