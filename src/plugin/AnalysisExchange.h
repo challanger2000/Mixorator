@@ -9,6 +9,12 @@
 namespace Mixorator
 {
 constexpr Steinberg::Vst::DataExchangeUserContextID kAnalysisExchangeContext = 0x4D58u;
+
+constexpr const char* kSetAnalysisStateMessage = "Mixorator.SetAnalysisState";
+constexpr const char* kAnalysisStateKey = "State";
+constexpr Steinberg::int64 kAnalysisStateLive = 0;
+constexpr Steinberg::int64 kAnalysisStateFinal = 1;
+
 constexpr const char* kRequestFinalSnapshotMessage = "Mixorator.RequestFinalSnapshot";
 constexpr const char* kFinalSnapshotMessage = "Mixorator.FinalSnapshot";
 constexpr const char* kFinalSnapshotGenerationKey = "Generation";
