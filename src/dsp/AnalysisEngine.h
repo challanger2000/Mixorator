@@ -37,6 +37,7 @@ public:
 
     double calculateIntegratedLufs() const noexcept;
     double calculatePlrDb() const noexcept;
+    double calculateLoudnessRangeLu() const noexcept;
 
 private:
     struct Biquad
@@ -84,6 +85,12 @@ private:
     std::vector<double> loudnessBlocks_;
     std::size_t loudnessBlockCount_ {0};
 
+    // EBU Tech 3342 LRA input: one 3 s short-term loudness value per second.
+    // Four hours maximum, preallocated in prepare(), never grown in process().
+    std::vector<double> lraShortTermBlocks_;
+    std::size_t lraShortTermBlockCount_ {0};
+    std::size_t lraHopCounter_ {0};
+
     Biquad shelf_[2];
     Biquad highPass_[2];
 
@@ -105,8 +112,6 @@ private:
     std::uint64_t clippedSampleCountRaw_ {0};
     std::uint64_t nonFiniteSampleCountRaw_ {0};
 
-    // Fixed FFT workspace. Stereo frames alternate L/R so tonal analysis cannot
-    // erase anti-phase content by summing the channels to mono first.
     double tonalInput_[kFftSize] {};
     double fftReal_[kFftSize] {};
     double fftImag_[kFftSize] {};
