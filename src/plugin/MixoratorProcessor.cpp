@@ -235,9 +235,18 @@ void Processor::publishAnalysisExchange(Steinberg::int32 numSamples) noexcept
 
     exchangeSampleCounter_ += static_cast<std::uint64_t>(std::max<Steinberg::int32>(0, numSamples));
     const auto generation = finalizationGeneration_.load(std::memory_order_acquire);
+    const bool finalState = analysisState_.load(std::memory_order_acquire) == AnalysisState::Final;
     const bool finalChanged = generation != lastPublishedFinalizationGeneration_;
-    if (exchangeSampleCounter_ < exchangeIntervalSamples_ && !finalChanged)
+
+    if (finalState)
+    {
+        if (!finalChanged)
+            return;
+    }
+    else if (exchangeSampleCounter_ < exchangeIntervalSamples_)
+    {
         return;
+    }
 
     auto block = dataExchange_->getCurrentOrNewBlock();
     if (block.blockID == Steinberg::Vst::InvalidDataExchangeBlockID ||
@@ -250,7 +259,7 @@ void Processor::publishAnalysisExchange(Steinberg::int32 numSamples) noexcept
     AnalysisExchangePacket packet;
     packet.sequence = ++exchangeSequence_;
     packet.finalizationGeneration = generation;
-    packet.finalState = analysisState_.load(std::memory_order_acquire) == AnalysisState::Final ? 1u : 0u;
+    packet.finalState = finalState ? 1u : 0u;
     packet.metrics = Analysis::AssessmentInput::fromLive(analysis_);
 
     std::memcpy(block.data, &packet, sizeof(packet));
