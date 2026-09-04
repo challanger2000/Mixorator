@@ -20,3 +20,14 @@ target_include_directories(MixoratorLocalStereoTests PRIVATE
 )
 
 add_test(NAME MixoratorLocalStereoTests COMMAND MixoratorLocalStereoTests)
+
+add_executable(MixoratorAnalyzerIntegrityTests
+    AnalyzerIntegrityTests.cpp
+    ../src/dsp/AnalysisEngine.cpp
+)
+
+target_include_directories(MixoratorAnalyzerIntegrityTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorAnalyzerIntegrityTests COMMAND MixoratorAnalyzerIntegrityTests)
