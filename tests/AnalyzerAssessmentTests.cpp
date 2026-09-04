@@ -53,6 +53,13 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  const auto liveMetrics=AssessmentInput::fromLive(e);
  const auto a=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Mix,Genre::Pop,Era::Modern);
  if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough Short-Term data");
+
+ const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ if(!snapshot.valid)return fail("Short FINAL capture was not marked as a captured snapshot");
+ const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
+ if(finalMetrics.loudnessAvailable||finalMetrics.plrAvailable||finalMetrics.lraAvailable)return fail("Short FINAL programme incorrectly exposed definitive whole-program metrics");
+ const auto finalAssessment=AssessmentModel::evaluate(finalMetrics,AnalysisMode::Master,Genre::Pop,Era::Modern);
+ if(finalAssessment.overallVerdict!=Verdict::InsufficientData)return fail("Short FINAL programme produced a definitive verdict");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;for(auto&x:r)x=-x;processStereo(e,l,r);
