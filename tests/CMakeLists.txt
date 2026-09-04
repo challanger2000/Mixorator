@@ -53,3 +53,18 @@ target_include_directories(MixoratorTruePeakMetrologyTests PRIVATE
 )
 
 add_test(NAME MixoratorTruePeakMetrologyTests COMMAND MixoratorTruePeakMetrologyTests)
+
+add_executable(MixoratorProcessorTransparencyTests
+    ProcessorTransparencyTests.cpp
+    ../src/plugin/MixoratorProcessor.cpp
+    ../src/dsp/AnalysisEngine.cpp
+    ../src/analysis/AssessmentModel.cpp
+)
+
+target_include_directories(MixoratorProcessorTransparencyTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+target_link_libraries(MixoratorProcessorTransparencyTests PRIVATE sdk)
+
+add_test(NAME MixoratorProcessorTransparencyTests COMMAND MixoratorProcessorTransparencyTests)
