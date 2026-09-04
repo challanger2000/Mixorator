@@ -9,18 +9,8 @@ enum class AnalysisMode : std::uint8_t { Mix, Master };
 enum class Era : std::uint8_t { Modern, Vintage };
 enum class Genre : std::uint8_t
 {
-    Rock,
-    Metal,
-    Pop,
-    Techno,
-    HouseEdm,
-    HipHopTrap,
-    ElectronicAmbient,
-    AcousticFolk,
-    Jazz,
-    Classical,
-    Cinematic,
-    General
+    Rock, Metal, Pop, Techno, HouseEdm, HipHopTrap, ElectronicAmbient,
+    AcousticFolk, Jazz, Classical, Cinematic, General
 };
 
 enum class Verdict : std::uint8_t { Excellent, Good, Attention, Critical, Unusual, InsufficientData };
@@ -34,6 +24,9 @@ struct Metrics
     double crestFactorDb {0.0};
     double correlation {1.0};
     double monoCompatibilityDb {0.0};
+    double worstLocalCorrelation {1.0};
+    double worstLocalMonoCompatibilityDb {0.0};
+    double negativeCorrelationPercent {0.0};
     double lrBalanceDb {0.0};
     double dcOffsetLeftDbfs {-1000.0};
     double dcOffsetRightDbfs {-1000.0};
@@ -41,8 +34,6 @@ struct Metrics
     std::uint64_t nonFiniteSamples {0};
     std::array<double, 4> tonalPercent {{0.0, 0.0, 0.0, 0.0}};
 
-    // FINAL has all three programme metrics. LIVE deliberately marks PLR/LRA
-    // unavailable and may use Short-Term LUFS as a provisional loudness value.
     bool loudnessAvailable {true};
     bool plrAvailable {true};
     bool lraAvailable {true};
