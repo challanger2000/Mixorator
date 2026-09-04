@@ -40,7 +40,7 @@ Steinberg::tresult PLUGIN_API Processor::terminate()
     return AudioEffect::terminate();
 }
 
-Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::Vst::IConnectionPoint* other)
+Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::IConnectionPoint* other)
 {
     const auto result = AudioEffect::connect(other);
     if (dataExchange_)
@@ -48,7 +48,7 @@ Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::Vst::IConnectionPoin
     return result;
 }
 
-Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionPoint* other)
+Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::IConnectionPoint* other)
 {
     if (dataExchange_)
         dataExchange_->onDisconnect(other);
@@ -66,7 +66,6 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
     exchangeSampleCounter_ = 0;
     exchangeSequence_ = 0;
     lastPublishedFinalizationGeneration_ = 0;
-    exchangeBlock_ = {nullptr, 0, Steinberg::Vst::InvalidDataExchangeBlockID};
     analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
     analysisState_.store(AnalysisState::Live, std::memory_order_release);
     finalizationGeneration_.store(0, std::memory_order_relaxed);
