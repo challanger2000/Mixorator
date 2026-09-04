@@ -126,6 +126,36 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(a.pcmDeliveryScore>=90.0||a.streamingDeliveryScore>=90.0)return fail("Over-full-scale samples did not affect both master delivery paths");
 }
 {
+ Metrics unusual=cleanMetrics();unusual.integratedLufs=-28;unusual.plrDb=30;unusual.lraLu=24;
+ const auto a=AssessmentModel::evaluate(unusual,AnalysisMode::Master,Genre::Metal,Era::Modern);
+ if(a.technicalVerdict!=Verdict::Excellent||a.styleScore>=50.0||a.styleVerdict!=Verdict::Unusual)return fail("Clean stylistic outlier was not labelled Unusual");
+}
+{
+ Metrics unusual=cleanMetrics();unusual.integratedLufs=-28;unusual.plrDb=30;unusual.lraLu=24;unusual.truePeakDbtp=2.0;unusual.correlation=-1.0;unusual.monoCompatibilityDb=-1000.0;
+ const auto a=AssessmentModel::evaluate(unusual,AnalysisMode::Master,Genre::Metal,Era::Modern);
+ if(a.technicalScore>=75.0||a.styleVerdict==Verdict::Unusual)return fail("Unusual verdict hid a technically unsafe master");
+}
+{
+ Metrics m=cleanMetrics();m.integratedLufs=-18;m.plrDb=20;m.lraLu=14;
+ const auto classicalModern=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Classical,Era::Modern);
+ const auto classicalVintage=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Classical,Era::Vintage);
+ const auto cinematicModern=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Cinematic,Era::Modern);
+ const auto cinematicVintage=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Cinematic,Era::Vintage);
+ if(!approx(classicalModern.styleScore,classicalVintage.styleScore,1e-9)||!approx(cinematicModern.styleScore,cinematicVintage.styleScore,1e-9))return fail("Era changed a genre whose profile is intentionally era-neutral");
+}
+{
+ Metrics m=cleanMetrics();m.integratedLufs=-20;m.plrDb=15;m.lraLu=9;
+ const auto modern=AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Rock,Era::Modern);
+ const auto vintage=AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Rock,Era::Vintage);
+ if(!approx(modern.styleScore,vintage.styleScore,1e-9))return fail("Era unexpectedly changed MIX calibration");
+}
+{
+ Metrics dense=cleanMetrics();dense.integratedLufs=-8;dense.plrDb=6;dense.lraLu=3;
+ const auto metal=AssessmentModel::evaluate(dense,AnalysisMode::Master,Genre::Metal,Era::Modern);
+ const auto classical=AssessmentModel::evaluate(dense,AnalysisMode::Master,Genre::Classical,Era::Modern);
+ if(metal.styleScore<=classical.styleScore+25.0)return fail("Dense modern master did not meaningfully separate Metal from Classical style");
+}
+{
  Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.worstLocalCorrelation=-1;m.worstLocalMonoCompatibilityDb=-1000;m.negativeCorrelationPercent=100;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);if(a.technicalScore>=50||a.overallScore>=50)return fail("Critical technical faults were averaged away");
 }
