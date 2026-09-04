@@ -30,8 +30,6 @@ public:
     double dcOffsetRightDbfs() const noexcept { return dcOffsetRightDbfs_.load(std::memory_order_relaxed); }
     std::uint64_t clippedSampleCount() const noexcept { return clippedSampleCount_.load(std::memory_order_relaxed); }
     std::uint64_t nonFiniteSampleCount() const noexcept { return nonFiniteSampleCount_.load(std::memory_order_relaxed); }
-
-    // Programme-wide spectral energy shares, normalized across 20 Hz to 20 kHz.
     double lowBandPercent() const noexcept { return lowBandPercent_.load(std::memory_order_relaxed); }
     double lowMidBandPercent() const noexcept { return lowMidBandPercent_.load(std::memory_order_relaxed); }
     double highMidBandPercent() const noexcept { return highMidBandPercent_.load(std::memory_order_relaxed); }
@@ -64,7 +62,7 @@ private:
     void processTruePeakSample(int channel, double sample) noexcept;
     void updateStereoMetrics() noexcept;
     void updateTechnicalMetrics() noexcept;
-    void pushTonalSample(double sample) noexcept;
+    void pushTonalSample(double sample, int availableChannels) noexcept;
     void analyseTonalFrame() noexcept;
     void updateTonalMetrics() noexcept;
 
@@ -107,12 +105,13 @@ private:
     std::uint64_t clippedSampleCountRaw_ {0};
     std::uint64_t nonFiniteSampleCountRaw_ {0};
 
-    // Fixed-size FFT workspace. The mono analysis signal is the energy-normalized
-    // stereo sum. No dynamic memory is touched while processing audio.
+    // Fixed FFT workspace. Stereo frames alternate L/R so tonal analysis cannot
+    // erase anti-phase content by summing the channels to mono first.
     double tonalInput_[kFftSize] {};
     double fftReal_[kFftSize] {};
     double fftImag_[kFftSize] {};
     std::size_t tonalWrite_ {0};
+    int tonalFrameChannel_ {0};
     long double tonalBandEnergy_[4] {0.0L, 0.0L, 0.0L, 0.0L};
 
     double samplePeakLinear_ {0.0};
