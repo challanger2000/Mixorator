@@ -27,13 +27,21 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
         return result;
 
     analysis_.prepare(setup.sampleRate);
+    analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
+    analysisState_.store(AnalysisState::Live, std::memory_order_release);
+    finalizationGeneration_.store(0, std::memory_order_relaxed);
     return Steinberg::kResultOk;
 }
 
 Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
 {
     if (state)
+    {
         analysis_.reset();
+        analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
+        analysisState_.store(AnalysisState::Live, std::memory_order_release);
+        finalizationGeneration_.store(0, std::memory_order_relaxed);
+    }
 
     return AudioEffect::setActive(state);
 }
@@ -62,18 +70,96 @@ Steinberg::tresult PLUGIN_API Processor::canProcessSampleSize(Steinberg::int32 s
                : Steinberg::kResultFalse;
 }
 
+void Processor::requestLiveAnalysis() noexcept
+{
+    analysisCommand_.store(AnalysisCommand::StartLive, std::memory_order_release);
+}
+
+void Processor::requestFinalAnalysis() noexcept
+{
+    analysisCommand_.store(AnalysisCommand::Finalize, std::memory_order_release);
+}
+
+Processor::AnalysisState Processor::analysisState() const noexcept
+{
+    return analysisState_.load(std::memory_order_acquire);
+}
+
+std::uint64_t Processor::finalizationGeneration() const noexcept
+{
+    return finalizationGeneration_.load(std::memory_order_acquire);
+}
+
+DSP::AnalysisSnapshot Processor::captureFinalSnapshot() const noexcept
+{
+    DSP::AnalysisSnapshot snapshot;
+
+    if (analysisState_.load(std::memory_order_acquire) != AnalysisState::Final)
+        return snapshot;
+
+    snapshotReaders_.fetch_add(1, std::memory_order_acq_rel);
+
+    // Recheck after registering as a reader. If LIVE was already applied at a
+    // preceding block boundary, no final snapshot may be read.
+    if (analysisState_.load(std::memory_order_acquire) == AnalysisState::Final)
+        snapshot = DSP::AnalysisSnapshot::capture(analysis_);
+
+    snapshotReaders_.fetch_sub(1, std::memory_order_release);
+    return snapshot;
+}
+
+void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
+{
+    auto command = analysisCommand_.load(std::memory_order_acquire);
+
+    if (command == AnalysisCommand::Finalize)
+    {
+        // Publishing FINAL with release semantics happens only after all writes
+        // from prior analysis blocks. From this block onward AnalysisEngine is
+        // not touched until a LIVE restart is safely applied.
+        analysisState_.store(AnalysisState::Final, std::memory_order_release);
+        finalizationGeneration_.fetch_add(1, std::memory_order_release);
+
+        AnalysisCommand expected = AnalysisCommand::Finalize;
+        analysisCommand_.compare_exchange_strong(
+            expected, AnalysisCommand::None,
+            std::memory_order_acq_rel, std::memory_order_acquire);
+        return;
+    }
+
+    if (command == AnalysisCommand::StartLive)
+    {
+        // Never reset mutable analyzer history while a non-realtime reader is
+        // constructing a final snapshot. Deferring one block is RT-safe.
+        if (snapshotReaders_.load(std::memory_order_acquire) != 0)
+            return;
+
+        analysis_.reset();
+        analysisState_.store(AnalysisState::Live, std::memory_order_release);
+
+        AnalysisCommand expected = AnalysisCommand::StartLive;
+        analysisCommand_.compare_exchange_strong(
+            expected, AnalysisCommand::None,
+            std::memory_order_acq_rel, std::memory_order_acquire);
+    }
+}
+
 Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& data)
 {
+    handleAnalysisCommandAtBlockBoundary();
+
     if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
         return Steinberg::kResultOk;
 
     auto& input = data.inputs[0];
     auto& output = data.outputs[0];
     const auto channels = input.numChannels < output.numChannels ? input.numChannels : output.numChannels;
+    const bool analyse = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live;
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
-        analysis_.process(input.channelBuffers32, input.numChannels, data.numSamples);
+        if (analyse)
+            analysis_.process(input.channelBuffers32, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
@@ -88,7 +174,8 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
-        analysis_.process(input.channelBuffers64, input.numChannels, data.numSamples);
+        if (analyse)
+            analysis_.process(input.channelBuffers64, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
         {
