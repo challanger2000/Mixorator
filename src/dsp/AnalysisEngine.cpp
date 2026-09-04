@@ -128,6 +128,8 @@ void AnalysisEngine::reset()
     loudnessBlockCount_ = 0;
     samplePeakLinear_ = 0.0;
     truePeakLinear_ = 0.0;
+    rmsSumSquares_ = 0.0L;
+    rmsSampleCount_ = 0;
 
     for (auto& filter : shelf_)
         filter.clear();
@@ -138,6 +140,8 @@ void AnalysisEngine::reset()
 
     samplePeakDbfs_.store(-1000.0, std::memory_order_relaxed);
     truePeakDbtp_.store(-1000.0, std::memory_order_relaxed);
+    rmsDbfs_.store(-1000.0, std::memory_order_relaxed);
+    crestFactorDb_.store(0.0, std::memory_order_relaxed);
     momentaryLufs_.store(-1000.0, std::memory_order_relaxed);
     shortTermLufs_.store(-1000.0, std::memory_order_relaxed);
 }
@@ -199,8 +203,12 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
                 continue;
 
             const double sample = static_cast<double>(channels[ch][i]);
-            samplePeakLinear_ = std::max(samplePeakLinear_, std::abs(sample));
+            const double absSample = std::abs(sample);
+            samplePeakLinear_ = std::max(samplePeakLinear_, absSample);
             processTruePeakSample(ch, sample);
+
+            rmsSumSquares_ += static_cast<long double>(sample) * static_cast<long double>(sample);
+            ++rmsSampleCount_;
 
             double filtered = shelf_[ch].process(sample);
             filtered = highPass_[ch].process(filtered);
@@ -239,8 +247,24 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
                                   ? 20.0 * std::log10(truePeakLinear_)
                                   : -std::numeric_limits<double>::infinity();
 
+    double rmsDb = -std::numeric_limits<double>::infinity();
+    double crestDb = 0.0;
+    if (rmsSampleCount_ > 0)
+    {
+        const long double meanSquare = rmsSumSquares_ / static_cast<long double>(rmsSampleCount_);
+        const double rmsLinear = std::sqrt(static_cast<double>(meanSquare));
+        if (rmsLinear > 0.0)
+        {
+            rmsDb = 20.0 * std::log10(rmsLinear);
+            if (samplePeakLinear_ > 0.0)
+                crestDb = peakDb - rmsDb;
+        }
+    }
+
     samplePeakDbfs_.store(peakDb, std::memory_order_relaxed);
     truePeakDbtp_.store(truePeakDb, std::memory_order_relaxed);
+    rmsDbfs_.store(rmsDb, std::memory_order_relaxed);
+    crestFactorDb_.store(crestDb, std::memory_order_relaxed);
 }
 
 void AnalysisEngine::process(float* const* channels, int numChannels, int numSamples) noexcept
@@ -297,5 +321,16 @@ double AnalysisEngine::calculateIntegratedLufs() const noexcept
     return finalCount > 0
                ? energyToLufs(finalSum / static_cast<double>(finalCount))
                : -std::numeric_limits<double>::infinity();
+}
+
+double AnalysisEngine::calculatePlrDb() const noexcept
+{
+    const double integrated = calculateIntegratedLufs();
+    const double truePeak = truePeakDbtp_.load(std::memory_order_relaxed);
+
+    if (!std::isfinite(integrated) || !std::isfinite(truePeak))
+        return std::numeric_limits<double>::quiet_NaN();
+
+    return truePeak - integrated;
 }
 }
