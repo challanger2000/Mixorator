@@ -1,5 +1,9 @@
 #include "MixoratorProcessor.h"
 #include "MixoratorIDs.h"
+#include "../analysis/AssessmentInput.h"
+
+#include <algorithm>
+#include <cstring>
 
 namespace Mixorator
 {
@@ -17,7 +21,38 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
     addAudioInput(STR16("Stereo In"), Steinberg::Vst::SpeakerArr::kStereo);
     addAudioOutput(STR16("Stereo Out"), Steinberg::Vst::SpeakerArr::kStereo);
 
+    dataExchange_ = std::make_unique<Steinberg::Vst::DataExchangeHandler>(
+        this,
+        [](auto& config, const auto&) {
+            config.numBlocks = 8;
+            config.blockSize = sizeof(AnalysisExchangePacket);
+            config.alignment = alignof(AnalysisExchangePacket);
+            config.userContextID = kAnalysisExchangeContext;
+            return true;
+        });
+
     return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API Processor::terminate()
+{
+    dataExchange_.reset();
+    return AudioEffect::terminate();
+}
+
+Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::Vst::IConnectionPoint* other)
+{
+    const auto result = AudioEffect::connect(other);
+    if (dataExchange_)
+        dataExchange_->onConnect(other, getHostContext());
+    return result;
+}
+
+Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionPoint* other)
+{
+    if (dataExchange_)
+        dataExchange_->onDisconnect(other);
+    return AudioEffect::disconnect(other);
 }
 
 Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::ProcessSetup& setup)
@@ -27,6 +62,11 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
         return result;
 
     analysis_.prepare(setup.sampleRate);
+    exchangeIntervalSamples_ = static_cast<std::uint64_t>(std::max(1.0, setup.sampleRate / 20.0));
+    exchangeSampleCounter_ = 0;
+    exchangeSequence_ = 0;
+    lastPublishedFinalizationGeneration_ = 0;
+    exchangeBlock_ = {nullptr, 0, Steinberg::Vst::InvalidDataExchangeBlockID};
     analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
     analysisState_.store(AnalysisState::Live, std::memory_order_release);
     finalizationGeneration_.store(0, std::memory_order_relaxed);
@@ -35,9 +75,20 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
 
 Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
 {
+    if (dataExchange_)
+    {
+        if (state)
+            dataExchange_->onActivate(processSetup);
+        else
+            dataExchange_->onDeactivate();
+    }
+
     if (state)
     {
         analysis_.reset();
+        exchangeSampleCounter_ = 0;
+        exchangeSequence_ = 0;
+        lastPublishedFinalizationGeneration_ = 0;
         analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
         analysisState_.store(AnalysisState::Live, std::memory_order_release);
         finalizationGeneration_.store(0, std::memory_order_relaxed);
@@ -98,25 +149,18 @@ DSP::AnalysisSnapshot Processor::captureFinalSnapshot() const noexcept
         return snapshot;
 
     snapshotReaders_.fetch_add(1, std::memory_order_acq_rel);
-
-    // Recheck after registering as a reader. If LIVE was already applied at a
-    // preceding block boundary, no final snapshot may be read.
     if (analysisState_.load(std::memory_order_acquire) == AnalysisState::Final)
         snapshot = DSP::AnalysisSnapshot::capture(analysis_);
-
     snapshotReaders_.fetch_sub(1, std::memory_order_release);
     return snapshot;
 }
 
 void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
 {
-    auto command = analysisCommand_.load(std::memory_order_acquire);
+    const auto command = analysisCommand_.load(std::memory_order_acquire);
 
     if (command == AnalysisCommand::Finalize)
     {
-        // Publishing FINAL with release semantics happens only after all writes
-        // from prior analysis blocks. From this block onward AnalysisEngine is
-        // not touched until a LIVE restart is safely applied.
         analysisState_.store(AnalysisState::Final, std::memory_order_release);
         finalizationGeneration_.fetch_add(1, std::memory_order_release);
 
@@ -129,13 +173,12 @@ void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
 
     if (command == AnalysisCommand::StartLive)
     {
-        // Never reset mutable analyzer history while a non-realtime reader is
-        // constructing a final snapshot. Deferring one block is RT-safe.
         if (snapshotReaders_.load(std::memory_order_acquire) != 0)
             return;
 
         analysis_.reset();
         analysisState_.store(AnalysisState::Live, std::memory_order_release);
+        exchangeSampleCounter_ = exchangeIntervalSamples_;
 
         AnalysisCommand expected = AnalysisCommand::StartLive;
         analysisCommand_.compare_exchange_strong(
@@ -144,12 +187,48 @@ void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
     }
 }
 
+void Processor::publishAnalysisExchange(Steinberg::int32 numSamples) noexcept
+{
+    if (!dataExchange_)
+        return;
+
+    exchangeSampleCounter_ += static_cast<std::uint64_t>(std::max<Steinberg::int32>(0, numSamples));
+    const auto generation = finalizationGeneration_.load(std::memory_order_acquire);
+    const bool finalChanged = generation != lastPublishedFinalizationGeneration_;
+    if (exchangeSampleCounter_ < exchangeIntervalSamples_ && !finalChanged)
+        return;
+
+    auto block = dataExchange_->getCurrentOrNewBlock();
+    if (block.blockID == Steinberg::Vst::InvalidDataExchangeBlockID ||
+        block.data == nullptr || block.size < sizeof(AnalysisExchangePacket))
+    {
+        dataExchange_->discardCurrentBlock();
+        return;
+    }
+
+    AnalysisExchangePacket packet;
+    packet.sequence = ++exchangeSequence_;
+    packet.finalizationGeneration = generation;
+    packet.finalState = analysisState_.load(std::memory_order_acquire) == AnalysisState::Final ? 1u : 0u;
+    packet.metrics = Analysis::AssessmentInput::fromLive(analysis_);
+
+    std::memcpy(block.data, &packet, sizeof(packet));
+    if (dataExchange_->sendCurrentBlock())
+    {
+        exchangeSampleCounter_ = 0;
+        lastPublishedFinalizationGeneration_ = generation;
+    }
+}
+
 Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& data)
 {
     handleAnalysisCommandAtBlockBoundary();
 
     if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
+    {
+        publishAnalysisExchange(data.numSamples);
         return Steinberg::kResultOk;
+    }
 
     auto& input = data.inputs[0];
     auto& output = data.outputs[0];
@@ -190,6 +269,7 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
 
     output.silenceFlags = input.silenceFlags;
+    publishAnalysisExchange(data.numSamples);
     return Steinberg::kResultOk;
 }
 }
