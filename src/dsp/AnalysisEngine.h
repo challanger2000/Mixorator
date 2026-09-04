@@ -26,6 +26,10 @@ public:
     double correlation() const noexcept { return correlation_.load(std::memory_order_relaxed); }
     double stereoWidthDb() const noexcept { return stereoWidthDb_.load(std::memory_order_relaxed); }
     double monoCompatibilityDb() const noexcept { return monoCompatibilityDb_.load(std::memory_order_relaxed); }
+    double dcOffsetLeftDbfs() const noexcept { return dcOffsetLeftDbfs_.load(std::memory_order_relaxed); }
+    double dcOffsetRightDbfs() const noexcept { return dcOffsetRightDbfs_.load(std::memory_order_relaxed); }
+    std::uint64_t clippedSampleCount() const noexcept { return clippedSampleCount_.load(std::memory_order_relaxed); }
+    std::uint64_t nonFiniteSampleCount() const noexcept { return nonFiniteSampleCount_.load(std::memory_order_relaxed); }
 
     // These calculations are intentionally not called from the audio thread.
     // Integrated loudness applies the BS.1770 gates across stored 400 ms blocks;
@@ -54,6 +58,7 @@ private:
     static Biquad makeKWeightingShelf(double sampleRate) noexcept;
     static Biquad makeKWeightingHighPass(double sampleRate) noexcept;
     static double energyToLufs(double meanSquare) noexcept;
+    static double linearToDbfs(double value) noexcept;
 
     void pushWindowSample(std::vector<double>& ring,
                           std::size_t& writeIndex,
@@ -62,6 +67,7 @@ private:
                           double value) noexcept;
     void processTruePeakSample(int channel, double sample) noexcept;
     void updateStereoMetrics() noexcept;
+    void updateTechnicalMetrics() noexcept;
 
     double sampleRate_ {48000.0};
     std::size_t momentarySamples_ {0};
@@ -86,23 +92,25 @@ private:
     Biquad highPass_[2];
 
     // ITU-R BS.1770 Annex 2: 48th-order, 4-phase FIR true-peak interpolator.
-    // State is fixed-size so true-peak measurement performs no allocation in process().
     double truePeakHistory_[2][12] {};
     double truePeakLinear_ {0.0};
 
-    // Programme-wide unweighted RMS energy for Crest Factor. Stereo channels are
-    // treated as individual samples so the metric remains independent of channel count.
     long double rmsSumSquares_ {0.0L};
     std::uint64_t rmsSampleCount_ {0};
 
-    // Programme-wide stereo statistics. The Mid/Side convention is
-    // M=(L+R)/sqrt(2), S=(L-R)/sqrt(2), preserving total energy.
+    // Programme-wide stereo statistics. M=(L+R)/sqrt(2), S=(L-R)/sqrt(2).
     long double leftSumSquares_ {0.0L};
     long double rightSumSquares_ {0.0L};
     long double lrCrossSum_ {0.0L};
     long double midSumSquares_ {0.0L};
     long double sideSumSquares_ {0.0L};
     std::uint64_t stereoSampleCount_ {0};
+
+    // Technical integrity statistics. DC is the signed arithmetic mean per channel.
+    long double dcSum_[2] {0.0L, 0.0L};
+    std::uint64_t dcSampleCount_[2] {0, 0};
+    std::uint64_t clippedSampleCountRaw_ {0};
+    std::uint64_t nonFiniteSampleCountRaw_ {0};
 
     double samplePeakLinear_ {0.0};
     std::atomic<double> samplePeakDbfs_ {-1000.0};
@@ -115,5 +123,9 @@ private:
     std::atomic<double> correlation_ {1.0};
     std::atomic<double> stereoWidthDb_ {-1000.0};
     std::atomic<double> monoCompatibilityDb_ {0.0};
+    std::atomic<double> dcOffsetLeftDbfs_ {-1000.0};
+    std::atomic<double> dcOffsetRightDbfs_ {-1000.0};
+    std::atomic<std::uint64_t> clippedSampleCount_ {0};
+    std::atomic<std::uint64_t> nonFiniteSampleCount_ {0};
 };
 }
