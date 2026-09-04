@@ -25,6 +25,9 @@ struct AnalysisSnapshot
     double correlation {1.0};
     double stereoWidthDb {-1000.0};
     double monoCompatibilityDb {0.0};
+    double worstLocalCorrelation {1.0};
+    double worstLocalMonoCompatibilityDb {0.0};
+    double negativeCorrelationPercent {0.0};
 
     double dcOffsetLeftDbfs {-1000.0};
     double dcOffsetRightDbfs {-1000.0};
@@ -50,6 +53,9 @@ struct AnalysisSnapshot
         s.correlation = engine.correlation();
         s.stereoWidthDb = engine.stereoWidthDb();
         s.monoCompatibilityDb = engine.monoCompatibilityDb();
+        s.worstLocalCorrelation = engine.worstLocalCorrelation();
+        s.worstLocalMonoCompatibilityDb = engine.worstLocalMonoCompatibilityDb();
+        s.negativeCorrelationPercent = engine.negativeCorrelationPercent();
         s.dcOffsetLeftDbfs = engine.dcOffsetLeftDbfs();
         s.dcOffsetRightDbfs = engine.dcOffsetRightDbfs();
         s.clippedSampleCount = engine.clippedSampleCount();
