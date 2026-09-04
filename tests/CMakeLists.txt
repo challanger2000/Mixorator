@@ -68,3 +68,18 @@ target_include_directories(MixoratorProcessorTransparencyTests PRIVATE
 target_link_libraries(MixoratorProcessorTransparencyTests PRIVATE sdk)
 
 add_test(NAME MixoratorProcessorTransparencyTests COMMAND MixoratorProcessorTransparencyTests)
+
+add_executable(MixoratorProcessorRobustnessTests
+    ProcessorRobustnessTests.cpp
+    ../src/plugin/MixoratorProcessor.cpp
+    ../src/dsp/AnalysisEngine.cpp
+    ../src/analysis/AssessmentModel.cpp
+)
+
+target_include_directories(MixoratorProcessorRobustnessTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+target_link_libraries(MixoratorProcessorRobustnessTests PRIVATE sdk)
+
+add_test(NAME MixoratorProcessorRobustnessTests COMMAND MixoratorProcessorRobustnessTests)
