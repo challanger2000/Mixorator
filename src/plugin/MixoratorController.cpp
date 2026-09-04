@@ -34,7 +34,7 @@ Steinberg::tresult Controller::requestAnalysisState(Steinberg::int64 state) noex
         return Steinberg::kOutOfMemory;
 
     message->setMessageID(kSetAnalysisStateMessage);
-    auto result = Steinberg::kResultFalse;
+    Steinberg::tresult result = Steinberg::kResultFalse;
     if (auto* attributes = message->getAttributes())
     {
         if (attributes->setInt(kAnalysisStateKey, state) == Steinberg::kResultTrue)
