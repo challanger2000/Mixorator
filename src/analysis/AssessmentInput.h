@@ -21,17 +21,15 @@ struct AssessmentInput
         m.crestFactorDb = engine.crestFactorDb();
         m.correlation = engine.correlation();
         m.monoCompatibilityDb = engine.monoCompatibilityDb();
+        m.worstLocalCorrelation = engine.worstLocalCorrelation();
+        m.worstLocalMonoCompatibilityDb = engine.worstLocalMonoCompatibilityDb();
+        m.negativeCorrelationPercent = engine.negativeCorrelationPercent();
         m.lrBalanceDb = engine.lrBalanceDb();
         m.dcOffsetLeftDbfs = engine.dcOffsetLeftDbfs();
         m.dcOffsetRightDbfs = engine.dcOffsetRightDbfs();
         m.clippedSamples = engine.clippedSampleCount();
         m.nonFiniteSamples = engine.nonFiniteSampleCount();
-        m.tonalPercent = {{
-            engine.lowBandPercent(),
-            engine.lowMidBandPercent(),
-            engine.highMidBandPercent(),
-            engine.highBandPercent()
-        }};
+        m.tonalPercent = {{engine.lowBandPercent(),engine.lowMidBandPercent(),engine.highMidBandPercent(),engine.highBandPercent()}};
         m.loudnessAvailable = std::isfinite(shortTerm) && shortTerm > -999.0;
         m.plrAvailable = false;
         m.lraAvailable = false;
@@ -49,6 +47,9 @@ struct AssessmentInput
         m.crestFactorDb = snapshot.crestFactorDb;
         m.correlation = snapshot.correlation;
         m.monoCompatibilityDb = snapshot.monoCompatibilityDb;
+        m.worstLocalCorrelation = snapshot.worstLocalCorrelation;
+        m.worstLocalMonoCompatibilityDb = snapshot.worstLocalMonoCompatibilityDb;
+        m.negativeCorrelationPercent = snapshot.negativeCorrelationPercent;
         m.lrBalanceDb = snapshot.lrBalanceDb;
         m.dcOffsetLeftDbfs = snapshot.dcOffsetLeftDbfs;
         m.dcOffsetRightDbfs = snapshot.dcOffsetRightDbfs;
