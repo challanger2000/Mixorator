@@ -53,7 +53,6 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  const auto liveMetrics=AssessmentInput::fromLive(e);
  const auto a=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Mix,Genre::Pop,Era::Modern);
  if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough Short-Term data");
-
  const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
  if(!snapshot.valid)return fail("Short FINAL capture was not marked as a captured snapshot");
  const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
@@ -98,7 +97,9 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
 }
 {
  Metrics m=cleanMetrics();m.integratedLufs=-20;m.plrDb=14;m.lraLu=8;
- if(AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Pop,Era::Modern).styleScore<=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Pop,Era::Modern).styleScore)return fail("MIX profile is not distinct from MASTER");
+ const auto mix=AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Pop,Era::Modern);
+ if(mix.styleScore<=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Pop,Era::Modern).styleScore)return fail("MIX profile is not distinct from MASTER");
+ if(mix.pcmDeliveryVerdict!=Verdict::InsufficientData||mix.streamingDeliveryVerdict!=Verdict::InsufficientData)return fail("MIX was incorrectly given a finished-master delivery verdict");
 }
 {
  Metrics m=cleanMetrics();m.integratedLufs=-10;m.plrDb=9;m.lraLu=5;m.tonalPercent={{60,20,15,5}};
@@ -119,6 +120,10 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  Metrics isolated=cleanMetrics();isolated.worstLocalCorrelation=-0.2;isolated.worstLocalMonoCompatibilityDb=-4.0;isolated.negativeCorrelationPercent=.5;
  const auto a=AssessmentModel::evaluate(isolated,AnalysisMode::Master,Genre::General,Era::Modern);
  if(a.technicalScore<95.0)return fail("Tiny isolated stereo anomaly was over-penalized");
+}
+{
+ Metrics clipped=cleanMetrics();clipped.clippedSamples=100;const auto a=AssessmentModel::evaluate(clipped,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(a.pcmDeliveryScore>=90.0||a.streamingDeliveryScore>=90.0)return fail("Over-full-scale samples did not affect both master delivery paths");
 }
 {
  Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.worstLocalCorrelation=-1;m.worstLocalMonoCompatibilityDb=-1000;m.negativeCorrelationPercent=100;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
