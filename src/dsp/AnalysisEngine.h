@@ -16,6 +16,7 @@ public:
     void process(double* const* channels, int numChannels, int numSamples) noexcept;
 
     double samplePeakDbfs() const noexcept { return samplePeakDbfs_.load(std::memory_order_relaxed); }
+    double truePeakDbtp() const noexcept { return truePeakDbtp_.load(std::memory_order_relaxed); }
     double momentaryLufs() const noexcept { return momentaryLufs_.load(std::memory_order_relaxed); }
     double shortTermLufs() const noexcept { return shortTermLufs_.load(std::memory_order_relaxed); }
 
@@ -50,6 +51,7 @@ private:
                           std::size_t& validSamples,
                           double& sum,
                           double value) noexcept;
+    void processTruePeakSample(int channel, double sample) noexcept;
 
     double sampleRate_ {48000.0};
     std::size_t momentarySamples_ {0};
@@ -73,8 +75,14 @@ private:
     Biquad shelf_[2];
     Biquad highPass_[2];
 
+    // ITU-R BS.1770 Annex 2: 48th-order, 4-phase FIR true-peak interpolator.
+    // State is fixed-size so true-peak measurement performs no allocation in process().
+    double truePeakHistory_[2][12] {};
+    double truePeakLinear_ {0.0};
+
     double samplePeakLinear_ {0.0};
     std::atomic<double> samplePeakDbfs_ {-1000.0};
+    std::atomic<double> truePeakDbtp_ {-1000.0};
     std::atomic<double> momentaryLufs_ {-1000.0};
     std::atomic<double> shortTermLufs_ {-1000.0};
 };
