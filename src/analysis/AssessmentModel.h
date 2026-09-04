@@ -46,12 +46,16 @@ struct Assessment
 {
     double technicalScore {100.0};
     double styleScore {100.0};
-    double deliveryScore {100.0};
+    double pcmDeliveryScore {100.0};
+    double streamingDeliveryScore {100.0};
     double overallScore {100.0};
     Verdict technicalVerdict {Verdict::Excellent};
     Verdict styleVerdict {Verdict::Excellent};
-    Verdict deliveryVerdict {Verdict::Excellent};
+    Verdict pcmDeliveryVerdict {Verdict::Excellent};
+    Verdict streamingDeliveryVerdict {Verdict::Excellent};
     Verdict overallVerdict {Verdict::Excellent};
+    // Estimated playback gain for a -14 LUFS streaming reference. Informational only.
+    double streamingGainDb {0.0};
 };
 
 class AssessmentModel
