@@ -18,7 +18,7 @@ void processStereo(Mixorator::DSP::AnalysisEngine& e,const std::vector<double>& 
     for(int p=0;p<static_cast<int>(l.size());p+=bs){const int n=std::min(bs,static_cast<int>(l.size())-p);double* c[2]={const_cast<double*>(l.data()+p),const_cast<double*>(r.data()+p)};e.process(c,2,n);}
 }
 std::vector<double> sine(double sr,double hz,double sec,double amp,double ph=0){std::vector<double> v(static_cast<std::size_t>(std::llround(sr*sec)));for(std::size_t i=0;i<v.size();++i)v[i]=amp*std::sin(2*kPi*hz*static_cast<double>(i)/sr+ph);return v;}
-Mixorator::Analysis::Metrics cleanMetrics(){Mixorator::Analysis::Metrics m;m.integratedLufs=-12;m.truePeakDbtp=-2.1;m.plrDb=10;m.lraLu=6;m.crestFactorDb=10;m.correlation=.7;m.monoCompatibilityDb=-.5;m.lrBalanceDb=.2;m.dcOffsetLeftDbfs=-90;m.dcOffsetRightDbfs=-90;return m;}
+Mixorator::Analysis::Metrics cleanMetrics(){Mixorator::Analysis::Metrics m;m.integratedLufs=-12;m.truePeakDbtp=-2.1;m.plrDb=10;m.lraLu=6;m.crestFactorDb=10;m.correlation=.7;m.monoCompatibilityDb=-.5;m.worstLocalCorrelation=.7;m.worstLocalMonoCompatibilityDb=-.5;m.negativeCorrelationPercent=0;m.lrBalanceDb=.2;m.dcOffsetLeftDbfs=-90;m.dcOffsetRightDbfs=-90;return m;}
 }
 
 int main()
@@ -101,7 +101,20 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(!approx(techno.technicalScore,acoustic.technicalScore,1e-9))return fail("Tonal style scoring contaminated technical safety");
 }
 {
- Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
+ Metrics clean=cleanMetrics();
+ const auto base=AssessmentModel::evaluate(clean,AnalysisMode::Master,Genre::General,Era::Modern);
+ Metrics shortFault=clean;shortFault.worstLocalCorrelation=-1.0;shortFault.worstLocalMonoCompatibilityDb=-20.0;shortFault.negativeCorrelationPercent=5.0;
+ const auto shortResult=AssessmentModel::evaluate(shortFault,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(shortResult.technicalScore>=90.0||shortResult.technicalScore<80.0)return fail("Short severe stereo fault was not conservatively downgraded into warning/good range");
+ if(!approx(shortResult.styleScore,base.styleScore,1e-9)||!approx(shortResult.pcmDeliveryScore,base.pcmDeliveryScore,1e-9)||!approx(shortResult.streamingDeliveryScore,base.streamingDeliveryScore,1e-9))return fail("Local stereo fault contaminated style or delivery scoring");
+}
+{
+ Metrics isolated=cleanMetrics();isolated.worstLocalCorrelation=-0.2;isolated.worstLocalMonoCompatibilityDb=-4.0;isolated.negativeCorrelationPercent=.5;
+ const auto a=AssessmentModel::evaluate(isolated,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(a.technicalScore<95.0)return fail("Tiny isolated stereo anomaly was over-penalized");
+}
+{
+ Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.worstLocalCorrelation=-1;m.worstLocalMonoCompatibilityDb=-1000;m.negativeCorrelationPercent=100;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);if(a.technicalScore>=50||a.overallScore>=50)return fail("Critical technical faults were averaged away");
 }
 {
