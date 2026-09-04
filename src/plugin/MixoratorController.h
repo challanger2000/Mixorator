@@ -4,6 +4,8 @@
 #include "public.sdk/source/vst/utility/dataexchange.h"
 #include "AnalysisExchange.h"
 
+#include <cstdint>
+
 namespace Mixorator
 {
 class Controller : public Steinberg::Vst::EditController,
@@ -37,6 +39,11 @@ public:
         Steinberg::TBool onBackgroundThread) override;
 
     bool hasAnalysisPacket() const noexcept { return hasPacket_; }
+    bool hasDefinitiveFinalSnapshot() const noexcept
+    {
+        return hasPacket_ && latestPacket_.finalState != 0 &&
+               finalSnapshotGeneration_ == latestPacket_.finalizationGeneration;
+    }
     const AnalysisExchangePacket& latestAnalysisPacket() const noexcept { return latestPacket_; }
 
     Analysis::Assessment evaluateLatest(
@@ -45,8 +52,13 @@ public:
         Analysis::Era era) const noexcept;
 
 private:
+    void requestFinalSnapshot(std::uint64_t generation) noexcept;
+    bool consumeFinalSnapshotMessage(Steinberg::Vst::IMessage* message) noexcept;
+
     Steinberg::Vst::DataExchangeReceiverHandler dataExchange_ {this};
     AnalysisExchangePacket latestPacket_ {};
     bool hasPacket_ {false};
+    std::uint64_t requestedFinalGeneration_ {0};
+    std::uint64_t finalSnapshotGeneration_ {0};
 };
 }
