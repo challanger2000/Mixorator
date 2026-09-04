@@ -3,6 +3,7 @@ set(MIXORATOR_SOURCES
     analysis/AssessmentModel.h
     dsp/AnalysisEngine.cpp
     dsp/AnalysisEngine.h
+    dsp/AnalysisSnapshot.h
     plugin/entry.cpp
     plugin/MixoratorIDs.h
     plugin/MixoratorProcessor.cpp
