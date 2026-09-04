@@ -9,6 +9,7 @@ namespace Mixorator::DSP
 namespace
 {
 constexpr double kPi = 3.1415926535897932384626433832795;
+constexpr double kInvSqrt2 = 0.70710678118654752440084436210485;
 constexpr double kLoudnessOffset = -0.691;
 constexpr double kAbsoluteGateLufs = -70.0;
 constexpr double kRelativeGateLu = 10.0;
@@ -130,6 +131,12 @@ void AnalysisEngine::reset()
     truePeakLinear_ = 0.0;
     rmsSumSquares_ = 0.0L;
     rmsSampleCount_ = 0;
+    leftSumSquares_ = 0.0L;
+    rightSumSquares_ = 0.0L;
+    lrCrossSum_ = 0.0L;
+    midSumSquares_ = 0.0L;
+    sideSumSquares_ = 0.0L;
+    stereoSampleCount_ = 0;
 
     for (auto& filter : shelf_)
         filter.clear();
@@ -144,6 +151,10 @@ void AnalysisEngine::reset()
     crestFactorDb_.store(0.0, std::memory_order_relaxed);
     momentaryLufs_.store(-1000.0, std::memory_order_relaxed);
     shortTermLufs_.store(-1000.0, std::memory_order_relaxed);
+    lrBalanceDb_.store(0.0, std::memory_order_relaxed);
+    correlation_.store(1.0, std::memory_order_relaxed);
+    stereoWidthDb_.store(-1000.0, std::memory_order_relaxed);
+    monoCompatibilityDb_.store(0.0, std::memory_order_relaxed);
 }
 
 void AnalysisEngine::pushWindowSample(std::vector<double>& ring,
@@ -172,7 +183,6 @@ void AnalysisEngine::processTruePeakSample(int channel, double sample) noexcept
         history[i] = history[i - 1];
     history[0] = sample;
 
-    // By definition the reconstructed waveform includes the original sample positions.
     truePeakLinear_ = std::max(truePeakLinear_, std::abs(sample));
 
     for (int phase = 0; phase < 4; ++phase)
@@ -183,6 +193,48 @@ void AnalysisEngine::processTruePeakSample(int channel, double sample) noexcept
 
         truePeakLinear_ = std::max(truePeakLinear_, std::abs(interpolated));
     }
+}
+
+void AnalysisEngine::updateStereoMetrics() noexcept
+{
+    if (stereoSampleCount_ == 0)
+        return;
+
+    const long double eps = 1.0e-30L;
+    const long double left = leftSumSquares_;
+    const long double right = rightSumSquares_;
+    const long double denom = std::sqrt(std::max(left * right, eps));
+
+    double corr = denom > 0.0L ? static_cast<double>(lrCrossSum_ / denom) : 1.0;
+    corr = std::max(-1.0, std::min(1.0, corr));
+
+    double balanceDb = 0.0;
+    if (left > eps && right > eps)
+        balanceDb = 10.0 * std::log10(static_cast<double>(left / right));
+    else if (left > eps)
+        balanceDb = 1000.0;
+    else if (right > eps)
+        balanceDb = -1000.0;
+
+    double widthDb = -1000.0;
+    if (midSumSquares_ > eps && sideSumSquares_ > eps)
+        widthDb = 10.0 * std::log10(static_cast<double>(sideSumSquares_ / midSumSquares_));
+    else if (sideSumSquares_ > eps)
+        widthDb = 1000.0;
+
+    // Mono compatibility expresses the RMS level change when collapsing stereo to mono.
+    // 0 dB means no programme-energy loss; negative values indicate cancellation.
+    const long double stereoEnergy = left + right;
+    double monoDb = 0.0;
+    if (stereoEnergy > eps && midSumSquares_ > eps)
+        monoDb = 10.0 * std::log10(static_cast<double>(midSumSquares_ / stereoEnergy));
+    else if (stereoEnergy > eps)
+        monoDb = -1000.0;
+
+    lrBalanceDb_.store(balanceDb, std::memory_order_relaxed);
+    correlation_.store(corr, std::memory_order_relaxed);
+    stereoWidthDb_.store(widthDb, std::memory_order_relaxed);
+    monoCompatibilityDb_.store(monoDb, std::memory_order_relaxed);
 }
 
 template <typename Sample>
@@ -203,8 +255,7 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
                 continue;
 
             const double sample = static_cast<double>(channels[ch][i]);
-            const double absSample = std::abs(sample);
-            samplePeakLinear_ = std::max(samplePeakLinear_, absSample);
+            samplePeakLinear_ = std::max(samplePeakLinear_, std::abs(sample));
             processTruePeakSample(ch, sample);
 
             rmsSumSquares_ += static_cast<long double>(sample) * static_cast<long double>(sample);
@@ -213,6 +264,21 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
             double filtered = shelf_[ch].process(sample);
             filtered = highPass_[ch].process(filtered);
             weightedEnergy += filtered * filtered;
+        }
+
+        if (channelsToMeasure == 2 && channels[0] && channels[1])
+        {
+            const long double left = static_cast<long double>(channels[0][i]);
+            const long double right = static_cast<long double>(channels[1][i]);
+            const long double mid = (left + right) * static_cast<long double>(kInvSqrt2);
+            const long double side = (left - right) * static_cast<long double>(kInvSqrt2);
+
+            leftSumSquares_ += left * left;
+            rightSumSquares_ += right * right;
+            lrCrossSum_ += left * right;
+            midSumSquares_ += mid * mid;
+            sideSumSquares_ += side * side;
+            ++stereoSampleCount_;
         }
 
         pushWindowSample(momentaryRing_, momentaryWrite_, momentaryValid_, momentarySum_, weightedEnergy);
@@ -265,6 +331,7 @@ void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int 
     truePeakDbtp_.store(truePeakDb, std::memory_order_relaxed);
     rmsDbfs_.store(rmsDb, std::memory_order_relaxed);
     crestFactorDb_.store(crestDb, std::memory_order_relaxed);
+    updateStereoMetrics();
 }
 
 void AnalysisEngine::process(float* const* channels, int numChannels, int numSamples) noexcept
