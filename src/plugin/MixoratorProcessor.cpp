@@ -57,8 +57,27 @@ Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionP
 
 Steinberg::tresult PLUGIN_API Processor::notify(Steinberg::Vst::IMessage* message)
 {
-    if (message && message->getMessageID() &&
-        std::strcmp(message->getMessageID(), kRequestFinalSnapshotMessage) == 0)
+    if (!message || !message->getMessageID())
+        return AudioEffect::notify(message);
+
+    if (std::strcmp(message->getMessageID(), kSetAnalysisStateMessage) == 0)
+    {
+        Steinberg::int64 state = -1;
+        auto* attributes = message->getAttributes();
+        if (!attributes || attributes->getInt(kAnalysisStateKey, state) != Steinberg::kResultTrue)
+            return Steinberg::kInvalidArgument;
+
+        if (state == kAnalysisStateLive)
+            requestLiveAnalysis();
+        else if (state == kAnalysisStateFinal)
+            requestFinalAnalysis();
+        else
+            return Steinberg::kInvalidArgument;
+
+        return Steinberg::kResultTrue;
+    }
+
+    if (std::strcmp(message->getMessageID(), kRequestFinalSnapshotMessage) == 0)
     {
         Steinberg::int64 generation = 0;
         if (auto* attributes = message->getAttributes())
