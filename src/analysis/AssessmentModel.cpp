@@ -14,6 +14,13 @@ struct Profile
     double loudnessWeight, plrWeight, lraWeight;
 };
 
+struct TonalProfile
+{
+    double min[4];
+    double max[4];
+    double margin[4];
+};
+
 Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
 {
     const bool vintage = era == Era::Vintage;
@@ -54,12 +61,51 @@ Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
     return {-18,-7.5,7,20,2,16,6,7,9,.35,.45,.20};
 }
 
+TonalProfile tonalProfileFor(Genre genre) noexcept
+{
+    // These are intentionally broad plausibility corridors for programme-wide
+    // energy distribution, not mastering targets. They are kept conservative
+    // until the public genre dataset is calibrated directly against Mixorator.
+    switch (genre)
+    {
+        case Genre::Rock:               return {{{18,25,15,1}}, {{45,50,40,15}}, {{15,15,15,8}}};
+        case Genre::Metal:              return {{{15,20,20,2}}, {{40,45,45,18}}, {{15,15,15,8}}};
+        case Genre::Pop:                return {{{20,25,18,2}}, {{45,50,40,15}}, {{15,15,15,8}}};
+        case Genre::Techno:
+        case Genre::HouseEdm:           return {{{30,18,12,1}}, {{60,40,35,12}}, {{18,15,15,7}}};
+        case Genre::HipHopTrap:         return {{{30,18,10,1}}, {{65,40,30,10}}, {{18,15,15,7}}};
+        case Genre::ElectronicAmbient: return {{{20,20,12,1}}, {{55,50,40,18}}, {{18,18,18,9}}};
+        case Genre::AcousticFolk:       return {{{10,30,20,2}}, {{35,60,45,18}}, {{12,18,15,9}}};
+        case Genre::Jazz:               return {{{10,28,20,2}}, {{38,58,45,18}}, {{13,18,15,9}}};
+        case Genre::Classical:          return {{{10,25,20,4}}, {{35,50,45,20}}, {{13,16,15,10}}};
+        case Genre::Cinematic:          return {{{20,20,15,2}}, {{55,48,42,18}}, {{18,16,16,9}}};
+        case Genre::General:            return {{{12,18,10,0.5}}, {{55,60,50,22}}, {{18,20,20,11}}};
+    }
+    return {{{12,18,10,0.5}}, {{55,60,50,22}}, {{18,20,20,11}}};
+}
+
 double rangeScore(double v,double lo,double hi,double margin) noexcept
 {
     if (!std::isfinite(v)) return 0.0;
     if (v >= lo && v <= hi) return 100.0;
     const double d = v < lo ? lo-v : v-hi;
     return std::clamp(100.0 - d/std::max(margin,0.001)*50.0,0.0,100.0);
+}
+
+bool tonalDataAvailable(const Metrics& m) noexcept
+{
+    const double total=m.tonalPercent[0]+m.tonalPercent[1]+m.tonalPercent[2]+m.tonalPercent[3];
+    return std::isfinite(total) && total>99.0 && total<101.0;
+}
+
+double tonalPlausibilityScore(const Metrics& m, Genre genre) noexcept
+{
+    const auto p=tonalProfileFor(genre);
+    constexpr double weights[4]={.35,.30,.25,.10};
+    double score=0.0;
+    for (int i=0;i<4;++i)
+        score += weights[i]*rangeScore(m.tonalPercent[static_cast<std::size_t>(i)],p.min[i],p.max[i],p.margin[i]);
+    return std::clamp(score,0.0,100.0);
 }
 
 Verdict verdictFor(double s) noexcept
@@ -112,8 +158,12 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         usedWeight += p.lraWeight;
     }
     double style = usedWeight>0.0 ? weightedStyle/usedWeight : 0.0;
-    const double tonalTotal=m.tonalPercent[0]+m.tonalPercent[1]+m.tonalPercent[2]+m.tonalPercent[3];
-    if (tonalTotal>99.0 && tonalTotal<101.0 && (m.tonalPercent[0]>70.0 || m.tonalPercent[3]>50.0)) style=std::max(0.0,style-5.0);
+
+    // Tonal balance is a separate, deliberately modest style dimension. It
+    // cannot make a technically safe master bad by itself, and it is ignored
+    // until the analyzer has a valid 20 Hz-20 kHz energy distribution.
+    if (tonalDataAvailable(m))
+        style = 0.85*style + 0.15*tonalPlausibilityScore(m,genre);
     style=std::clamp(style,0.0,100.0);
 
     double pcm=100.0;
