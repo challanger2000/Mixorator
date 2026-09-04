@@ -14,7 +14,6 @@ struct Profile
     double loudnessWeight, plrWeight, lraWeight;
 };
 
-// Broad professional plausibility corridors, not fixed mastering targets.
 Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
 {
     const bool vintage = era == Era::Vintage;
@@ -75,7 +74,9 @@ Verdict verdictFor(double s) noexcept
 Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre genre, Era era) noexcept
 {
     Assessment a;
-    if (!std::isfinite(m.integratedLufs) || !std::isfinite(m.truePeakDbtp))
+    a.provisional = m.provisional;
+
+    if (!std::isfinite(m.truePeakDbtp) || !m.loudnessAvailable || !std::isfinite(m.integratedLufs))
     {
         a.technicalVerdict=a.styleVerdict=a.pcmDeliveryVerdict=a.streamingDeliveryVerdict=a.overallVerdict=Verdict::InsufficientData;
         a.technicalScore=a.styleScore=a.pcmDeliveryScore=a.streamingDeliveryScore=a.overallScore=0.0;
@@ -93,23 +94,34 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     technical=std::clamp(technical,0.0,100.0);
 
     const Profile p=profileFor(mode,genre,era);
-    double style=p.loudnessWeight*rangeScore(m.integratedLufs,p.loudnessMin,p.loudnessMax,p.loudnessMargin)
-               +p.plrWeight*rangeScore(m.plrDb,p.plrMin,p.plrMax,p.plrMargin)
-               +p.lraWeight*rangeScore(m.lraLu,p.lraMin,p.lraMax,p.lraMargin);
+    double weightedStyle=0.0;
+    double usedWeight=0.0;
+    if (m.loudnessAvailable && std::isfinite(m.integratedLufs))
+    {
+        weightedStyle += p.loudnessWeight*rangeScore(m.integratedLufs,p.loudnessMin,p.loudnessMax,p.loudnessMargin);
+        usedWeight += p.loudnessWeight;
+    }
+    if (m.plrAvailable && std::isfinite(m.plrDb))
+    {
+        weightedStyle += p.plrWeight*rangeScore(m.plrDb,p.plrMin,p.plrMax,p.plrMargin);
+        usedWeight += p.plrWeight;
+    }
+    if (m.lraAvailable && std::isfinite(m.lraLu))
+    {
+        weightedStyle += p.lraWeight*rangeScore(m.lraLu,p.lraMin,p.lraMax,p.lraMargin);
+        usedWeight += p.lraWeight;
+    }
+    double style = usedWeight>0.0 ? weightedStyle/usedWeight : 0.0;
     const double tonalTotal=m.tonalPercent[0]+m.tonalPercent[1]+m.tonalPercent[2]+m.tonalPercent[3];
     if (tonalTotal>99.0 && tonalTotal<101.0 && (m.tonalPercent[0]>70.0 || m.tonalPercent[3]>50.0)) style=std::max(0.0,style-5.0);
     style=std::clamp(style,0.0,100.0);
 
-    // PCM/CD/file delivery: loudness itself is not a defect. Score only headroom/integrity risk.
     double pcm=100.0;
     if (m.nonFiniteSamples>0) pcm=0.0;
     if (m.clippedSamples>0) pcm-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
     if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
     pcm=std::clamp(pcm,0.0,100.0);
 
-    // Streaming: normalization is informational; transcoding/headroom risk affects compatibility.
-    // Spotify Normal playback currently uses -14 LUFS and recommends <=-1 dBTP, or <=-2 dBTP
-    // for masters louder than -14 LUFS. Loudness above -14 therefore does NOT lower quality score.
     const bool loud=m.integratedLufs>-14.0;
     const double recommendedTp=loud ? -2.0 : -1.0;
     double streaming=100.0;
@@ -119,8 +131,6 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     streaming=std::clamp(streaming,0.0,100.0);
     a.streamingGainDb=-14.0-m.integratedLufs;
 
-    // Overall is master quality: technical safety + musical/style plausibility.
-    // Delivery reports are separate and cannot make an otherwise excellent master 'bad'.
     double overall=0.60*technical+0.40*style;
     if (technical<50.0) overall=std::min(overall,49.0);
     else if (technical<75.0) overall=std::min(overall,74.0);
