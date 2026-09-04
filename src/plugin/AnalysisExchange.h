@@ -9,6 +9,10 @@
 namespace Mixorator
 {
 constexpr Steinberg::Vst::DataExchangeUserContextID kAnalysisExchangeContext = 0x4D58u;
+constexpr const char* kRequestFinalSnapshotMessage = "Mixorator.RequestFinalSnapshot";
+constexpr const char* kFinalSnapshotMessage = "Mixorator.FinalSnapshot";
+constexpr const char* kFinalSnapshotGenerationKey = "Generation";
+constexpr const char* kFinalSnapshotDataKey = "Snapshot";
 
 struct AnalysisExchangePacket
 {
