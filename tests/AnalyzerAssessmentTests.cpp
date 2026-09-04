@@ -1,4 +1,5 @@
 #include "dsp/AnalysisEngine.h"
+#include "dsp/AnalysisSnapshot.h"
 #include "analysis/AssessmentModel.h"
 
 #include <algorithm>
@@ -27,6 +28,9 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(e.truePeakDbtp()+1e-9<e.samplePeakDbfs())return fail("True Peak fell below Sample Peak");
  if(!approx(e.correlation(),1,1e-6)||!approx(e.lrBalanceDb(),0,1e-6)||!approx(e.monoCompatibilityDb(),0,1e-6))return fail("In-phase stereo metrics failed");
  if(std::abs(e.calculateLoudnessRangeLu())>.2)return fail("Constant programme LRA is not approximately 0 LU");
+ const auto s=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ if(!s.valid||!approx(s.samplePeakDbfs,e.samplePeakDbfs(),1e-12)||!approx(s.truePeakDbtp,e.truePeakDbtp(),1e-12)||!approx(s.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("Final snapshot did not preserve analyzer metrics");
+ if(!std::isfinite(s.plrDb)||!std::isfinite(s.loudnessRangeLu))return fail("Final snapshot produced invalid derived metrics");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;for(auto&x:r)x=-x;processStereo(e,l,r);
