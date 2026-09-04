@@ -55,6 +55,48 @@ Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionP
     return AudioEffect::disconnect(other);
 }
 
+Steinberg::tresult PLUGIN_API Processor::notify(Steinberg::Vst::IMessage* message)
+{
+    if (message && message->getMessageID() &&
+        std::strcmp(message->getMessageID(), kRequestFinalSnapshotMessage) == 0)
+    {
+        Steinberg::int64 generation = 0;
+        if (auto* attributes = message->getAttributes())
+            attributes->getInt(kFinalSnapshotGenerationKey, generation);
+        sendFinalSnapshotMessage(static_cast<std::uint64_t>(std::max<Steinberg::int64>(0, generation)));
+        return Steinberg::kResultTrue;
+    }
+
+    return AudioEffect::notify(message);
+}
+
+void Processor::sendFinalSnapshotMessage(std::uint64_t requestedGeneration) noexcept
+{
+    if (analysisState_.load(std::memory_order_acquire) != AnalysisState::Final)
+        return;
+
+    const auto currentGeneration = finalizationGeneration_.load(std::memory_order_acquire);
+    if (requestedGeneration != currentGeneration)
+        return;
+
+    const auto snapshot = captureFinalSnapshot();
+    if (!snapshot.valid)
+        return;
+
+    auto* message = allocateMessage();
+    if (!message)
+        return;
+
+    message->setMessageID(kFinalSnapshotMessage);
+    if (auto* attributes = message->getAttributes())
+    {
+        attributes->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64>(currentGeneration));
+        attributes->setBinary(kFinalSnapshotDataKey, &snapshot, static_cast<Steinberg::uint32>(sizeof(snapshot)));
+        sendMessage(message);
+    }
+    message->release();
+}
+
 Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::ProcessSetup& setup)
 {
     const auto result = AudioEffect::setupProcessing(setup);
