@@ -14,9 +14,6 @@ constexpr double kLoudnessOffset = -0.691;
 constexpr double kAbsoluteGateLufs = -70.0;
 constexpr double kRelativeGateLu = 10.0;
 constexpr double kMinimumEnergy = 1.0e-20;
-
-// ITU-R BS.1770 Annex 2 example coefficients for a 48th-order,
-// 4-phase FIR interpolator. Floating-point processing needs no initial 12.04 dB attenuation.
 constexpr double kTruePeakFir[12][4] = {
     { 0.0017089843750, -0.0291748046875, -0.0189208984375, -0.0083007812500 },
     { 0.0109863281250,  0.0292968750000,  0.0330810546875,  0.0148925781250 },
@@ -33,371 +30,111 @@ constexpr double kTruePeakFir[12][4] = {
 };
 }
 
-double AnalysisEngine::Biquad::process(double x) noexcept
+double AnalysisEngine::Biquad::process(double x) noexcept { const double y=b0*x+z1; z1=b1*x-a1*y+z2; z2=b2*x-a2*y; return y; }
+void AnalysisEngine::Biquad::clear() noexcept { z1=0.0; z2=0.0; }
+
+AnalysisEngine::Biquad AnalysisEngine::makeKWeightingShelf(double sr) noexcept
 {
-    const double y = b0 * x + z1;
-    z1 = b1 * x - a1 * y + z2;
-    z2 = b2 * x - a2 * y;
-    return y;
+    constexpr double gainDb=3.999843853973347, f0=1681.974450955533, q=0.7071752369554196, vbExp=0.4996667741545416;
+    const double k=std::tan(kPi*f0/sr), vh=std::pow(10.0,gainDb/20.0), vb=std::pow(vh,vbExp), a0=1.0+k/q+k*k;
+    Biquad f; f.b0=(vh+vb*k/q+k*k)/a0; f.b1=2.0*(k*k-vh)/a0; f.b2=(vh-vb*k/q+k*k)/a0; f.a1=2.0*(k*k-1.0)/a0; f.a2=(1.0-k/q+k*k)/a0; return f;
 }
 
-void AnalysisEngine::Biquad::clear() noexcept
+AnalysisEngine::Biquad AnalysisEngine::makeKWeightingHighPass(double sr) noexcept
 {
-    z1 = 0.0;
-    z2 = 0.0;
+    constexpr double f0=38.13547087602444, q=0.5003270373238773;
+    const double k=std::tan(kPi*f0/sr), a0=1.0+k/q+k*k;
+    Biquad f; f.b0=1.0; f.b1=-2.0; f.b2=1.0; f.a1=2.0*(k*k-1.0)/a0; f.a2=(1.0-k/q+k*k)/a0; return f;
 }
 
-AnalysisEngine::Biquad AnalysisEngine::makeKWeightingShelf(double sampleRate) noexcept
+double AnalysisEngine::energyToLufs(double e) noexcept { return e<=kMinimumEnergy ? -std::numeric_limits<double>::infinity() : kLoudnessOffset+10.0*std::log10(e); }
+double AnalysisEngine::linearToDbfs(double v) noexcept { return v>0.0 ? 20.0*std::log10(v) : -std::numeric_limits<double>::infinity(); }
+
+void AnalysisEngine::prepare(double sr)
 {
-    constexpr double gainDb = 3.999843853973347;
-    constexpr double f0 = 1681.974450955533;
-    constexpr double q = 0.7071752369554196;
-    constexpr double vbExponent = 0.4996667741545416;
-
-    const double k = std::tan(kPi * f0 / sampleRate);
-    const double vh = std::pow(10.0, gainDb / 20.0);
-    const double vb = std::pow(vh, vbExponent);
-    const double a0 = 1.0 + k / q + k * k;
-
-    Biquad filter;
-    filter.b0 = (vh + vb * k / q + k * k) / a0;
-    filter.b1 = 2.0 * (k * k - vh) / a0;
-    filter.b2 = (vh - vb * k / q + k * k) / a0;
-    filter.a1 = 2.0 * (k * k - 1.0) / a0;
-    filter.a2 = (1.0 - k / q + k * k) / a0;
-    return filter;
-}
-
-AnalysisEngine::Biquad AnalysisEngine::makeKWeightingHighPass(double sampleRate) noexcept
-{
-    constexpr double f0 = 38.13547087602444;
-    constexpr double q = 0.5003270373238773;
-
-    const double k = std::tan(kPi * f0 / sampleRate);
-    const double a0 = 1.0 + k / q + k * k;
-
-    Biquad filter;
-    filter.b0 = 1.0;
-    filter.b1 = -2.0;
-    filter.b2 = 1.0;
-    filter.a1 = 2.0 * (k * k - 1.0) / a0;
-    filter.a2 = (1.0 - k / q + k * k) / a0;
-    return filter;
-}
-
-double AnalysisEngine::energyToLufs(double meanSquare) noexcept
-{
-    if (meanSquare <= kMinimumEnergy)
-        return -std::numeric_limits<double>::infinity();
-
-    return kLoudnessOffset + 10.0 * std::log10(meanSquare);
-}
-
-void AnalysisEngine::prepare(double sampleRate)
-{
-    sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
-    momentarySamples_ = std::max<std::size_t>(1, static_cast<std::size_t>(std::llround(sampleRate_ * 0.400)));
-    shortTermSamples_ = std::max<std::size_t>(1, static_cast<std::size_t>(std::llround(sampleRate_ * 3.000)));
-    hopSamples_ = std::max<std::size_t>(1, static_cast<std::size_t>(std::llround(sampleRate_ * 0.100)));
-
-    momentaryRing_.assign(momentarySamples_, 0.0);
-    shortTermRing_.assign(shortTermSamples_, 0.0);
-
-    constexpr std::size_t maxBlocksForFourHours = 4u * 60u * 60u * 10u;
-    loudnessBlocks_.assign(maxBlocksForFourHours, 0.0);
-
-    shelf_[0] = makeKWeightingShelf(sampleRate_);
-    shelf_[1] = shelf_[0];
-    highPass_[0] = makeKWeightingHighPass(sampleRate_);
-    highPass_[1] = highPass_[0];
-
-    reset();
+    sampleRate_=sr>1.0?sr:48000.0;
+    momentarySamples_=std::max<std::size_t>(1,static_cast<std::size_t>(std::llround(sampleRate_*0.400)));
+    shortTermSamples_=std::max<std::size_t>(1,static_cast<std::size_t>(std::llround(sampleRate_*3.000)));
+    hopSamples_=std::max<std::size_t>(1,static_cast<std::size_t>(std::llround(sampleRate_*0.100)));
+    momentaryRing_.assign(momentarySamples_,0.0); shortTermRing_.assign(shortTermSamples_,0.0);
+    loudnessBlocks_.assign(4u*60u*60u*10u,0.0);
+    shelf_[0]=makeKWeightingShelf(sampleRate_); shelf_[1]=shelf_[0]; highPass_[0]=makeKWeightingHighPass(sampleRate_); highPass_[1]=highPass_[0]; reset();
 }
 
 void AnalysisEngine::reset()
 {
-    std::fill(momentaryRing_.begin(), momentaryRing_.end(), 0.0);
-    std::fill(shortTermRing_.begin(), shortTermRing_.end(), 0.0);
-
-    momentaryWrite_ = 0;
-    shortTermWrite_ = 0;
-    momentaryValid_ = 0;
-    shortTermValid_ = 0;
-    momentarySum_ = 0.0;
-    shortTermSum_ = 0.0;
-    samplesSinceBlock_ = 0;
-    loudnessBlockCount_ = 0;
-    samplePeakLinear_ = 0.0;
-    truePeakLinear_ = 0.0;
-    rmsSumSquares_ = 0.0L;
-    rmsSampleCount_ = 0;
-    leftSumSquares_ = 0.0L;
-    rightSumSquares_ = 0.0L;
-    lrCrossSum_ = 0.0L;
-    midSumSquares_ = 0.0L;
-    sideSumSquares_ = 0.0L;
-    stereoSampleCount_ = 0;
-
-    for (auto& filter : shelf_)
-        filter.clear();
-    for (auto& filter : highPass_)
-        filter.clear();
-    for (auto& channelHistory : truePeakHistory_)
-        std::fill(channelHistory, channelHistory + 12, 0.0);
-
-    samplePeakDbfs_.store(-1000.0, std::memory_order_relaxed);
-    truePeakDbtp_.store(-1000.0, std::memory_order_relaxed);
-    rmsDbfs_.store(-1000.0, std::memory_order_relaxed);
-    crestFactorDb_.store(0.0, std::memory_order_relaxed);
-    momentaryLufs_.store(-1000.0, std::memory_order_relaxed);
-    shortTermLufs_.store(-1000.0, std::memory_order_relaxed);
-    lrBalanceDb_.store(0.0, std::memory_order_relaxed);
-    correlation_.store(1.0, std::memory_order_relaxed);
-    stereoWidthDb_.store(-1000.0, std::memory_order_relaxed);
-    monoCompatibilityDb_.store(0.0, std::memory_order_relaxed);
+    std::fill(momentaryRing_.begin(),momentaryRing_.end(),0.0); std::fill(shortTermRing_.begin(),shortTermRing_.end(),0.0);
+    momentaryWrite_=shortTermWrite_=momentaryValid_=shortTermValid_=samplesSinceBlock_=loudnessBlockCount_=0; momentarySum_=shortTermSum_=0.0;
+    samplePeakLinear_=truePeakLinear_=0.0; rmsSumSquares_=0.0L; rmsSampleCount_=0;
+    leftSumSquares_=rightSumSquares_=lrCrossSum_=midSumSquares_=sideSumSquares_=0.0L; stereoSampleCount_=0;
+    dcSum_[0]=dcSum_[1]=0.0L; dcSampleCount_[0]=dcSampleCount_[1]=0; clippedSampleCountRaw_=nonFiniteSampleCountRaw_=0;
+    for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
+    samplePeakDbfs_.store(-1000.0); truePeakDbtp_.store(-1000.0); rmsDbfs_.store(-1000.0); crestFactorDb_.store(0.0);
+    momentaryLufs_.store(-1000.0); shortTermLufs_.store(-1000.0); lrBalanceDb_.store(0.0); correlation_.store(1.0);
+    stereoWidthDb_.store(-1000.0); monoCompatibilityDb_.store(0.0); dcOffsetLeftDbfs_.store(-1000.0); dcOffsetRightDbfs_.store(-1000.0);
+    clippedSampleCount_.store(0); nonFiniteSampleCount_.store(0);
 }
 
-void AnalysisEngine::pushWindowSample(std::vector<double>& ring,
-                                      std::size_t& writeIndex,
-                                      std::size_t& validSamples,
-                                      double& sum,
-                                      double value) noexcept
+void AnalysisEngine::pushWindowSample(std::vector<double>& r,std::size_t& w,std::size_t& valid,double& sum,double v) noexcept
 {
-    if (ring.empty())
-        return;
-
-    if (validSamples == ring.size())
-        sum -= ring[writeIndex];
-    else
-        ++validSamples;
-
-    ring[writeIndex] = value;
-    sum += value;
-    writeIndex = (writeIndex + 1) % ring.size();
+    if(r.empty()) return; if(valid==r.size()) sum-=r[w]; else ++valid; r[w]=v; sum+=v; w=(w+1)%r.size();
 }
 
-void AnalysisEngine::processTruePeakSample(int channel, double sample) noexcept
+void AnalysisEngine::processTruePeakSample(int ch,double s) noexcept
 {
-    auto& history = truePeakHistory_[channel];
-    for (int i = 11; i > 0; --i)
-        history[i] = history[i - 1];
-    history[0] = sample;
-
-    truePeakLinear_ = std::max(truePeakLinear_, std::abs(sample));
-
-    for (int phase = 0; phase < 4; ++phase)
-    {
-        double interpolated = 0.0;
-        for (int tap = 0; tap < 12; ++tap)
-            interpolated += history[tap] * kTruePeakFir[tap][phase];
-
-        truePeakLinear_ = std::max(truePeakLinear_, std::abs(interpolated));
-    }
+    auto& h=truePeakHistory_[ch]; for(int i=11;i>0;--i) h[i]=h[i-1]; h[0]=s; truePeakLinear_=std::max(truePeakLinear_,std::abs(s));
+    for(int p=0;p<4;++p){ double y=0.0; for(int t=0;t<12;++t) y+=h[t]*kTruePeakFir[t][p]; truePeakLinear_=std::max(truePeakLinear_,std::abs(y)); }
 }
 
 void AnalysisEngine::updateStereoMetrics() noexcept
 {
-    if (stereoSampleCount_ == 0)
-        return;
+    if(!stereoSampleCount_) return; const long double eps=1.0e-30L, l=leftSumSquares_, r=rightSumSquares_, den=std::sqrt(std::max(l*r,eps));
+    double corr=den>0.0L?static_cast<double>(lrCrossSum_/den):1.0; corr=std::max(-1.0,std::min(1.0,corr));
+    double bal=0.0; if(l>eps&&r>eps) bal=10.0*std::log10(static_cast<double>(l/r)); else if(l>eps) bal=1000.0; else if(r>eps) bal=-1000.0;
+    double width=-1000.0; if(midSumSquares_>eps&&sideSumSquares_>eps) width=10.0*std::log10(static_cast<double>(sideSumSquares_/midSumSquares_)); else if(sideSumSquares_>eps) width=1000.0;
+    const long double se=l+r; double mono=0.0; if(se>eps&&midSumSquares_>eps) mono=10.0*std::log10(static_cast<double>(midSumSquares_/se)); else if(se>eps) mono=-1000.0;
+    lrBalanceDb_.store(bal); correlation_.store(corr); stereoWidthDb_.store(width); monoCompatibilityDb_.store(mono);
+}
 
-    const long double eps = 1.0e-30L;
-    const long double left = leftSumSquares_;
-    const long double right = rightSumSquares_;
-    const long double denom = std::sqrt(std::max(left * right, eps));
-
-    double corr = denom > 0.0L ? static_cast<double>(lrCrossSum_ / denom) : 1.0;
-    corr = std::max(-1.0, std::min(1.0, corr));
-
-    double balanceDb = 0.0;
-    if (left > eps && right > eps)
-        balanceDb = 10.0 * std::log10(static_cast<double>(left / right));
-    else if (left > eps)
-        balanceDb = 1000.0;
-    else if (right > eps)
-        balanceDb = -1000.0;
-
-    double widthDb = -1000.0;
-    if (midSumSquares_ > eps && sideSumSquares_ > eps)
-        widthDb = 10.0 * std::log10(static_cast<double>(sideSumSquares_ / midSumSquares_));
-    else if (sideSumSquares_ > eps)
-        widthDb = 1000.0;
-
-    // Mono compatibility expresses the RMS level change when collapsing stereo to mono.
-    // 0 dB means no programme-energy loss; negative values indicate cancellation.
-    const long double stereoEnergy = left + right;
-    double monoDb = 0.0;
-    if (stereoEnergy > eps && midSumSquares_ > eps)
-        monoDb = 10.0 * std::log10(static_cast<double>(midSumSquares_ / stereoEnergy));
-    else if (stereoEnergy > eps)
-        monoDb = -1000.0;
-
-    lrBalanceDb_.store(balanceDb, std::memory_order_relaxed);
-    correlation_.store(corr, std::memory_order_relaxed);
-    stereoWidthDb_.store(widthDb, std::memory_order_relaxed);
-    monoCompatibilityDb_.store(monoDb, std::memory_order_relaxed);
+void AnalysisEngine::updateTechnicalMetrics() noexcept
+{
+    for(int ch=0;ch<2;++ch){ double db=-1000.0; if(dcSampleCount_[ch]) db=linearToDbfs(std::abs(static_cast<double>(dcSum_[ch]/static_cast<long double>(dcSampleCount_[ch])))); (ch?dcOffsetRightDbfs_:dcOffsetLeftDbfs_).store(db); }
+    clippedSampleCount_.store(clippedSampleCountRaw_); nonFiniteSampleCount_.store(nonFiniteSampleCountRaw_);
 }
 
 template <typename Sample>
-void AnalysisEngine::processBlock(Sample* const* channels, int numChannels, int numSamples) noexcept
+void AnalysisEngine::processBlock(Sample* const* channels,int numChannels,int numSamples) noexcept
 {
-    if (!channels || numChannels <= 0 || numSamples <= 0 || momentaryRing_.empty() || shortTermRing_.empty())
-        return;
-
-    const int channelsToMeasure = std::min(numChannels, 2);
-
-    for (int i = 0; i < numSamples; ++i)
-    {
-        double weightedEnergy = 0.0;
-
-        for (int ch = 0; ch < channelsToMeasure; ++ch)
-        {
-            if (!channels[ch])
-                continue;
-
-            const double sample = static_cast<double>(channels[ch][i]);
-            samplePeakLinear_ = std::max(samplePeakLinear_, std::abs(sample));
-            processTruePeakSample(ch, sample);
-
-            rmsSumSquares_ += static_cast<long double>(sample) * static_cast<long double>(sample);
-            ++rmsSampleCount_;
-
-            double filtered = shelf_[ch].process(sample);
-            filtered = highPass_[ch].process(filtered);
-            weightedEnergy += filtered * filtered;
+    if(!channels||numChannels<=0||numSamples<=0||momentaryRing_.empty()||shortTermRing_.empty()) return; const int nCh=std::min(numChannels,2);
+    for(int i=0;i<numSamples;++i){ double weightedEnergy=0.0;
+        for(int ch=0;ch<nCh;++ch){ if(!channels[ch]) continue; const double s=static_cast<double>(channels[ch][i]);
+            if(!std::isfinite(s)){ ++nonFiniteSampleCountRaw_; continue; }
+            if(std::abs(s)>1.0) ++clippedSampleCountRaw_; dcSum_[ch]+=static_cast<long double>(s); ++dcSampleCount_[ch];
+            samplePeakLinear_=std::max(samplePeakLinear_,std::abs(s)); processTruePeakSample(ch,s); rmsSumSquares_+=static_cast<long double>(s)*s; ++rmsSampleCount_;
+            double f=shelf_[ch].process(s); f=highPass_[ch].process(f); weightedEnergy+=f*f;
         }
-
-        if (channelsToMeasure == 2 && channels[0] && channels[1])
-        {
-            const long double left = static_cast<long double>(channels[0][i]);
-            const long double right = static_cast<long double>(channels[1][i]);
-            const long double mid = (left + right) * static_cast<long double>(kInvSqrt2);
-            const long double side = (left - right) * static_cast<long double>(kInvSqrt2);
-
-            leftSumSquares_ += left * left;
-            rightSumSquares_ += right * right;
-            lrCrossSum_ += left * right;
-            midSumSquares_ += mid * mid;
-            sideSumSquares_ += side * side;
-            ++stereoSampleCount_;
-        }
-
-        pushWindowSample(momentaryRing_, momentaryWrite_, momentaryValid_, momentarySum_, weightedEnergy);
-        pushWindowSample(shortTermRing_, shortTermWrite_, shortTermValid_, shortTermSum_, weightedEnergy);
-
-        ++samplesSinceBlock_;
-        if (samplesSinceBlock_ >= hopSamples_)
-        {
-            samplesSinceBlock_ = 0;
-
-            if (momentaryValid_ == momentarySamples_)
-            {
-                const double meanSquare = momentarySum_ / static_cast<double>(momentarySamples_);
-                momentaryLufs_.store(energyToLufs(meanSquare), std::memory_order_relaxed);
-
-                if (loudnessBlockCount_ < loudnessBlocks_.size())
-                    loudnessBlocks_[loudnessBlockCount_++] = meanSquare;
-            }
-
-            if (shortTermValid_ == shortTermSamples_)
-            {
-                const double meanSquare = shortTermSum_ / static_cast<double>(shortTermSamples_);
-                shortTermLufs_.store(energyToLufs(meanSquare), std::memory_order_relaxed);
-            }
-        }
+        if(nCh==2&&channels[0]&&channels[1]){ const double ld=static_cast<double>(channels[0][i]), rd=static_cast<double>(channels[1][i]); if(std::isfinite(ld)&&std::isfinite(rd)){ const long double l=ld,r=rd,m=(l+r)*kInvSqrt2,s=(l-r)*kInvSqrt2; leftSumSquares_+=l*l; rightSumSquares_+=r*r; lrCrossSum_+=l*r; midSumSquares_+=m*m; sideSumSquares_+=s*s; ++stereoSampleCount_; } }
+        pushWindowSample(momentaryRing_,momentaryWrite_,momentaryValid_,momentarySum_,weightedEnergy); pushWindowSample(shortTermRing_,shortTermWrite_,shortTermValid_,shortTermSum_,weightedEnergy);
+        if(++samplesSinceBlock_>=hopSamples_){ samplesSinceBlock_=0; if(momentaryValid_==momentarySamples_){ const double ms=momentarySum_/momentarySamples_; momentaryLufs_.store(energyToLufs(ms)); if(loudnessBlockCount_<loudnessBlocks_.size()) loudnessBlocks_[loudnessBlockCount_++]=ms; } if(shortTermValid_==shortTermSamples_) shortTermLufs_.store(energyToLufs(shortTermSum_/shortTermSamples_)); }
     }
-
-    const double peakDb = samplePeakLinear_ > 0.0
-                              ? 20.0 * std::log10(samplePeakLinear_)
-                              : -std::numeric_limits<double>::infinity();
-    const double truePeakDb = truePeakLinear_ > 0.0
-                                  ? 20.0 * std::log10(truePeakLinear_)
-                                  : -std::numeric_limits<double>::infinity();
-
-    double rmsDb = -std::numeric_limits<double>::infinity();
-    double crestDb = 0.0;
-    if (rmsSampleCount_ > 0)
-    {
-        const long double meanSquare = rmsSumSquares_ / static_cast<long double>(rmsSampleCount_);
-        const double rmsLinear = std::sqrt(static_cast<double>(meanSquare));
-        if (rmsLinear > 0.0)
-        {
-            rmsDb = 20.0 * std::log10(rmsLinear);
-            if (samplePeakLinear_ > 0.0)
-                crestDb = peakDb - rmsDb;
-        }
-    }
-
-    samplePeakDbfs_.store(peakDb, std::memory_order_relaxed);
-    truePeakDbtp_.store(truePeakDb, std::memory_order_relaxed);
-    rmsDbfs_.store(rmsDb, std::memory_order_relaxed);
-    crestFactorDb_.store(crestDb, std::memory_order_relaxed);
-    updateStereoMetrics();
+    const double peak=linearToDbfs(samplePeakLinear_), tp=linearToDbfs(truePeakLinear_); double rms=-std::numeric_limits<double>::infinity(), crest=0.0;
+    if(rmsSampleCount_){ const double rl=std::sqrt(static_cast<double>(rmsSumSquares_/rmsSampleCount_)); if(rl>0.0){ rms=linearToDbfs(rl); if(samplePeakLinear_>0.0) crest=peak-rms; } }
+    samplePeakDbfs_.store(peak); truePeakDbtp_.store(tp); rmsDbfs_.store(rms); crestFactorDb_.store(crest); updateStereoMetrics(); updateTechnicalMetrics();
 }
 
-void AnalysisEngine::process(float* const* channels, int numChannels, int numSamples) noexcept
-{
-    processBlock(channels, numChannels, numSamples);
-}
-
-void AnalysisEngine::process(double* const* channels, int numChannels, int numSamples) noexcept
-{
-    processBlock(channels, numChannels, numSamples);
-}
+void AnalysisEngine::process(float* const* c,int n,int s) noexcept { processBlock(c,n,s); }
+void AnalysisEngine::process(double* const* c,int n,int s) noexcept { processBlock(c,n,s); }
 
 double AnalysisEngine::calculateIntegratedLufs() const noexcept
 {
-    if (loudnessBlockCount_ == 0)
-        return -std::numeric_limits<double>::infinity();
-
-    const double absoluteGateEnergy = std::pow(10.0, (kAbsoluteGateLufs - kLoudnessOffset) / 10.0);
-
-    double absoluteGatedSum = 0.0;
-    std::size_t absoluteGatedCount = 0;
-
-    for (std::size_t i = 0; i < loudnessBlockCount_; ++i)
-    {
-        const double energy = loudnessBlocks_[i];
-        if (energy >= absoluteGateEnergy)
-        {
-            absoluteGatedSum += energy;
-            ++absoluteGatedCount;
-        }
-    }
-
-    if (absoluteGatedCount == 0)
-        return -std::numeric_limits<double>::infinity();
-
-    const double absoluteGatedMean = absoluteGatedSum / static_cast<double>(absoluteGatedCount);
-    const double relativeGateLufs = energyToLufs(absoluteGatedMean) - kRelativeGateLu;
-    const double relativeGateEnergy = std::pow(10.0, (relativeGateLufs - kLoudnessOffset) / 10.0);
-    const double finalGateEnergy = std::max(absoluteGateEnergy, relativeGateEnergy);
-
-    double finalSum = 0.0;
-    std::size_t finalCount = 0;
-
-    for (std::size_t i = 0; i < loudnessBlockCount_; ++i)
-    {
-        const double energy = loudnessBlocks_[i];
-        if (energy >= finalGateEnergy)
-        {
-            finalSum += energy;
-            ++finalCount;
-        }
-    }
-
-    return finalCount > 0
-               ? energyToLufs(finalSum / static_cast<double>(finalCount))
-               : -std::numeric_limits<double>::infinity();
+    if(!loudnessBlockCount_) return -std::numeric_limits<double>::infinity(); const double ag=std::pow(10.0,(kAbsoluteGateLufs-kLoudnessOffset)/10.0); double sum=0.0; std::size_t count=0;
+    for(std::size_t i=0;i<loudnessBlockCount_;++i) if(loudnessBlocks_[i]>=ag){sum+=loudnessBlocks_[i];++count;} if(!count) return -std::numeric_limits<double>::infinity();
+    const double rg=std::pow(10.0,(energyToLufs(sum/count)-kRelativeGateLu-kLoudnessOffset)/10.0), gate=std::max(ag,rg); sum=0.0; count=0;
+    for(std::size_t i=0;i<loudnessBlockCount_;++i) if(loudnessBlocks_[i]>=gate){sum+=loudnessBlocks_[i];++count;} return count?energyToLufs(sum/count):-std::numeric_limits<double>::infinity();
 }
 
 double AnalysisEngine::calculatePlrDb() const noexcept
 {
-    const double integrated = calculateIntegratedLufs();
-    const double truePeak = truePeakDbtp_.load(std::memory_order_relaxed);
-
-    if (!std::isfinite(integrated) || !std::isfinite(truePeak))
-        return std::numeric_limits<double>::quiet_NaN();
-
-    return truePeak - integrated;
+    const double i=calculateIntegratedLufs(),tp=truePeakDbtp_.load(); return (!std::isfinite(i)||!std::isfinite(tp))?std::numeric_limits<double>::quiet_NaN():tp-i;
 }
 }
