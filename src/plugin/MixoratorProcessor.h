@@ -33,6 +33,7 @@ public:
     Steinberg::tresult PLUGIN_API terminate() override;
     Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) override;
     Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) override;
+    Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
     Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) override;
     Steinberg::tresult PLUGIN_API setActive(Steinberg::TBool state) override;
     Steinberg::tresult PLUGIN_API setBusArrangements(
@@ -61,6 +62,7 @@ private:
 
     void handleAnalysisCommandAtBlockBoundary() noexcept;
     void publishAnalysisExchange(Steinberg::int32 numSamples) noexcept;
+    void sendFinalSnapshotMessage(std::uint64_t requestedGeneration) noexcept;
 
     DSP::AnalysisEngine analysis_;
     std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange_;
