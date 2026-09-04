@@ -1,4 +1,6 @@
 set(MIXORATOR_SOURCES
+    analysis/AssessmentModel.cpp
+    analysis/AssessmentModel.h
     dsp/AnalysisEngine.cpp
     dsp/AnalysisEngine.h
     plugin/entry.cpp
