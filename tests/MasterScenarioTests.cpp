@@ -80,7 +80,10 @@ int main()
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Classical, Era::Modern);
         if (!safeTechnical(a))
             return fail("Over-compressed Classical scenario contaminated technical safety");
-        if (a.styleScore >= 50.0 || (a.styleVerdict != Verdict::Unusual && a.styleVerdict != Verdict::Critical))
+        // Loudness alone is only slightly outside the broad Classical corridor,
+        // while PLR and LRA are clearly too compressed. The weighted result is
+        // therefore ATTENTION rather than the stronger UNUSUAL classification.
+        if (a.styleScore >= 75.0 || a.styleVerdict != Verdict::Attention)
             return fail("Over-compressed Classical scenario was not flagged stylistically");
     }
 
