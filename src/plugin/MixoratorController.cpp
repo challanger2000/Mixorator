@@ -24,6 +24,36 @@ Steinberg::tresult PLUGIN_API Controller::notify(Steinberg::Vst::IMessage* messa
     return EditController::notify(message);
 }
 
+Steinberg::tresult Controller::requestAnalysisState(Steinberg::int64 state) noexcept
+{
+    if (state != kAnalysisStateLive && state != kAnalysisStateFinal)
+        return Steinberg::kInvalidArgument;
+
+    auto* message = allocateMessage();
+    if (!message)
+        return Steinberg::kOutOfMemory;
+
+    message->setMessageID(kSetAnalysisStateMessage);
+    auto result = Steinberg::kResultFalse;
+    if (auto* attributes = message->getAttributes())
+    {
+        if (attributes->setInt(kAnalysisStateKey, state) == Steinberg::kResultTrue)
+            result = sendMessage(message);
+    }
+    message->release();
+    return result;
+}
+
+Steinberg::tresult Controller::requestLiveAnalysis() noexcept
+{
+    return requestAnalysisState(kAnalysisStateLive);
+}
+
+Steinberg::tresult Controller::requestFinalAnalysis() noexcept
+{
+    return requestAnalysisState(kAnalysisStateFinal);
+}
+
 bool Controller::consumeFinalSnapshotMessage(Steinberg::Vst::IMessage* message) noexcept
 {
     if (!message || !message->getMessageID() ||
@@ -121,7 +151,10 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(
         if (packet.finalState != 0)
             requestFinalSnapshot(packet.finalizationGeneration);
         else
+        {
+            requestedFinalGeneration_ = 0;
             finalSnapshotGeneration_ = 0;
+        }
     }
 }
 
