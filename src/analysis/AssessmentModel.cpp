@@ -16,9 +16,9 @@ struct Profile
 
 struct TonalProfile
 {
-    double min[4];
-    double max[4];
-    double margin[4];
+    std::array<double, 4> min;
+    std::array<double, 4> max;
+    std::array<double, 4> margin;
 };
 
 Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
