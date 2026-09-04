@@ -68,11 +68,14 @@ void AnalysisEngine::reset()
     samplePeakLinear_=truePeakLinear_=0.0; rmsSumSquares_=0.0L; rmsSampleCount_=0;
     leftSumSquares_=rightSumSquares_=lrCrossSum_=midSumSquares_=sideSumSquares_=0.0L; stereoSampleCount_=0;
     dcSum_[0]=dcSum_[1]=0.0L; dcSampleCount_[0]=dcSampleCount_[1]=0; clippedSampleCountRaw_=nonFiniteSampleCountRaw_=0;
+    tonalWrite_=0; tonalFrameChannel_=0; std::fill(tonalInput_,tonalInput_+kFftSize,0.0); std::fill(fftReal_,fftReal_+kFftSize,0.0); std::fill(fftImag_,fftImag_+kFftSize,0.0);
+    for(auto& e:tonalBandEnergy_) e=0.0L;
     for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
     samplePeakDbfs_.store(-1000.0); truePeakDbtp_.store(-1000.0); rmsDbfs_.store(-1000.0); crestFactorDb_.store(0.0);
     momentaryLufs_.store(-1000.0); shortTermLufs_.store(-1000.0); lrBalanceDb_.store(0.0); correlation_.store(1.0);
     stereoWidthDb_.store(-1000.0); monoCompatibilityDb_.store(0.0); dcOffsetLeftDbfs_.store(-1000.0); dcOffsetRightDbfs_.store(-1000.0);
     clippedSampleCount_.store(0); nonFiniteSampleCount_.store(0);
+    lowBandPercent_.store(0.0); lowMidBandPercent_.store(0.0); highMidBandPercent_.store(0.0); highBandPercent_.store(0.0);
 }
 
 void AnalysisEngine::pushWindowSample(std::vector<double>& r,std::size_t& w,std::size_t& valid,double& sum,double v) noexcept
@@ -102,6 +105,31 @@ void AnalysisEngine::updateTechnicalMetrics() noexcept
     clippedSampleCount_.store(clippedSampleCountRaw_); nonFiniteSampleCount_.store(nonFiniteSampleCountRaw_);
 }
 
+void AnalysisEngine::pushTonalSample(double sample,int availableChannels) noexcept
+{
+    tonalInput_[tonalWrite_++]=std::isfinite(sample)?sample:0.0;
+    if(tonalWrite_==kFftSize){ analyseTonalFrame(); tonalWrite_=0; if(availableChannels>1) tonalFrameChannel_=1-tonalFrameChannel_; else tonalFrameChannel_=0; }
+}
+
+void AnalysisEngine::analyseTonalFrame() noexcept
+{
+    for(std::size_t i=0;i<kFftSize;++i){ const double w=0.5-0.5*std::cos((2.0*kPi*static_cast<double>(i))/static_cast<double>(kFftSize-1)); fftReal_[i]=tonalInput_[i]*w; fftImag_[i]=0.0; }
+
+    for(std::size_t i=1,j=0;i<kFftSize;++i){ std::size_t bit=kFftSize>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit; if(i<j){ std::swap(fftReal_[i],fftReal_[j]); std::swap(fftImag_[i],fftImag_[j]); } }
+
+    for(std::size_t len=2;len<=kFftSize;len<<=1){ const double ang=-2.0*kPi/static_cast<double>(len); const double wLenR=std::cos(ang), wLenI=std::sin(ang); for(std::size_t i=0;i<kFftSize;i+=len){ double wr=1.0,wi=0.0; for(std::size_t j=0;j<len/2;++j){ const std::size_t a=i+j,b=a+len/2; const double vr=fftReal_[b]*wr-fftImag_[b]*wi, vi=fftReal_[b]*wi+fftImag_[b]*wr; const double ur=fftReal_[a],ui=fftImag_[a]; fftReal_[a]=ur+vr; fftImag_[a]=ui+vi; fftReal_[b]=ur-vr; fftImag_[b]=ui-vi; const double nwr=wr*wLenR-wi*wLenI; wi=wr*wLenI+wi*wLenR; wr=nwr; } } }
+
+    const double nyquist=sampleRate_*0.5, upper=std::min(20000.0,nyquist);
+    for(std::size_t k=1;k<=kFftSize/2;++k){ const double f=static_cast<double>(k)*sampleRate_/static_cast<double>(kFftSize); if(f<20.0||f>upper) continue; const long double e=static_cast<long double>(fftReal_[k])*fftReal_[k]+static_cast<long double>(fftImag_[k])*fftImag_[k]; const int band=f<250.0?0:(f<2000.0?1:(f<8000.0?2:3)); tonalBandEnergy_[band]+=e; }
+    updateTonalMetrics();
+}
+
+void AnalysisEngine::updateTonalMetrics() noexcept
+{
+    const long double total=tonalBandEnergy_[0]+tonalBandEnergy_[1]+tonalBandEnergy_[2]+tonalBandEnergy_[3]; if(total<=1.0e-30L) return;
+    lowBandPercent_.store(100.0*static_cast<double>(tonalBandEnergy_[0]/total)); lowMidBandPercent_.store(100.0*static_cast<double>(tonalBandEnergy_[1]/total)); highMidBandPercent_.store(100.0*static_cast<double>(tonalBandEnergy_[2]/total)); highBandPercent_.store(100.0*static_cast<double>(tonalBandEnergy_[3]/total));
+}
+
 template <typename Sample>
 void AnalysisEngine::processBlock(Sample* const* channels,int numChannels,int numSamples) noexcept
 {
@@ -114,6 +142,9 @@ void AnalysisEngine::processBlock(Sample* const* channels,int numChannels,int nu
             double f=shelf_[ch].process(s); f=highPass_[ch].process(f); weightedEnergy+=f*f;
         }
         if(nCh==2&&channels[0]&&channels[1]){ const double ld=static_cast<double>(channels[0][i]), rd=static_cast<double>(channels[1][i]); if(std::isfinite(ld)&&std::isfinite(rd)){ const long double l=ld,r=rd,m=(l+r)*kInvSqrt2,s=(l-r)*kInvSqrt2; leftSumSquares_+=l*l; rightSumSquares_+=r*r; lrCrossSum_+=l*r; midSumSquares_+=m*m; sideSumSquares_+=s*s; ++stereoSampleCount_; } }
+
+        int tonalChannel=(nCh>1?tonalFrameChannel_:0); double tonalSample=0.0; if(tonalChannel<nCh&&channels[tonalChannel]) tonalSample=static_cast<double>(channels[tonalChannel][i]); pushTonalSample(tonalSample,nCh);
+
         pushWindowSample(momentaryRing_,momentaryWrite_,momentaryValid_,momentarySum_,weightedEnergy); pushWindowSample(shortTermRing_,shortTermWrite_,shortTermValid_,shortTermSum_,weightedEnergy);
         if(++samplesSinceBlock_>=hopSamples_){ samplesSinceBlock_=0; if(momentaryValid_==momentarySamples_){ const double ms=momentarySum_/momentarySamples_; momentaryLufs_.store(energyToLufs(ms)); if(loudnessBlockCount_<loudnessBlocks_.size()) loudnessBlocks_[loudnessBlockCount_++]=ms; } if(shortTermValid_==shortTermSamples_) shortTermLufs_.store(energyToLufs(shortTermSum_/shortTermSamples_)); }
     }
