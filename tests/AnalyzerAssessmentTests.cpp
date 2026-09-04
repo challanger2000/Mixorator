@@ -1,5 +1,6 @@
 #include "dsp/AnalysisEngine.h"
 #include "dsp/AnalysisSnapshot.h"
+#include "analysis/AssessmentInput.h"
 #include "analysis/AssessmentModel.h"
 
 #include <algorithm>
@@ -34,6 +35,24 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  const double directLra=e.calculateLoudnessRangeLu();
  if(std::isfinite(directLra)){if(!std::isfinite(s.loudnessRangeLu)||!approx(s.loudnessRangeLu,directLra,1e-12))return fail("Final snapshot did not preserve LRA");}
  else if(std::isfinite(s.loudnessRangeLu))return fail("Final snapshot changed insufficient LRA data into a finite value");
+
+ const auto liveMetrics=AssessmentInput::fromLive(e);
+ if(!liveMetrics.provisional||!liveMetrics.loudnessAvailable||liveMetrics.plrAvailable||liveMetrics.lraAvailable)return fail("LIVE metric availability flags are wrong");
+ if(!approx(liveMetrics.integratedLufs,e.shortTermLufs(),1e-12))return fail("LIVE loudness does not use Short-Term LUFS");
+ const auto liveAssessment=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(!liveAssessment.provisional||liveAssessment.overallVerdict==Verdict::InsufficientData)return fail("LIVE assessment was not produced as provisional");
+
+ const auto finalMetrics=AssessmentInput::fromFinal(s);
+ if(finalMetrics.provisional||!finalMetrics.loudnessAvailable||!finalMetrics.plrAvailable)return fail("FINAL metric availability flags are wrong");
+ if(!approx(finalMetrics.integratedLufs,s.integratedLufs,1e-12)||!approx(finalMetrics.plrDb,s.plrDb,1e-12))return fail("FINAL assessment mapping changed whole-program metrics");
+ const auto finalAssessment=AssessmentModel::evaluate(finalMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(finalAssessment.provisional||finalAssessment.overallVerdict==Verdict::InsufficientData)return fail("FINAL assessment was not produced as definitive");
+}
+{
+ AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,1,.5);auto r=l;processStereo(e,l,r);
+ const auto liveMetrics=AssessmentInput::fromLive(e);
+ const auto a=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Mix,Genre::Pop,Era::Modern);
+ if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough Short-Term data");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;for(auto&x:r)x=-x;processStereo(e,l,r);
@@ -48,43 +67,36 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,4000,2,.5);auto r=l;processStereo(e,l,r);if(e.highMidBandPercent()<90)return fail("4 kHz tonal classification failed");
 }
-// Loud modern Metal: strong musical master, safe PCM, streaming normalization is informational.
 {
  Metrics m=cleanMetrics();m.integratedLufs=-8;m.truePeakDbtp=-2.1;m.plrDb=7;m.lraLu=4;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);
  if(a.technicalScore<99||a.styleScore<85||a.pcmDeliveryScore<99||a.streamingDeliveryScore<99)return fail("Safe loud Metal master was incorrectly penalized");
  if(!approx(a.streamingGainDb,-6.0,1e-9))return fail("Streaming gain estimate is wrong");
 }
-// Same master with insufficient codec headroom: CD/PCM remains fine, streaming gets warning.
 {
  Metrics m=cleanMetrics();m.integratedLufs=-8;m.truePeakDbtp=-1;m.plrDb=7;m.lraLu=4;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);
  if(a.styleScore<85||a.pcmDeliveryScore<99)return fail("Streaming concern contaminated master/PCM quality");
  if(a.streamingDeliveryScore>=90)return fail("Codec headroom risk did not lower streaming compatibility");
 }
-// Era changes style, not technical or delivery safety.
 {
  Metrics m=cleanMetrics();m.integratedLufs=-8;m.plrDb=7;m.lraLu=4;
  const auto x=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Rock,Era::Modern);const auto y=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Rock,Era::Vintage);
  if(!approx(x.technicalScore,y.technicalScore,1e-9)||!approx(x.pcmDeliveryScore,y.pcmDeliveryScore,1e-9)||!approx(x.streamingDeliveryScore,y.streamingDeliveryScore,1e-9))return fail("Era altered universal safety/delivery");
  if(x.styleScore<=y.styleScore)return fail("Modern/vintage Rock profiles are not differentiated");
 }
-// Classical rewards dynamics.
 {
  Metrics d=cleanMetrics();d.integratedLufs=-18;d.plrDb=20;d.lraLu=15;Metrics c=d;c.plrDb=5;c.lraLu=1;
  if(AssessmentModel::evaluate(d,AnalysisMode::Master,Genre::Classical,Era::Modern).styleScore<=AssessmentModel::evaluate(c,AnalysisMode::Master,Genre::Classical,Era::Modern).styleScore+20)return fail("Classical dynamics profile insufficient");
 }
-// MIX and MASTER are distinct.
 {
  Metrics m=cleanMetrics();m.integratedLufs=-20;m.plrDb=14;m.lraLu=8;
  if(AssessmentModel::evaluate(m,AnalysisMode::Mix,Genre::Pop,Era::Modern).styleScore<=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Pop,Era::Modern).styleScore)return fail("MIX profile is not distinct from MASTER");
 }
-// Critical technical faults cap overall.
 {
  Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;
  const auto a=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Metal,Era::Modern);if(a.technicalScore>=50||a.overallScore>=50)return fail("Critical technical faults were averaged away");
 }
-// Every profile produces finite outputs.
 {
  Metrics m=cleanMetrics();for(int mo=0;mo<2;++mo)for(int er=0;er<2;++er)for(int g=0;g<=static_cast<int>(Genre::General);++g){const auto a=AssessmentModel::evaluate(m,static_cast<AnalysisMode>(mo),static_cast<Genre>(g),static_cast<Era>(er));if(!std::isfinite(a.technicalScore)||!std::isfinite(a.styleScore)||!std::isfinite(a.pcmDeliveryScore)||!std::isfinite(a.streamingDeliveryScore)||!std::isfinite(a.overallScore)||!std::isfinite(a.streamingGainDb))return fail("A profile produced non-finite output");}
 }
