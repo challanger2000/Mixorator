@@ -22,6 +22,10 @@ public:
     double crestFactorDb() const noexcept { return crestFactorDb_.load(std::memory_order_relaxed); }
     double momentaryLufs() const noexcept { return momentaryLufs_.load(std::memory_order_relaxed); }
     double shortTermLufs() const noexcept { return shortTermLufs_.load(std::memory_order_relaxed); }
+    double lrBalanceDb() const noexcept { return lrBalanceDb_.load(std::memory_order_relaxed); }
+    double correlation() const noexcept { return correlation_.load(std::memory_order_relaxed); }
+    double stereoWidthDb() const noexcept { return stereoWidthDb_.load(std::memory_order_relaxed); }
+    double monoCompatibilityDb() const noexcept { return monoCompatibilityDb_.load(std::memory_order_relaxed); }
 
     // These calculations are intentionally not called from the audio thread.
     // Integrated loudness applies the BS.1770 gates across stored 400 ms blocks;
@@ -57,6 +61,7 @@ private:
                           double& sum,
                           double value) noexcept;
     void processTruePeakSample(int channel, double sample) noexcept;
+    void updateStereoMetrics() noexcept;
 
     double sampleRate_ {48000.0};
     std::size_t momentarySamples_ {0};
@@ -90,6 +95,15 @@ private:
     long double rmsSumSquares_ {0.0L};
     std::uint64_t rmsSampleCount_ {0};
 
+    // Programme-wide stereo statistics. The Mid/Side convention is
+    // M=(L+R)/sqrt(2), S=(L-R)/sqrt(2), preserving total energy.
+    long double leftSumSquares_ {0.0L};
+    long double rightSumSquares_ {0.0L};
+    long double lrCrossSum_ {0.0L};
+    long double midSumSquares_ {0.0L};
+    long double sideSumSquares_ {0.0L};
+    std::uint64_t stereoSampleCount_ {0};
+
     double samplePeakLinear_ {0.0};
     std::atomic<double> samplePeakDbfs_ {-1000.0};
     std::atomic<double> truePeakDbtp_ {-1000.0};
@@ -97,5 +111,9 @@ private:
     std::atomic<double> crestFactorDb_ {0.0};
     std::atomic<double> momentaryLufs_ {-1000.0};
     std::atomic<double> shortTermLufs_ {-1000.0};
+    std::atomic<double> lrBalanceDb_ {0.0};
+    std::atomic<double> correlation_ {1.0};
+    std::atomic<double> stereoWidthDb_ {-1000.0};
+    std::atomic<double> monoCompatibilityDb_ {0.0};
 };
 }
