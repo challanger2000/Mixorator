@@ -56,9 +56,20 @@ struct AssessmentInput
         m.clippedSamples = snapshot.clippedSampleCount;
         m.nonFiniteSamples = snapshot.nonFiniteSampleCount;
         m.tonalPercent = snapshot.tonalPercent;
-        m.loudnessAvailable = snapshot.valid && std::isfinite(snapshot.integratedLufs);
-        m.plrAvailable = snapshot.valid && std::isfinite(snapshot.plrDb);
-        m.lraAvailable = snapshot.valid && std::isfinite(snapshot.loudnessRangeLu);
+
+        // A snapshot being captured only means that FINAL successfully froze the analyzer.
+        // It must not imply that enough programme material exists for a definitive verdict.
+        // Requiring a valid Short-Term value guarantees at least one complete 3 s window,
+        // while Integrated Loudness still comes from the full gated programme calculation.
+        const bool minimumProgrammeContext = snapshot.valid
+            && std::isfinite(snapshot.shortTermLufs)
+            && snapshot.shortTermLufs > -999.0;
+        m.loudnessAvailable = minimumProgrammeContext
+            && std::isfinite(snapshot.integratedLufs);
+        m.plrAvailable = m.loudnessAvailable
+            && std::isfinite(snapshot.plrDb);
+        m.lraAvailable = minimumProgrammeContext
+            && std::isfinite(snapshot.loudnessRangeLu);
         m.provisional = false;
         return m;
     }
