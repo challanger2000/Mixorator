@@ -42,3 +42,14 @@ target_include_directories(MixoratorLoudnessMetrologyTests PRIVATE
 )
 
 add_test(NAME MixoratorLoudnessMetrologyTests COMMAND MixoratorLoudnessMetrologyTests)
+
+add_executable(MixoratorTruePeakMetrologyTests
+    TruePeakMetrologyTests.cpp
+    ../src/dsp/AnalysisEngine.cpp
+)
+
+target_include_directories(MixoratorTruePeakMetrologyTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorTruePeakMetrologyTests COMMAND MixoratorTruePeakMetrologyTests)
