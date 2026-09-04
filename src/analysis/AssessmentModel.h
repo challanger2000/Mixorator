@@ -40,6 +40,13 @@ struct Metrics
     std::uint64_t clippedSamples {0};
     std::uint64_t nonFiniteSamples {0};
     std::array<double, 4> tonalPercent {{0.0, 0.0, 0.0, 0.0}};
+
+    // FINAL has all three programme metrics. LIVE deliberately marks PLR/LRA
+    // unavailable and may use Short-Term LUFS as a provisional loudness value.
+    bool loudnessAvailable {true};
+    bool plrAvailable {true};
+    bool lraAvailable {true};
+    bool provisional {false};
 };
 
 struct Assessment
@@ -54,8 +61,8 @@ struct Assessment
     Verdict pcmDeliveryVerdict {Verdict::Excellent};
     Verdict streamingDeliveryVerdict {Verdict::Excellent};
     Verdict overallVerdict {Verdict::Excellent};
-    // Estimated playback gain for a -14 LUFS streaming reference. Informational only.
     double streamingGainDb {0.0};
+    bool provisional {false};
 };
 
 class AssessmentModel
