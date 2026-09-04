@@ -15,8 +15,18 @@ struct Profile
     double plrMax;
     double lraMin;
     double lraMax;
+    double loudnessMargin;
+    double plrMargin;
+    double lraMargin;
+    double loudnessWeight;
+    double plrWeight;
+    double lraWeight;
 };
 
+// These are deliberately broad plausibility corridors, not mastering targets.
+// They encode expected professional practice by mode/genre/era while avoiding
+// fake precision. Distribution-normalisation recommendations are scored later
+// and never used as the musical-quality target itself.
 Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
 {
     const bool vintage = era == Era::Vintage;
@@ -25,31 +35,68 @@ Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
     {
         switch (genre)
         {
-            case Genre::Metal: return {-24.0, -14.0, 8.0, 18.0, 2.0, 14.0};
-            case Genre::Pop: return {-24.0, -14.0, 8.0, 18.0, 2.0, 14.0};
-            case Genre::Techno:
-            case Genre::HouseEdm: return {-22.0, -13.0, 7.0, 17.0, 2.0, 12.0};
-            case Genre::HipHopTrap: return {-23.0, -13.0, 7.0, 18.0, 2.0, 13.0};
-            case Genre::Classical: return {-30.0, -16.0, 12.0, 28.0, 5.0, 24.0};
-            case Genre::Jazz:
-            case Genre::AcousticFolk: return {-28.0, -15.0, 10.0, 24.0, 4.0, 20.0};
-            default: return {-26.0, -14.0, 9.0, 21.0, 3.0, 18.0};
+            case Genre::Rock:              return {-27.0, -14.0,  9.0, 22.0, 3.0, 18.0, 7.0, 7.0, 9.0, 0.35, 0.40, 0.25};
+            case Genre::Metal:             return {-25.0, -13.0,  8.0, 19.0, 2.0, 14.0, 7.0, 6.0, 8.0, 0.35, 0.45, 0.20};
+            case Genre::Pop:               return {-25.0, -13.0,  8.0, 19.0, 2.0, 14.0, 7.0, 6.0, 8.0, 0.35, 0.45, 0.20};
+            case Genre::Techno:            return {-23.0, -12.0,  7.0, 17.0, 1.5, 12.0, 6.0, 6.0, 7.0, 0.35, 0.45, 0.20};
+            case Genre::HouseEdm:          return {-23.0, -12.0,  7.0, 17.0, 1.5, 12.0, 6.0, 6.0, 7.0, 0.35, 0.45, 0.20};
+            case Genre::HipHopTrap:        return {-24.0, -12.0,  7.0, 18.0, 1.5, 13.0, 7.0, 6.0, 8.0, 0.35, 0.45, 0.20};
+            case Genre::ElectronicAmbient:return {-29.0, -13.0,  8.0, 24.0, 2.0, 20.0, 8.0, 8.0,10.0, 0.30, 0.40, 0.30};
+            case Genre::AcousticFolk:      return {-30.0, -15.0, 11.0, 26.0, 4.0, 22.0, 8.0, 8.0,10.0, 0.25, 0.40, 0.35};
+            case Genre::Jazz:              return {-30.0, -15.0, 11.0, 27.0, 4.0, 23.0, 8.0, 8.0,10.0, 0.25, 0.40, 0.35};
+            case Genre::Classical:         return {-34.0, -16.0, 14.0, 32.0, 6.0, 28.0, 9.0,10.0,12.0, 0.20, 0.40, 0.40};
+            case Genre::Cinematic:         return {-31.0, -14.0, 11.0, 29.0, 4.0, 25.0, 9.0, 9.0,11.0, 0.25, 0.40, 0.35};
+            case Genre::General:           return {-28.0, -13.0,  9.0, 23.0, 3.0, 19.0, 8.0, 8.0,10.0, 0.30, 0.45, 0.25};
         }
     }
 
+    // MASTER: era changes musical loudness/dynamics expectations, never technical safety.
     switch (genre)
     {
-        case Genre::Metal: return vintage ? Profile{-16.0, -8.0, 8.0, 18.0, 2.0, 14.0} : Profile{-12.0, -6.0, 5.0, 13.0, 1.0, 10.0};
-        case Genre::Pop: return vintage ? Profile{-17.0, -9.0, 8.0, 18.0, 2.0, 14.0} : Profile{-14.0, -7.0, 6.0, 14.0, 1.0, 11.0};
+        case Genre::Rock:
+            return vintage
+                ? Profile{-20.0, -9.0, 10.0, 24.0, 3.0, 19.0, 6.0, 7.0, 9.0, 0.35, 0.40, 0.25}
+                : Profile{-15.0, -7.0,  7.0, 18.0, 2.0, 14.0, 5.0, 6.0, 8.0, 0.40, 0.40, 0.20};
+        case Genre::Metal:
+            return vintage
+                ? Profile{-18.0, -8.0,  9.0, 21.0, 2.0, 16.0, 6.0, 7.0, 8.0, 0.40, 0.40, 0.20}
+                : Profile{-13.0, -5.5, 5.0, 14.0, 1.0, 10.0, 5.0, 5.0, 7.0, 0.45, 0.40, 0.15};
+        case Genre::Pop:
+            return vintage
+                ? Profile{-19.0, -9.0,  9.0, 21.0, 2.0, 16.0, 6.0, 7.0, 8.0, 0.40, 0.40, 0.20}
+                : Profile{-15.0, -6.5, 6.0, 15.0, 1.0, 11.0, 5.0, 5.0, 7.0, 0.45, 0.40, 0.15};
         case Genre::Techno:
-        case Genre::HouseEdm: return vintage ? Profile{-16.0, -9.0, 7.0, 17.0, 2.0, 12.0} : Profile{-12.0, -6.0, 5.0, 12.0, 1.0, 9.0};
-        case Genre::HipHopTrap: return vintage ? Profile{-17.0, -9.0, 8.0, 18.0, 2.0, 13.0} : Profile{-13.0, -6.0, 5.0, 13.0, 1.0, 10.0};
-        case Genre::Classical: return {-24.0, -14.0, 14.0, 30.0, 6.0, 25.0};
-        case Genre::Jazz: return vintage ? Profile{-22.0, -13.0, 12.0, 26.0, 5.0, 22.0} : Profile{-20.0, -11.0, 10.0, 23.0, 4.0, 20.0};
-        case Genre::AcousticFolk: return vintage ? Profile{-22.0, -13.0, 11.0, 25.0, 4.0, 21.0} : Profile{-19.0, -10.0, 9.0, 21.0, 3.0, 18.0};
-        case Genre::Cinematic: return {-22.0, -10.0, 10.0, 26.0, 4.0, 22.0};
-        default: return vintage ? Profile{-20.0, -11.0, 10.0, 23.0, 4.0, 19.0} : Profile{-16.0, -8.0, 7.0, 18.0, 2.0, 15.0};
+        case Genre::HouseEdm:
+            return vintage
+                ? Profile{-18.0, -8.5, 8.0, 19.0, 2.0, 14.0, 6.0, 6.0, 8.0, 0.45, 0.40, 0.15}
+                : Profile{-13.0, -5.5, 4.5, 13.0, 1.0,  9.0, 5.0, 5.0, 6.0, 0.45, 0.40, 0.15};
+        case Genre::HipHopTrap:
+            return vintage
+                ? Profile{-19.0, -9.0,  9.0, 21.0, 2.0, 15.0, 6.0, 7.0, 8.0, 0.40, 0.40, 0.20}
+                : Profile{-14.0, -5.5, 5.0, 14.0, 1.0, 10.0, 5.0, 5.0, 7.0, 0.45, 0.40, 0.15};
+        case Genre::ElectronicAmbient:
+            return vintage
+                ? Profile{-23.0, -10.0,10.0, 26.0, 4.0, 22.0, 7.0, 8.0,10.0, 0.30, 0.40, 0.30}
+                : Profile{-20.0, -8.0,  8.0, 22.0, 3.0, 19.0, 7.0, 7.0, 9.0, 0.30, 0.40, 0.30};
+        case Genre::AcousticFolk:
+            return vintage
+                ? Profile{-24.0, -12.0,12.0, 28.0, 5.0, 23.0, 7.0, 8.0,10.0, 0.25, 0.40, 0.35}
+                : Profile{-21.0, -9.5, 9.0, 23.0, 3.0, 20.0, 7.0, 7.0, 9.0, 0.25, 0.40, 0.35};
+        case Genre::Jazz:
+            return vintage
+                ? Profile{-24.0, -12.0,13.0, 29.0, 5.0, 24.0, 7.0, 8.0,10.0, 0.25, 0.40, 0.35}
+                : Profile{-22.0, -10.0,10.0, 25.0, 4.0, 21.0, 7.0, 8.0, 9.0, 0.25, 0.40, 0.35};
+        case Genre::Classical:
+            return {-27.0, -13.0, 15.0, 34.0, 7.0, 30.0, 9.0,11.0,13.0, 0.15, 0.40, 0.45};
+        case Genre::Cinematic:
+            return {-24.0, -9.0, 11.0, 29.0, 4.0, 25.0, 8.0, 9.0,11.0, 0.25, 0.40, 0.35};
+        case Genre::General:
+            return vintage
+                ? Profile{-22.0, -10.0,11.0, 26.0, 4.0, 21.0, 7.0, 8.0,10.0, 0.30, 0.45, 0.25}
+                : Profile{-18.0, -7.5, 7.0, 20.0, 2.0, 16.0, 6.0, 7.0, 9.0, 0.35, 0.45, 0.20};
     }
+
+    return {-18.0, -7.5, 7.0, 20.0, 2.0, 16.0, 6.0, 7.0, 9.0, 0.35, 0.45, 0.20};
 }
 
 double rangeScore(double value, double minGood, double maxGood, double softMargin) noexcept
@@ -59,7 +106,7 @@ double rangeScore(double value, double minGood, double maxGood, double softMargi
     if (value >= minGood && value <= maxGood)
         return 100.0;
     const double distance = value < minGood ? minGood - value : value - maxGood;
-    return std::clamp(100.0 - (distance / softMargin) * 50.0, 0.0, 100.0);
+    return std::clamp(100.0 - (distance / std::max(softMargin, 0.001)) * 50.0, 0.0, 100.0);
 }
 
 Verdict verdictFor(double score) noexcept
@@ -82,40 +129,48 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         return a;
     }
 
-    // Technical safety is deliberately genre-independent.
+    // Universal technical safety: never relaxed by genre or era.
     double technical = 100.0;
     if (m.nonFiniteSamples > 0) technical = 0.0;
-    if (m.clippedSamples > 0) technical -= 25.0;
-    if (m.truePeakDbtp > 0.0) technical -= std::min(35.0, 15.0 + m.truePeakDbtp * 10.0);
+    if (m.clippedSamples > 0) technical -= std::min(30.0, 15.0 + 5.0 * std::log10(1.0 + static_cast<double>(m.clippedSamples)));
+    if (m.truePeakDbtp > 0.0) technical -= std::min(40.0, 20.0 + m.truePeakDbtp * 10.0);
     if (m.correlation < 0.0) technical -= std::min(30.0, -m.correlation * 30.0);
-    if (m.monoCompatibilityDb < -3.0) technical -= std::min(25.0, (-3.0 - m.monoCompatibilityDb) * 5.0);
+    if (m.monoCompatibilityDb < -3.0) technical -= std::min(30.0, (-3.0 - m.monoCompatibilityDb) * 5.0);
     if (std::abs(m.lrBalanceDb) > 3.0) technical -= std::min(15.0, (std::abs(m.lrBalanceDb) - 3.0) * 3.0);
     if (m.dcOffsetLeftDbfs > -50.0 || m.dcOffsetRightDbfs > -50.0) technical -= 10.0;
     technical = std::clamp(technical, 0.0, 100.0);
 
     const Profile p = profileFor(mode, genre, era);
-    const double loudnessScore = rangeScore(m.integratedLufs, p.loudnessMin, p.loudnessMax, 6.0);
-    const double plrScore = rangeScore(m.plrDb, p.plrMin, p.plrMax, 6.0);
-    const double lraScore = rangeScore(m.lraLu, p.lraMin, p.lraMax, 8.0);
-    double style = 0.45 * loudnessScore + 0.35 * plrScore + 0.20 * lraScore;
+    const double loudnessScore = rangeScore(m.integratedLufs, p.loudnessMin, p.loudnessMax, p.loudnessMargin);
+    const double plrScore = rangeScore(m.plrDb, p.plrMin, p.plrMax, p.plrMargin);
+    const double lraScore = rangeScore(m.lraLu, p.lraMin, p.lraMax, p.lraMargin);
+    double style = p.loudnessWeight * loudnessScore + p.plrWeight * plrScore + p.lraWeight * lraScore;
 
-    // Tonal profile remains a weak signal until empirical genre corridors are calibrated.
+    // Tonal balance is still intentionally weak until per-genre distributions are
+    // calibrated from raw reference data. Only pathological global skews are flagged.
     const double tonalTotal = m.tonalPercent[0] + m.tonalPercent[1] + m.tonalPercent[2] + m.tonalPercent[3];
     if (tonalTotal > 99.0 && tonalTotal < 101.0)
     {
-        const bool extreme = m.tonalPercent[0] > 65.0 || m.tonalPercent[3] > 45.0;
-        if (extreme) style = std::max(0.0, style - 5.0);
+        const bool extremeLow = m.tonalPercent[0] > 70.0;
+        const bool extremeHigh = m.tonalPercent[3] > 50.0;
+        if (extremeLow || extremeHigh)
+            style = std::max(0.0, style - 5.0);
     }
 
-    // Delivery compatibility is intentionally separate from musical master quality.
+    // Delivery compatibility models normalisation/transcoding risk, not artistry.
+    // Spotify currently normalises Normal playback to -14 LUFS, recommends <=-1 dBTP,
+    // and <=-2 dBTP for masters louder than -14 LUFS. A loud but clean master may
+    // therefore retain an excellent style score while receiving a delivery warning.
     double delivery = 100.0;
-    if (m.truePeakDbtp > -1.0)
-        delivery -= std::min(35.0, (m.truePeakDbtp + 1.0) * 20.0 + 10.0);
-    if (m.integratedLufs > -14.0)
+    const bool louderThanStreamingReference = m.integratedLufs > -14.0;
+    const double recommendedTp = louderThanStreamingReference ? -2.0 : -1.0;
+    if (m.truePeakDbtp > recommendedTp)
+        delivery -= std::min(45.0, 10.0 + (m.truePeakDbtp - recommendedTp) * 20.0);
+    if (louderThanStreamingReference)
         delivery -= std::min(20.0, (m.integratedLufs + 14.0) * 2.5);
     delivery = std::clamp(delivery, 0.0, 100.0);
 
-    // Critical technical defects cap the overall result; style cannot average them away.
+    // Technical faults cap the overall result and cannot be averaged away.
     double overall = 0.50 * technical + 0.35 * style + 0.15 * delivery;
     if (technical < 50.0) overall = std::min(overall, 49.0);
     else if (technical < 75.0) overall = std::min(overall, 74.0);
@@ -128,7 +183,6 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     a.styleVerdict = verdictFor(a.styleScore);
     a.deliveryVerdict = verdictFor(a.deliveryScore);
     a.overallVerdict = verdictFor(a.overallScore);
-
     return a;
 }
 }
