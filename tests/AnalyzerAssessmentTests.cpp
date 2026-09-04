@@ -30,7 +30,10 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(std::abs(e.calculateLoudnessRangeLu())>.2)return fail("Constant programme LRA is not approximately 0 LU");
  const auto s=Mixorator::DSP::AnalysisSnapshot::capture(e);
  if(!s.valid||!approx(s.samplePeakDbfs,e.samplePeakDbfs(),1e-12)||!approx(s.truePeakDbtp,e.truePeakDbtp(),1e-12)||!approx(s.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("Final snapshot did not preserve analyzer metrics");
- if(!std::isfinite(s.plrDb)||!std::isfinite(s.loudnessRangeLu))return fail("Final snapshot produced invalid derived metrics");
+ if(!std::isfinite(s.plrDb))return fail("Final snapshot produced invalid PLR");
+ const double directLra=e.calculateLoudnessRangeLu();
+ if(std::isfinite(directLra)){if(!std::isfinite(s.loudnessRangeLu)||!approx(s.loudnessRangeLu,directLra,1e-12))return fail("Final snapshot did not preserve LRA");}
+ else if(std::isfinite(s.loudnessRangeLu))return fail("Final snapshot changed insufficient LRA data into a finite value");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;for(auto&x:r)x=-x;processStereo(e,l,r);
