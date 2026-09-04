@@ -83,3 +83,14 @@ target_include_directories(MixoratorProcessorRobustnessTests PRIVATE
 target_link_libraries(MixoratorProcessorRobustnessTests PRIVATE sdk)
 
 add_test(NAME MixoratorProcessorRobustnessTests COMMAND MixoratorProcessorRobustnessTests)
+
+add_executable(MixoratorMasterScenarioTests
+    MasterScenarioTests.cpp
+    ../src/analysis/AssessmentModel.cpp
+)
+
+target_include_directories(MixoratorMasterScenarioTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorMasterScenarioTests COMMAND MixoratorMasterScenarioTests)
