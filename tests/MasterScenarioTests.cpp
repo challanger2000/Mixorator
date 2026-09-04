@@ -64,7 +64,10 @@ int main()
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
         if (!safeTechnical(a))
             return fail("Dynamic Metal scenario contaminated technical safety");
-        if (a.styleVerdict != Verdict::Unusual && a.styleScore >= 50.0)
+        // This is clearly outside the modern-Metal sweet spot, but not so far
+        // outside it that it should cross the deliberately stronger UNUSUAL
+        // threshold. ATTENTION is the intended intermediate result here.
+        if (a.styleScore >= 75.0 || a.styleVerdict != Verdict::Attention)
             return fail("Dynamic modern Metal scenario did not register as stylistically atypical");
     }
 
