@@ -174,8 +174,6 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         style = 0.85*style + 0.15*tonalPlausibilityScore(m,genre);
     style=std::clamp(style,0.0,100.0);
 
-    // Delivery is a MASTER concept. A MIX can be technically/style assessed,
-    // but calling an unfinished mix "streaming compatible" would be misleading.
     double pcm=0.0;
     double streaming=0.0;
     if (mode == AnalysisMode::Master)
@@ -186,8 +184,6 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
         pcm=std::clamp(pcm,0.0,100.0);
 
-        // -14 LUFS is only a normalization reference. Loudness itself is not a
-        // quality penalty; it selects the conservative codec-headroom corridor.
         const bool loud=m.integratedLufs>-14.0;
         const double recommendedTp=loud ? -2.0 : -1.0;
         streaming=100.0;
@@ -209,7 +205,9 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     a.streamingDeliveryScore=streaming;
     a.overallScore=std::clamp(overall,0.0,100.0);
     a.technicalVerdict=verdictFor(a.technicalScore);
-    a.styleVerdict=verdictFor(a.styleScore);
+    a.styleVerdict=(a.styleScore<50.0 && a.technicalScore>=75.0)
+        ? Verdict::Unusual
+        : verdictFor(a.styleScore);
     a.overallVerdict=verdictFor(a.overallScore);
     if (mode == AnalysisMode::Master)
     {
