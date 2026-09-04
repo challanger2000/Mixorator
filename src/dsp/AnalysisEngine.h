@@ -26,6 +26,9 @@ public:
     double correlation() const noexcept { return correlation_.load(std::memory_order_relaxed); }
     double stereoWidthDb() const noexcept { return stereoWidthDb_.load(std::memory_order_relaxed); }
     double monoCompatibilityDb() const noexcept { return monoCompatibilityDb_.load(std::memory_order_relaxed); }
+    double worstLocalCorrelation() const noexcept { return worstLocalCorrelation_.load(std::memory_order_relaxed); }
+    double worstLocalMonoCompatibilityDb() const noexcept { return worstLocalMonoCompatibilityDb_.load(std::memory_order_relaxed); }
+    double negativeCorrelationPercent() const noexcept { return negativeCorrelationPercent_.load(std::memory_order_relaxed); }
     double dcOffsetLeftDbfs() const noexcept { return dcOffsetLeftDbfs_.load(std::memory_order_relaxed); }
     double dcOffsetRightDbfs() const noexcept { return dcOffsetRightDbfs_.load(std::memory_order_relaxed); }
     std::uint64_t clippedSampleCount() const noexcept { return clippedSampleCount_.load(std::memory_order_relaxed); }
@@ -62,6 +65,7 @@ private:
                           std::size_t& validSamples, double& sum, double value) noexcept;
     void processTruePeakSample(int channel, double sample) noexcept;
     void updateStereoMetrics() noexcept;
+    void finishLocalStereoWindow() noexcept;
     void updateTechnicalMetrics() noexcept;
     void pushTonalSample(double sample, int availableChannels) noexcept;
     void analyseTonalFrame() noexcept;
@@ -85,8 +89,6 @@ private:
     std::vector<double> loudnessBlocks_;
     std::size_t loudnessBlockCount_ {0};
 
-    // EBU Tech 3342 LRA input: one 3 s short-term loudness value per second.
-    // Four hours maximum, preallocated in prepare(), never grown in process().
     std::vector<double> lraShortTermBlocks_;
     std::size_t lraShortTermBlockCount_ {0};
     std::size_t lraHopCounter_ {0};
@@ -106,6 +108,18 @@ private:
     long double midSumSquares_ {0.0L};
     long double sideSumSquares_ {0.0L};
     std::uint64_t stereoSampleCount_ {0};
+
+    // Non-overlapping 100 ms stereo windows expose short phase/mono faults
+    // that programme-wide averages can hide.
+    long double localLeftSumSquares_ {0.0L};
+    long double localRightSumSquares_ {0.0L};
+    long double localCrossSum_ {0.0L};
+    long double localMidSumSquares_ {0.0L};
+    std::size_t localStereoSamples_ {0};
+    std::uint64_t localStereoWindowCount_ {0};
+    std::uint64_t negativeCorrelationWindowCount_ {0};
+    double worstLocalCorrelationRaw_ {1.0};
+    double worstLocalMonoCompatibilityDbRaw_ {0.0};
 
     long double dcSum_[2] {0.0L, 0.0L};
     std::uint64_t dcSampleCount_[2] {0, 0};
@@ -130,6 +144,9 @@ private:
     std::atomic<double> correlation_ {1.0};
     std::atomic<double> stereoWidthDb_ {-1000.0};
     std::atomic<double> monoCompatibilityDb_ {0.0};
+    std::atomic<double> worstLocalCorrelation_ {1.0};
+    std::atomic<double> worstLocalMonoCompatibilityDb_ {0.0};
+    std::atomic<double> negativeCorrelationPercent_ {0.0};
     std::atomic<double> dcOffsetLeftDbfs_ {-1000.0};
     std::atomic<double> dcOffsetRightDbfs_ {-1000.0};
     std::atomic<std::uint64_t> clippedSampleCount_ {0};
