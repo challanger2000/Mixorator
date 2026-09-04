@@ -63,9 +63,6 @@ Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
 
 TonalProfile tonalProfileFor(Genre genre) noexcept
 {
-    // These are intentionally broad plausibility corridors for programme-wide
-    // energy distribution, not mastering targets. They are kept conservative
-    // until the public genre dataset is calibrated directly against Mixorator.
     switch (genre)
     {
         case Genre::Rock:               return {{{18,25,15,1}}, {{45,50,40,15}}, {{15,15,15,8}}};
@@ -108,6 +105,23 @@ double tonalPlausibilityScore(const Metrics& m, Genre genre) noexcept
     return std::clamp(score,0.0,100.0);
 }
 
+double localStereoPenalty(const Metrics& m) noexcept
+{
+    double severity=0.0;
+    if (std::isfinite(m.worstLocalCorrelation) && m.worstLocalCorrelation<0.0)
+        severity += std::min(8.0,-m.worstLocalCorrelation*8.0);
+    if (std::isfinite(m.worstLocalMonoCompatibilityDb) && m.worstLocalMonoCompatibilityDb<-3.0)
+        severity += std::min(8.0,(-3.0-m.worstLocalMonoCompatibilityDb)*1.5);
+
+    const double prevalence=std::clamp(m.negativeCorrelationPercent,0.0,100.0);
+    const double prevalencePenalty = prevalence<=1.0 ? 0.0 : std::min(8.0,(prevalence-1.0)*0.35);
+
+    // A short isolated fault should move an otherwise excellent technical score
+    // into a warning/good region, but sustained bad stereo must be handled much
+    // more strongly by the existing programme-wide correlation/mono penalties.
+    return std::min(16.0,severity+prevalencePenalty);
+}
+
 Verdict verdictFor(double s) noexcept
 {
     if (s>=90) return Verdict::Excellent;
@@ -135,6 +149,7 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     if (m.truePeakDbtp>0.0) technical-=std::min(40.0,20.0+m.truePeakDbtp*10.0);
     if (m.correlation<0.0) technical-=std::min(30.0,-m.correlation*30.0);
     if (m.monoCompatibilityDb<-3.0) technical-=std::min(30.0,(-3.0-m.monoCompatibilityDb)*5.0);
+    technical-=localStereoPenalty(m);
     if (std::abs(m.lrBalanceDb)>3.0) technical-=std::min(15.0,(std::abs(m.lrBalanceDb)-3.0)*3.0);
     if (m.dcOffsetLeftDbfs>-50.0 || m.dcOffsetRightDbfs>-50.0) technical-=10.0;
     technical=std::clamp(technical,0.0,100.0);
@@ -159,9 +174,6 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     }
     double style = usedWeight>0.0 ? weightedStyle/usedWeight : 0.0;
 
-    // Tonal balance is a separate, deliberately modest style dimension. It
-    // cannot make a technically safe master bad by itself, and it is ignored
-    // until the analyzer has a valid 20 Hz-20 kHz energy distribution.
     if (tonalDataAvailable(m))
         style = 0.85*style + 0.15*tonalPlausibilityScore(m,genre);
     style=std::clamp(style,0.0,100.0);
