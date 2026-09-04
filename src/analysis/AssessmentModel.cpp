@@ -115,10 +115,6 @@ double localStereoPenalty(const Metrics& m) noexcept
 
     const double prevalence=std::clamp(m.negativeCorrelationPercent,0.0,100.0);
     const double prevalencePenalty = prevalence<=1.0 ? 0.0 : std::min(8.0,(prevalence-1.0)*0.35);
-
-    // A short isolated fault should move an otherwise excellent technical score
-    // into a warning/good region, but sustained bad stereo must be handled much
-    // more strongly by the existing programme-wide correlation/mono penalties.
     return std::min(16.0,severity+prevalencePenalty);
 }
 
@@ -178,20 +174,30 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         style = 0.85*style + 0.15*tonalPlausibilityScore(m,genre);
     style=std::clamp(style,0.0,100.0);
 
-    double pcm=100.0;
-    if (m.nonFiniteSamples>0) pcm=0.0;
-    if (m.clippedSamples>0) pcm-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
-    if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
-    pcm=std::clamp(pcm,0.0,100.0);
+    // Delivery is a MASTER concept. A MIX can be technically/style assessed,
+    // but calling an unfinished mix "streaming compatible" would be misleading.
+    double pcm=0.0;
+    double streaming=0.0;
+    if (mode == AnalysisMode::Master)
+    {
+        pcm=100.0;
+        if (m.nonFiniteSamples>0) pcm=0.0;
+        if (m.clippedSamples>0) pcm-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
+        if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
+        pcm=std::clamp(pcm,0.0,100.0);
 
-    const bool loud=m.integratedLufs>-14.0;
-    const double recommendedTp=loud ? -2.0 : -1.0;
-    double streaming=100.0;
-    if (m.nonFiniteSamples>0) streaming=0.0;
-    if (m.truePeakDbtp>recommendedTp)
-        streaming-=std::min(50.0,10.0+(m.truePeakDbtp-recommendedTp)*20.0);
-    streaming=std::clamp(streaming,0.0,100.0);
-    a.streamingGainDb=-14.0-m.integratedLufs;
+        // -14 LUFS is only a normalization reference. Loudness itself is not a
+        // quality penalty; it selects the conservative codec-headroom corridor.
+        const bool loud=m.integratedLufs>-14.0;
+        const double recommendedTp=loud ? -2.0 : -1.0;
+        streaming=100.0;
+        if (m.nonFiniteSamples>0) streaming=0.0;
+        if (m.clippedSamples>0) streaming-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
+        if (m.truePeakDbtp>recommendedTp)
+            streaming-=std::min(50.0,10.0+(m.truePeakDbtp-recommendedTp)*20.0);
+        streaming=std::clamp(streaming,0.0,100.0);
+        a.streamingGainDb=-14.0-m.integratedLufs;
+    }
 
     double overall=0.60*technical+0.40*style;
     if (technical<50.0) overall=std::min(overall,49.0);
@@ -204,9 +210,17 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     a.overallScore=std::clamp(overall,0.0,100.0);
     a.technicalVerdict=verdictFor(a.technicalScore);
     a.styleVerdict=verdictFor(a.styleScore);
-    a.pcmDeliveryVerdict=verdictFor(a.pcmDeliveryScore);
-    a.streamingDeliveryVerdict=verdictFor(a.streamingDeliveryScore);
     a.overallVerdict=verdictFor(a.overallScore);
+    if (mode == AnalysisMode::Master)
+    {
+        a.pcmDeliveryVerdict=verdictFor(a.pcmDeliveryScore);
+        a.streamingDeliveryVerdict=verdictFor(a.streamingDeliveryScore);
+    }
+    else
+    {
+        a.pcmDeliveryVerdict=Verdict::InsufficientData;
+        a.streamingDeliveryVerdict=Verdict::InsufficientData;
+    }
     return a;
 }
 }
