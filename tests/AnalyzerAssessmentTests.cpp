@@ -44,6 +44,22 @@ std::vector<double> sine(double sr, double hz, double seconds, double amp, doubl
         v[i] = amp * std::sin(2.0 * kPi * hz * static_cast<double>(i) / sr + phase);
     return v;
 }
+
+Mixorator::Analysis::Metrics cleanMetrics()
+{
+    Mixorator::Analysis::Metrics m;
+    m.integratedLufs = -12.0;
+    m.truePeakDbtp = -2.1;
+    m.plrDb = 10.0;
+    m.lraLu = 6.0;
+    m.crestFactorDb = 10.0;
+    m.correlation = 0.7;
+    m.monoCompatibilityDb = -0.5;
+    m.lrBalanceDb = 0.2;
+    m.dcOffsetLeftDbfs = -90.0;
+    m.dcOffsetRightDbfs = -90.0;
+    return m;
+}
 }
 
 int main()
@@ -81,7 +97,7 @@ int main()
         if (e.monoCompatibilityDb() > -100.0) return fail("Anti-phase mono cancellation was not detected");
     }
 
-    // 3) True-peak intersample stress: shifted high-frequency sine must preserve TP>=SP invariant.
+    // 3) True-peak stress invariant.
     {
         AnalysisEngine e;
         e.prepare(sr);
@@ -91,7 +107,7 @@ int main()
         if (e.truePeakDbtp() + 1e-9 < e.samplePeakDbfs()) return fail("True Peak invariant failed on intersample stress signal");
     }
 
-    // 4) Tonal classification: a 100 Hz sine should overwhelmingly land in 20-250 Hz.
+    // 4) Tonal classification: 100 Hz -> low band.
     {
         AnalysisEngine e;
         e.prepare(sr);
@@ -101,7 +117,7 @@ int main()
         if (e.lowBandPercent() < 90.0) return fail("100 Hz tone was not classified as low-band energy");
     }
 
-    // 5) Tonal classification: a 4 kHz sine should overwhelmingly land in 2-8 kHz.
+    // 5) Tonal classification: 4 kHz -> high-mid band.
     {
         AnalysisEngine e;
         e.prepare(sr);
@@ -111,40 +127,101 @@ int main()
         if (e.highMidBandPercent() < 90.0) return fail("4 kHz tone was not classified as high-mid energy");
     }
 
-    // 6) Assessment: a plausible modern metal master may be loud but must not be technically penalized solely for loudness.
+    // 6) A plausible modern metal master can be loud without becoming a technical fault.
     {
-        Metrics m;
+        Metrics m = cleanMetrics();
         m.integratedLufs = -8.0;
-        m.truePeakDbtp = -1.2;
+        m.truePeakDbtp = -2.1;
         m.plrDb = 7.0;
         m.lraLu = 4.0;
-        m.crestFactorDb = 8.0;
-        m.correlation = 0.7;
-        m.monoCompatibilityDb = -0.5;
-        m.lrBalanceDb = 0.2;
-        m.dcOffsetLeftDbfs = -90.0;
-        m.dcOffsetRightDbfs = -90.0;
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
         if (a.technicalScore < 99.0) return fail("Loud but safe metal master was technically penalized");
-        if (a.styleScore < 75.0) return fail("Plausible modern metal master did not score as stylistically acceptable");
+        if (a.styleScore < 85.0) return fail("Plausible modern metal master did not score strongly for style");
     }
 
-    // 7) Assessment: critical technical faults must cap overall result regardless of style.
+    // 7) Delivery is independent: same musical master can be stylistically strong but receive streaming warnings.
     {
-        Metrics m;
+        Metrics m = cleanMetrics();
+        m.integratedLufs = -8.0;
+        m.truePeakDbtp = -1.0;
+        m.plrDb = 7.0;
+        m.lraLu = 4.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (a.styleScore < 85.0) return fail("Delivery warning contaminated style score");
+        if (a.deliveryScore >= 90.0) return fail("Loud master with limited codec headroom did not receive delivery warning");
+    }
+
+    // 8) Era must affect style expectations but never technical safety.
+    {
+        Metrics m = cleanMetrics();
+        m.integratedLufs = -8.0;
+        m.truePeakDbtp = -2.1;
+        m.plrDb = 7.0;
+        m.lraLu = 4.0;
+        const auto modern = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Rock, Era::Modern);
+        const auto vintage = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Rock, Era::Vintage);
+        if (!approx(modern.technicalScore, vintage.technicalScore, 1e-9)) return fail("Era altered universal technical safety");
+        if (modern.styleScore <= vintage.styleScore) return fail("Modern/vintage Rock profiles are not meaningfully differentiated");
+    }
+
+    // 9) Classical should reward preserved dynamics over a hyper-limited profile.
+    {
+        Metrics dynamic = cleanMetrics();
+        dynamic.integratedLufs = -18.0;
+        dynamic.plrDb = 20.0;
+        dynamic.lraLu = 15.0;
+        Metrics crushed = dynamic;
+        crushed.plrDb = 5.0;
+        crushed.lraLu = 1.0;
+        const auto good = AssessmentModel::evaluate(dynamic, AnalysisMode::Master, Genre::Classical, Era::Modern);
+        const auto bad = AssessmentModel::evaluate(crushed, AnalysisMode::Master, Genre::Classical, Era::Modern);
+        if (good.styleScore <= bad.styleScore + 20.0) return fail("Classical dynamics profile is not differentiated enough");
+    }
+
+    // 10) Mix and master are distinct states; a healthy mix should not be forced toward mastered loudness.
+    {
+        Metrics m = cleanMetrics();
+        m.integratedLufs = -20.0;
+        m.plrDb = 14.0;
+        m.lraLu = 8.0;
+        const auto mix = AssessmentModel::evaluate(m, AnalysisMode::Mix, Genre::Pop, Era::Modern);
+        const auto master = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Pop, Era::Modern);
+        if (mix.styleScore <= master.styleScore) return fail("MIX profile is not distinct from MASTER profile");
+    }
+
+    // 11) Critical technical faults must cap overall result regardless of style.
+    {
+        Metrics m = cleanMetrics();
         m.integratedLufs = -9.0;
         m.truePeakDbtp = 2.0;
         m.plrDb = 8.0;
         m.lraLu = 4.0;
         m.correlation = -1.0;
         m.monoCompatibilityDb = -1000.0;
-        m.lrBalanceDb = 0.0;
         m.dcOffsetLeftDbfs = -20.0;
         m.dcOffsetRightDbfs = -20.0;
         m.clippedSamples = 100;
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
         if (a.technicalScore >= 50.0) return fail("Severe technical faults did not become critical");
         if (a.overallScore >= 50.0) return fail("Critical technical faults were averaged away in overall score");
+    }
+
+    // 12) Every genre/profile combination must produce finite scores for valid input.
+    {
+        Metrics m = cleanMetrics();
+        for (int mode = 0; mode < 2; ++mode)
+        for (int era = 0; era < 2; ++era)
+        for (int genre = 0; genre <= static_cast<int>(Genre::General); ++genre)
+        {
+            const auto a = AssessmentModel::evaluate(
+                m,
+                static_cast<AnalysisMode>(mode),
+                static_cast<Genre>(genre),
+                static_cast<Era>(era));
+            if (!std::isfinite(a.technicalScore) || !std::isfinite(a.styleScore) ||
+                !std::isfinite(a.deliveryScore) || !std::isfinite(a.overallScore))
+                return fail("A calibrated profile produced a non-finite score");
+        }
     }
 
     std::cout << "All Mixorator deterministic tests passed.\n";
