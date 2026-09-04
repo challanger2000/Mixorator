@@ -15,7 +15,7 @@ jobs:
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
       - name: Build tests
-        run: cmake --build build --config Release --target MixoratorTests MixoratorLocalStereoTests MixoratorAnalyzerIntegrityTests MixoratorLoudnessMetrologyTests --parallel
+        run: cmake --build build --config Release --target MixoratorTests MixoratorLocalStereoTests MixoratorAnalyzerIntegrityTests MixoratorLoudnessMetrologyTests MixoratorTruePeakMetrologyTests --parallel
 
       - name: Run tests
         run: ctest --test-dir build -C Release --output-on-failure
