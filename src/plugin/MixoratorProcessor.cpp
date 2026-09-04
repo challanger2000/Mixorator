@@ -40,7 +40,7 @@ Steinberg::tresult PLUGIN_API Processor::terminate()
     return AudioEffect::terminate();
 }
 
-Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::IConnectionPoint* other)
+Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::Vst::IConnectionPoint* other)
 {
     const auto result = AudioEffect::connect(other);
     if (dataExchange_)
@@ -48,7 +48,7 @@ Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::IConnectionPoint* ot
     return result;
 }
 
-Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::IConnectionPoint* other)
+Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionPoint* other)
 {
     if (dataExchange_)
         dataExchange_->onDisconnect(other);
