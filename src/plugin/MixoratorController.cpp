@@ -12,9 +12,6 @@ namespace Mixorator
 {
 namespace
 {
-const VSTGUI::CPoint kCompactSize {650., 440.};
-const VSTGUI::CPoint kDetailsSize {1000., 700.};
-
 const char* verdictText(Analysis::Verdict verdict) noexcept
 {
     switch (verdict)
@@ -48,7 +45,7 @@ Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* contex
 }
 Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString name)
 {
-    if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0) { auto* editor = new VSTGUI::VST3Editor(this, "view", "mixorator.uidesc"); editor->setDelegate(this); return editor; }
+    if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0) { auto* editor = new VSTGUI::VST3Editor(this, "compactView", "mixorator.uidesc"); editor->setDelegate(this); return editor; }
     return nullptr;
 }
 VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view, const VSTGUI::UIAttributes& attributes, const VSTGUI::IUIDescription*, VSTGUI::VST3Editor*)
@@ -75,9 +72,7 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view, const VSTGUI::UIAttri
 void Controller::didOpen(VSTGUI::VST3Editor* editor)
 {
     editor_ = editor;
-    editor_->setEditorSizeConstrains(kCompactSize, kDetailsSize);
     refreshUi();
-    editor_->requestResize(kCompactSize);
 }
 void Controller::willClose(VSTGUI::VST3Editor*) { clearUiPointers(); }
 void Controller::valueChanged(VSTGUI::CControl* control)
@@ -92,13 +87,23 @@ void Controller::valueChanged(VSTGUI::CControl* control)
         case kUiGenre: if (genreMenu_) { const auto i = genreMenu_->getCurrentIndex(); if (i >= 0 && i <= static_cast<std::int32_t>(Analysis::Genre::General)) uiGenre_ = static_cast<Analysis::Genre>(i); } break;
         case kUiEra: if (eraMenu_) { const auto i = eraMenu_->getCurrentIndex(); if (i >= 0 && i <= static_cast<std::int32_t>(Analysis::Era::Vintage)) uiEra_ = static_cast<Analysis::Era>(i); } break;
         case kUiDetails:
+        {
             uiDetailsVisible_ = true;
-            if (editor_) editor_->requestResize(kDetailsSize);
-            break;
+            auto* currentEditor = editor_;
+            clearUiPointers();
+            editor_ = currentEditor;
+            if (currentEditor) currentEditor->exchangeView("detailsView");
+            return;
+        }
         case kUiBack:
+        {
             uiDetailsVisible_ = false;
-            if (editor_) editor_->requestResize(kCompactSize);
-            break;
+            auto* currentEditor = editor_;
+            clearUiPointers();
+            editor_ = currentEditor;
+            if (currentEditor) currentEditor->exchangeView("compactView");
+            return;
+        }
         case kUiReset: case kUiAnalyze: if (requestLiveAnalysis() == Steinberg::kResultTrue) { uiFinalSelected_ = false; hasPacket_ = false; latestPacket_ = {}; requestedFinalGeneration_ = 0; finalSnapshotGeneration_ = 0; } break;
         default: return;
     }
