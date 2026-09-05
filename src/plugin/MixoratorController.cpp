@@ -12,6 +12,9 @@ namespace Mixorator
 {
 namespace
 {
+const VSTGUI::CPoint kCompactSize {650., 440.};
+const VSTGUI::CPoint kDetailsSize {1000., 700.};
+
 const char* verdictText(Analysis::Verdict verdict) noexcept
 {
     switch (verdict)
@@ -92,7 +95,11 @@ void Controller::valueChanged(VSTGUI::CControl* control)
             auto* currentEditor = editor_;
             clearUiPointers();
             editor_ = currentEditor;
-            if (currentEditor) currentEditor->exchangeView("detailsView");
+            if (currentEditor)
+            {
+                currentEditor->exchangeView("detailsView");
+                currentEditor->requestResize(kDetailsSize);
+            }
             return;
         }
         case kUiBack:
@@ -101,7 +108,11 @@ void Controller::valueChanged(VSTGUI::CControl* control)
             auto* currentEditor = editor_;
             clearUiPointers();
             editor_ = currentEditor;
-            if (currentEditor) currentEditor->exchangeView("compactView");
+            if (currentEditor)
+            {
+                currentEditor->exchangeView("compactView");
+                currentEditor->requestResize(kCompactSize);
+            }
             return;
         }
         case kUiReset: case kUiAnalyze: if (requestLiveAnalysis() == Steinberg::kResultTrue) { uiFinalSelected_ = false; hasPacket_ = false; latestPacket_ = {}; requestedFinalGeneration_ = 0; finalSnapshotGeneration_ = 0; } break;
