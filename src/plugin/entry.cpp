@@ -3,7 +3,7 @@
 #include "MixoratorIDs.h"
 #include "MixoratorProcessor.h"
 
-#define stringPluginName "Mixorator"
+#define stringPluginName "Analysator"
 #define stringPluginVersion "0.1.0"
 
 BEGIN_FACTORY_DEF("challanger2000", "https://github.com/challanger2000/Mixorator", "")
@@ -23,7 +23,7 @@ DEF_CLASS2(
     INLINE_UID_FROM_FUID(Mixorator::kControllerUID),
     Steinberg::PClassInfo::kManyInstances,
     kVstComponentControllerClass,
-    "Mixorator Controller",
+    "Analysator Controller",
     0,
     "",
     stringPluginVersion,
