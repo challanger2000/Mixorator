@@ -67,7 +67,9 @@ Steinberg::tresult PLUGIN_API Processor::notify(Steinberg::Vst::IMessage* messag
         if (!attributes || attributes->getInt(kAnalysisStateKey, state) != Steinberg::kResultTrue)
             return Steinberg::kInvalidArgument;
 
-        if (state == kAnalysisStateLive)
+        if (state == kAnalysisStateIdle)
+            requestResetAnalysis();
+        else if (state == kAnalysisStateLive)
             requestLiveAnalysis();
         else if (state == kAnalysisStateFinal)
             requestFinalAnalysis();
@@ -128,7 +130,7 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
     exchangeSequence_ = 0;
     lastPublishedFinalizationGeneration_ = 0;
     analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
-    analysisState_.store(AnalysisState::Live, std::memory_order_release);
+    analysisState_.store(AnalysisState::Idle, std::memory_order_release);
     finalizationGeneration_.store(0, std::memory_order_relaxed);
     return Steinberg::kResultOk;
 }
@@ -150,7 +152,7 @@ Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
         exchangeSequence_ = 0;
         lastPublishedFinalizationGeneration_ = 0;
         analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
-        analysisState_.store(AnalysisState::Live, std::memory_order_release);
+        analysisState_.store(AnalysisState::Idle, std::memory_order_release);
         finalizationGeneration_.store(0, std::memory_order_relaxed);
     }
 
@@ -179,6 +181,11 @@ Steinberg::tresult PLUGIN_API Processor::canProcessSampleSize(Steinberg::int32 s
             symbolicSampleSize == Steinberg::Vst::kSample64)
                ? Steinberg::kResultTrue
                : Steinberg::kResultFalse;
+}
+
+void Processor::requestResetAnalysis() noexcept
+{
+    analysisCommand_.store(AnalysisCommand::Reset, std::memory_order_release);
 }
 
 void Processor::requestLiveAnalysis() noexcept
@@ -231,16 +238,17 @@ void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
         return;
     }
 
-    if (command == AnalysisCommand::StartLive)
+    if (command == AnalysisCommand::Reset || command == AnalysisCommand::StartLive)
     {
         if (snapshotReaders_.load(std::memory_order_acquire) != 0)
             return;
 
         analysis_.reset();
-        analysisState_.store(AnalysisState::Live, std::memory_order_release);
+        analysisState_.store(command == AnalysisCommand::Reset ? AnalysisState::Idle : AnalysisState::Live,
+                             std::memory_order_release);
         exchangeSampleCounter_ = exchangeIntervalSamples_;
 
-        AnalysisCommand expected = AnalysisCommand::StartLive;
+        AnalysisCommand expected = command;
         analysisCommand_.compare_exchange_strong(
             expected, AnalysisCommand::None,
             std::memory_order_acq_rel, std::memory_order_acquire);
@@ -252,9 +260,13 @@ void Processor::publishAnalysisExchange(Steinberg::int32 numSamples) noexcept
     if (!dataExchange_)
         return;
 
+    const auto state = analysisState_.load(std::memory_order_acquire);
+    if (state == AnalysisState::Idle)
+        return;
+
     exchangeSampleCounter_ += static_cast<std::uint64_t>(std::max<Steinberg::int32>(0, numSamples));
     const auto generation = finalizationGeneration_.load(std::memory_order_acquire);
-    const bool finalState = analysisState_.load(std::memory_order_acquire) == AnalysisState::Final;
+    const bool finalState = state == AnalysisState::Final;
     const bool finalChanged = generation != lastPublishedFinalizationGeneration_;
 
     if (finalState)
