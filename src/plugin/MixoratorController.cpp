@@ -1,26 +1,363 @@
 #include "MixoratorController.h"
 #include "../analysis/AssessmentInput.h"
 #include "../dsp/AnalysisSnapshot.h"
-#include "vstgui/plugin-bindings/vst3editor.h"
+#include "vstgui/lib/controls/ccontrol.h"
+#include "vstgui/lib/controls/coptionmenu.h"
+#include "vstgui/lib/controls/ctextlabel.h"
 
+#include <cstdio>
 #include <cstring>
 
 namespace Mixorator
 {
+namespace
+{
+const char* verdictText(Analysis::Verdict verdict) noexcept
+{
+    switch (verdict)
+    {
+        case Analysis::Verdict::Excellent: return "EXCELLENT";
+        case Analysis::Verdict::Good: return "GOOD";
+        case Analysis::Verdict::Attention: return "ATTENTION";
+        case Analysis::Verdict::Critical: return "CRITICAL";
+        case Analysis::Verdict::Unusual: return "UNUSUAL";
+        case Analysis::Verdict::InsufficientData: return "N/A";
+    }
+    return "N/A";
+}
+
+void setLabel(VSTGUI::CTextLabel* label, const char* text) noexcept
+{
+    if (label)
+        label->setText(text ? text : "");
+}
+
+void formatValue(VSTGUI::CTextLabel* label, double value, const char* suffix,
+                 bool available, int precision = 1) noexcept
+{
+    if (!label)
+        return;
+
+    if (!available)
+    {
+        label->setText("--");
+        return;
+    }
+
+    char buffer[64] {};
+    std::snprintf(buffer, sizeof(buffer), precision == 2 ? "%.2f %s" : "%.1f %s",
+                  value, suffix ? suffix : "");
+    label->setText(buffer);
+}
+}
+
 Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* context)
 {
     hasPacket_ = false;
     latestPacket_ = {};
     requestedFinalGeneration_ = 0;
     finalSnapshotGeneration_ = 0;
+    uiMode_ = Analysis::AnalysisMode::Mix;
+    uiGenre_ = Analysis::Genre::General;
+    uiEra_ = Analysis::Era::Modern;
+    uiFinalSelected_ = false;
+    clearUiPointers();
     return EditController::initialize(context);
 }
 
 Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString name)
 {
     if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
-        return new VSTGUI::VST3Editor(this, "view", "mixorator.uidesc");
+    {
+        auto* editor = new VSTGUI::VST3Editor(this, "view", "mixorator.uidesc");
+        editor->setDelegate(this);
+        return editor;
+    }
     return nullptr;
+}
+
+VSTGUI::CView* Controller::verifyView(
+    VSTGUI::CView* view,
+    const VSTGUI::UIAttributes& attributes,
+    const VSTGUI::IUIDescription*,
+    VSTGUI::VST3Editor*)
+{
+    if (!view)
+        return nullptr;
+
+    bindNamedView(view, attributes);
+
+    if (auto* control = dynamic_cast<VSTGUI::CControl*>(view))
+    {
+        switch (control->getTag())
+        {
+            case kUiMix:
+                mixControl_ = control;
+                control->setListener(this);
+                break;
+            case kUiMaster:
+                masterControl_ = control;
+                control->setListener(this);
+                break;
+            case kUiLive:
+                liveControl_ = control;
+                control->setListener(this);
+                break;
+            case kUiFinal:
+                finalControl_ = control;
+                control->setListener(this);
+                break;
+            case kUiGenre:
+                if (auto* menu = dynamic_cast<VSTGUI::COptionMenu*>(control))
+                {
+                    genreMenu_ = menu;
+                    menu->setListener(this);
+                    menu->removeAllEntry();
+                    menu->addEntry("Rock");
+                    menu->addEntry("Metal");
+                    menu->addEntry("Pop");
+                    menu->addEntry("Techno");
+                    menu->addEntry("House / EDM");
+                    menu->addEntry("Hip-Hop / Trap");
+                    menu->addEntry("Electronic / Ambient");
+                    menu->addEntry("Acoustic / Folk");
+                    menu->addEntry("Jazz");
+                    menu->addEntry("Classical");
+                    menu->addEntry("Cinematic Music");
+                    menu->addEntry("General");
+                    menu->setCurrent(static_cast<std::int32_t>(uiGenre_));
+                }
+                break;
+            case kUiEra:
+                if (auto* menu = dynamic_cast<VSTGUI::COptionMenu*>(control))
+                {
+                    eraMenu_ = menu;
+                    menu->setListener(this);
+                    menu->removeAllEntry();
+                    menu->addEntry("Modern");
+                    menu->addEntry("Vintage");
+                    menu->setCurrent(static_cast<std::int32_t>(uiEra_));
+                }
+                break;
+            case kUiReset:
+            case kUiAnalyze:
+                control->setListener(this);
+                break;
+            default:
+                break;
+        }
+    }
+
+    return view;
+}
+
+void Controller::didOpen(VSTGUI::VST3Editor* editor)
+{
+    editor_ = editor;
+    refreshUi();
+}
+
+void Controller::willClose(VSTGUI::VST3Editor*)
+{
+    clearUiPointers();
+}
+
+void Controller::valueChanged(VSTGUI::CControl* control)
+{
+    if (!control)
+        return;
+
+    switch (control->getTag())
+    {
+        case kUiMix:
+            uiMode_ = Analysis::AnalysisMode::Mix;
+            break;
+        case kUiMaster:
+            uiMode_ = Analysis::AnalysisMode::Master;
+            break;
+        case kUiLive:
+            if (requestLiveAnalysis() == Steinberg::kResultTrue)
+            {
+                uiFinalSelected_ = false;
+                hasPacket_ = false;
+                latestPacket_ = {};
+                requestedFinalGeneration_ = 0;
+                finalSnapshotGeneration_ = 0;
+            }
+            break;
+        case kUiFinal:
+            if (requestFinalAnalysis() == Steinberg::kResultTrue)
+                uiFinalSelected_ = true;
+            break;
+        case kUiGenre:
+            if (genreMenu_)
+            {
+                const auto index = genreMenu_->getCurrentIndex();
+                if (index >= 0 && index <= static_cast<std::int32_t>(Analysis::Genre::General))
+                    uiGenre_ = static_cast<Analysis::Genre>(index);
+            }
+            break;
+        case kUiEra:
+            if (eraMenu_)
+            {
+                const auto index = eraMenu_->getCurrentIndex();
+                if (index >= 0 && index <= static_cast<std::int32_t>(Analysis::Era::Vintage))
+                    uiEra_ = static_cast<Analysis::Era>(index);
+            }
+            break;
+        case kUiReset:
+        case kUiAnalyze:
+            if (requestLiveAnalysis() == Steinberg::kResultTrue)
+            {
+                uiFinalSelected_ = false;
+                hasPacket_ = false;
+                latestPacket_ = {};
+                requestedFinalGeneration_ = 0;
+                finalSnapshotGeneration_ = 0;
+            }
+            break;
+        default:
+            return;
+    }
+
+    refreshUi();
+}
+
+void Controller::bindNamedView(VSTGUI::CView* view, const VSTGUI::UIAttributes& attributes) noexcept
+{
+    const auto* id = attributes.getAttributeValue("mixorator-id");
+    if (!id)
+        return;
+
+    auto* label = dynamic_cast<VSTGUI::CTextLabel*>(view);
+    if (!label)
+        return;
+
+    if (*id == "technicalVerdict") technicalVerdict_ = label;
+    else if (*id == "styleVerdict") styleVerdict_ = label;
+    else if (*id == "pcmVerdict") pcmVerdict_ = label;
+    else if (*id == "streamingVerdict") streamingVerdict_ = label;
+    else if (*id == "stateLabel") stateLabel_ = label;
+    else if (*id == "overallVerdict") overallVerdict_ = label;
+    else if (*id == "overallLine1") overallLine1_ = label;
+    else if (*id == "overallLine2") overallLine2_ = label;
+    else if (*id == "integratedValue") integratedValue_ = label;
+    else if (*id == "truePeakValue") truePeakValue_ = label;
+    else if (*id == "plrValue") plrValue_ = label;
+    else if (*id == "lraValue") lraValue_ = label;
+    else if (*id == "correlationValue") correlationValue_ = label;
+    else if (*id == "monoValue") monoValue_ = label;
+}
+
+void Controller::updateSelectionControls() noexcept
+{
+    if (mixControl_)
+    {
+        mixControl_->setValue(uiMode_ == Analysis::AnalysisMode::Mix ? 1.f : 0.f);
+        mixControl_->invalid();
+    }
+    if (masterControl_)
+    {
+        masterControl_->setValue(uiMode_ == Analysis::AnalysisMode::Master ? 1.f : 0.f);
+        masterControl_->invalid();
+    }
+    if (liveControl_)
+    {
+        liveControl_->setValue(uiFinalSelected_ ? 0.f : 1.f);
+        liveControl_->invalid();
+    }
+    if (finalControl_)
+    {
+        finalControl_->setValue(uiFinalSelected_ ? 1.f : 0.f);
+        finalControl_->invalid();
+    }
+
+    if (genreMenu_)
+        genreMenu_->setCurrent(static_cast<std::int32_t>(uiGenre_));
+    if (eraMenu_)
+        eraMenu_->setCurrent(static_cast<std::int32_t>(uiEra_));
+}
+
+void Controller::refreshUi() noexcept
+{
+    updateSelectionControls();
+
+    const auto assessment = evaluateLatest(uiMode_, uiGenre_, uiEra_);
+    setLabel(technicalVerdict_, verdictText(assessment.technicalVerdict));
+    setLabel(styleVerdict_, verdictText(assessment.styleVerdict));
+    setLabel(pcmVerdict_, verdictText(assessment.pcmDeliveryVerdict));
+    setLabel(streamingVerdict_, verdictText(assessment.streamingDeliveryVerdict));
+    setLabel(overallVerdict_, verdictText(assessment.overallVerdict));
+
+    if (!hasPacket_)
+    {
+        setLabel(stateLabel_, "WAITING FOR AUDIO");
+        setLabel(overallLine1_, "Start playback to begin analysis.");
+        setLabel(overallLine2_, "No programme data received yet.");
+        formatValue(integratedValue_, 0.0, "LUFS", false);
+        formatValue(truePeakValue_, 0.0, "dBTP", false);
+        formatValue(plrValue_, 0.0, "dB", false);
+        formatValue(lraValue_, 0.0, "LU", false);
+        formatValue(correlationValue_, 0.0, "", false);
+        formatValue(monoValue_, 0.0, "dB", false);
+        return;
+    }
+
+    const auto& metrics = latestPacket_.metrics;
+    const bool finalPacket = latestPacket_.finalState != 0;
+    const bool definitive = finalPacket && hasDefinitiveFinalSnapshot();
+
+    if (finalPacket && !definitive)
+    {
+        setLabel(stateLabel_, "FINAL / PENDING");
+        setLabel(overallLine1_, "Final snapshot requested.");
+        setLabel(overallLine2_, "Waiting for definitive programme metrics.");
+    }
+    else if (definitive)
+    {
+        setLabel(stateLabel_, "FINAL / DEFINITIVE");
+        setLabel(overallLine1_, "Definitive full-programme assessment.");
+        setLabel(overallLine2_, "Snapshot frozen until a new analysis starts.");
+    }
+    else
+    {
+        setLabel(stateLabel_, "LIVE / PROVISIONAL");
+        setLabel(overallLine1_, "Live analysis in progress.");
+        setLabel(overallLine2_, "Values may change until FINAL is requested.");
+    }
+
+    formatValue(integratedValue_, metrics.integratedLufs, "LUFS",
+                metrics.loudnessAvailable && metrics.integratedLufs > -999.0);
+    formatValue(truePeakValue_, metrics.truePeakDbtp, "dBTP", metrics.truePeakDbtp > -999.0);
+    formatValue(plrValue_, metrics.plrDb, "dB", metrics.plrAvailable);
+    formatValue(lraValue_, metrics.lraLu, "LU", metrics.lraAvailable);
+    formatValue(correlationValue_, metrics.correlation, "", true, 2);
+    formatValue(monoValue_, metrics.monoCompatibilityDb, "dB", true);
+}
+
+void Controller::clearUiPointers() noexcept
+{
+    editor_ = nullptr;
+    mixControl_ = nullptr;
+    masterControl_ = nullptr;
+    liveControl_ = nullptr;
+    finalControl_ = nullptr;
+    genreMenu_ = nullptr;
+    eraMenu_ = nullptr;
+    technicalVerdict_ = nullptr;
+    styleVerdict_ = nullptr;
+    pcmVerdict_ = nullptr;
+    streamingVerdict_ = nullptr;
+    stateLabel_ = nullptr;
+    overallVerdict_ = nullptr;
+    overallLine1_ = nullptr;
+    overallLine2_ = nullptr;
+    integratedValue_ = nullptr;
+    truePeakValue_ = nullptr;
+    plrValue_ = nullptr;
+    lraValue_ = nullptr;
+    correlationValue_ = nullptr;
+    monoValue_ = nullptr;
 }
 
 Steinberg::tresult PLUGIN_API Controller::notify(Steinberg::Vst::IMessage* message)
@@ -92,6 +429,7 @@ bool Controller::consumeFinalSnapshotMessage(Steinberg::Vst::IMessage* message) 
 
     latestPacket_.metrics = Analysis::AssessmentInput::fromFinal(snapshot);
     finalSnapshotGeneration_ = generation;
+    refreshUi();
     return true;
 }
 
@@ -131,6 +469,7 @@ void PLUGIN_API Controller::queueClosed(
         hasPacket_ = false;
         requestedFinalGeneration_ = 0;
         finalSnapshotGeneration_ = 0;
+        refreshUi();
     }
 }
 
@@ -143,6 +482,7 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(
     if (userContextID != kAnalysisExchangeContext || !blocks)
         return;
 
+    bool changed = false;
     for (Steinberg::uint32 i = 0; i < numBlocks; ++i)
     {
         if (!blocks[i].data || blocks[i].size < sizeof(AnalysisExchangePacket))
@@ -155,6 +495,8 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(
 
         latestPacket_ = packet;
         hasPacket_ = true;
+        uiFinalSelected_ = packet.finalState != 0;
+        changed = true;
 
         if (packet.finalState != 0)
             requestFinalSnapshot(packet.finalizationGeneration);
@@ -164,6 +506,9 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(
             finalSnapshotGeneration_ = 0;
         }
     }
+
+    if (changed)
+        refreshUi();
 }
 
 Analysis::Assessment Controller::evaluateLatest(
