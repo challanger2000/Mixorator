@@ -12,6 +12,9 @@ namespace Mixorator
 {
 namespace
 {
+const VSTGUI::CPoint kCompactSize {650., 440.};
+const VSTGUI::CPoint kDetailsSize {1000., 700.};
+
 const char* verdictText(Analysis::Verdict verdict) noexcept
 {
     switch (verdict)
@@ -69,7 +72,12 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view, const VSTGUI::UIAttri
     }
     return view;
 }
-void Controller::didOpen(VSTGUI::VST3Editor* editor) { editor_ = editor; refreshUi(); }
+void Controller::didOpen(VSTGUI::VST3Editor* editor)
+{
+    editor_ = editor;
+    refreshUi();
+    editor_->requestResize(kCompactSize);
+}
 void Controller::willClose(VSTGUI::VST3Editor*) { clearUiPointers(); }
 void Controller::valueChanged(VSTGUI::CControl* control)
 {
@@ -82,8 +90,14 @@ void Controller::valueChanged(VSTGUI::CControl* control)
         case kUiFinal: if (requestFinalAnalysis() == Steinberg::kResultTrue) uiFinalSelected_ = true; break;
         case kUiGenre: if (genreMenu_) { const auto i = genreMenu_->getCurrentIndex(); if (i >= 0 && i <= static_cast<std::int32_t>(Analysis::Genre::General)) uiGenre_ = static_cast<Analysis::Genre>(i); } break;
         case kUiEra: if (eraMenu_) { const auto i = eraMenu_->getCurrentIndex(); if (i >= 0 && i <= static_cast<std::int32_t>(Analysis::Era::Vintage)) uiEra_ = static_cast<Analysis::Era>(i); } break;
-        case kUiDetails: uiDetailsVisible_ = true; break;
-        case kUiBack: uiDetailsVisible_ = false; break;
+        case kUiDetails:
+            uiDetailsVisible_ = true;
+            if (editor_) editor_->requestResize(kDetailsSize);
+            break;
+        case kUiBack:
+            uiDetailsVisible_ = false;
+            if (editor_) editor_->requestResize(kCompactSize);
+            break;
         case kUiReset: case kUiAnalyze: if (requestLiveAnalysis() == Steinberg::kResultTrue) { uiFinalSelected_ = false; hasPacket_ = false; latestPacket_ = {}; requestedFinalGeneration_ = 0; finalSnapshotGeneration_ = 0; } break;
         default: return;
     }
