@@ -3,6 +3,10 @@
 #include "MixoratorIDs.h"
 #include "MixoratorProcessor.h"
 
+#if defined(_WIN32)
+void* moduleHandle = nullptr;
+#endif
+
 #define stringPluginName "Mixorator"
 #define stringPluginVersion "0.1.0"
 
