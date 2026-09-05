@@ -64,9 +64,6 @@ int main()
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
         if (!safeTechnical(a))
             return fail("Dynamic Metal scenario contaminated technical safety");
-        // This is clearly outside the modern-Metal sweet spot, but not so far
-        // outside it that it should cross the deliberately stronger UNUSUAL
-        // threshold. ATTENTION is the intended intermediate result here.
         if (a.styleScore >= 75.0 || a.styleVerdict != Verdict::Attention)
             return fail("Dynamic modern Metal scenario did not register as stylistically atypical");
     }
@@ -80,18 +77,12 @@ int main()
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Classical, Era::Modern);
         if (!safeTechnical(a))
             return fail("Over-compressed Classical scenario contaminated technical safety");
-        // Loudness alone is only slightly outside the broad Classical corridor,
-        // while PLR and LRA are clearly too compressed. The weighted result is
-        // therefore ATTENTION rather than the stronger UNUSUAL classification.
         if (a.styleScore >= 75.0 || a.styleVerdict != Verdict::Attention)
             return fail("Over-compressed Classical scenario was not flagged stylistically");
     }
 
     {
         auto m = base();
-        // Keep loudness/dynamics inside both modern Acoustic/Folk and Techno
-        // corridors so this scenario isolates tonal discrimination instead of
-        // letting the dynamics profile dominate the comparison.
         m.integratedLufs = -12.0;
         m.plrDb = 10.0;
         m.lraLu = 6.0;
@@ -149,6 +140,18 @@ int main()
             return fail("Vintage Rock scenario did not prefer the vintage profile");
         if (std::abs(vintage.technicalScore - modern.technicalScore) > 1e-12)
             return fail("Era changed technical safety");
+    }
+
+    {
+        auto m = base();
+        m.integratedLufs = -30.0;
+        m.plrDb = 30.0;
+        m.lraLu = 25.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (!safeTechnical(a) || a.styleVerdict != Verdict::Unusual)
+            return fail("Clean extreme style outlier did not produce UNUSUAL style semantics");
+        if (a.overallVerdict == Verdict::Critical)
+            return fail("Clean stylistic outlier was mislabeled CRITICAL overall");
     }
 
     {
