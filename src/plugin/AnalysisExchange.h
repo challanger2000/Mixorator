@@ -12,8 +12,9 @@ constexpr Steinberg::Vst::DataExchangeUserContextID kAnalysisExchangeContext = 0
 
 constexpr const char* kSetAnalysisStateMessage = "Mixorator.SetAnalysisState";
 constexpr const char* kAnalysisStateKey = "State";
-constexpr Steinberg::int64 kAnalysisStateLive = 0;
-constexpr Steinberg::int64 kAnalysisStateFinal = 1;
+constexpr Steinberg::int64 kAnalysisStateIdle = 0;
+constexpr Steinberg::int64 kAnalysisStateLive = 1;
+constexpr Steinberg::int64 kAnalysisStateFinal = 2;
 
 constexpr const char* kRequestFinalSnapshotMessage = "Mixorator.RequestFinalSnapshot";
 constexpr const char* kFinalSnapshotMessage = "Mixorator.FinalSnapshot";
