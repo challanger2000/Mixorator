@@ -4,6 +4,7 @@
 #include "public.sdk/source/vst/utility/dataexchange.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "vstgui/lib/controls/icontrollistener.h"
+#include "vstgui/uidescription/uiattributes.h"
 #include "AnalysisExchange.h"
 
 #include <cstdint>
