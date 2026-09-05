@@ -1,58 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <vstgui-ui-description version="1">
-    <colors>
-        <color name="Background" rgba="#15181CFF"/>
-        <color name="Panel" rgba="#20242AFF"/>
-        <color name="Panel2" rgba="#262B32FF"/>
-        <color name="Active" rgba="#3A424CFF"/>
-        <color name="Text" rgba="#ECEFF2FF"/>
-        <color name="MutedText" rgba="#929AA5FF"/>
-        <color name="Accent" rgba="#B9C4D0FF"/>
-    </colors>
-    <fonts>
-        <font name="Title" font-name="Arial" size="22" bold="true"/>
-        <font name="Section" font-name="Arial" size="14" bold="true"/>
-        <font name="Body" font-name="Arial" size="13"/>
-        <font name="Small" font-name="Arial" size="11"/>
-        <font name="Status" font-name="Arial" size="28" bold="true"/>
-    </fonts>
-    <template name="view" class="CViewContainer" origin="0, 0" size="900, 600" background-color="Background" transparent="false">
-        <view class="CTextLabel" origin="32, 22" size="260, 34" font="Title" font-color="Text" back-color="Background" transparent="true" title="MIXORATOR"/>
-        <view class="CTextLabel" origin="32, 56" size="360, 22" font="Body" font-color="MutedText" back-color="Background" transparent="true" title="Professional Mix / Master Analysis"/>
+  <colors>
+    <color name="Background" rgba="#17181BFF"/>
+    <color name="Panel" rgba="#22242AFF"/>
+    <color name="Text" rgba="#F4F5F7FF"/>
+    <color name="MutedText" rgba="#969CA6FF"/>
+  </colors>
 
-        <view class="CViewContainer" origin="32, 96" size="836, 102" background-color="Panel" transparent="false"/>
-        <view class="CTextLabel" origin="48, 108" size="84, 20" font="Small" font-color="MutedText" back-color="Panel" transparent="true" title="ANALYSIS"/>
-        <view class="CViewContainer" origin="48, 134" size="172, 42" background-color="Panel2" transparent="false"/>
-        <view class="CViewContainer" origin="50, 136" size="84, 38" background-color="Active" transparent="false"/>
-        <view class="CTextLabel" origin="50, 136" size="84, 38" font="Section" font-color="Text" back-color="Active" transparent="true" text-alignment="center" title="MIX"/>
-        <view class="CTextLabel" origin="134, 136" size="84, 38" font="Section" font-color="MutedText" back-color="Panel2" transparent="true" text-alignment="center" title="MASTER"/>
+  <template name="view" class="CViewContainer" origin="0, 0" size="600, 400" transparent="false" background-color="Background">
+    <view class="CTextLabel" origin="28, 24" size="544, 38" title="MIXORATOR TEST GUI" font-color="Text"/>
+    <view class="CTextLabel" origin="30, 62" size="540, 24" title="VSTGUI RESOURCE TEST" font-color="MutedText"/>
 
-        <view class="CTextLabel" origin="246, 108" size="84, 20" font="Small" font-color="MutedText" back-color="Panel" transparent="true" title="STATE"/>
-        <view class="CViewContainer" origin="246, 134" size="172, 42" background-color="Panel2" transparent="false"/>
-        <view class="CViewContainer" origin="248, 136" size="84, 38" background-color="Active" transparent="false"/>
-        <view class="CTextLabel" origin="248, 136" size="84, 38" font="Section" font-color="Text" back-color="Active" transparent="true" text-alignment="center" title="LIVE"/>
-        <view class="CTextLabel" origin="332, 136" size="84, 38" font="Section" font-color="MutedText" back-color="Panel2" transparent="true" text-alignment="center" title="FINAL"/>
-
-        <view class="CTextLabel" origin="444, 108" size="120, 20" font="Small" font-color="MutedText" back-color="Panel" transparent="true" title="GENRE"/>
-        <view class="CViewContainer" origin="444, 134" size="188, 42" background-color="Panel2" transparent="false"/>
-        <view class="CTextLabel" origin="456, 136" size="148, 38" font="Body" font-color="Text" back-color="Panel2" transparent="true" title="General"/>
-        <view class="CTextLabel" origin="604, 136" size="20, 38" font="Body" font-color="MutedText" back-color="Panel2" transparent="true" text-alignment="center" title="v"/>
-
-        <view class="CTextLabel" origin="658, 108" size="120, 20" font="Small" font-color="MutedText" back-color="Panel" transparent="true" title="ERA"/>
-        <view class="CViewContainer" origin="658, 134" size="194, 42" background-color="Panel2" transparent="false"/>
-        <view class="CTextLabel" origin="670, 136" size="154, 38" font="Body" font-color="Text" back-color="Panel2" transparent="true" title="Modern"/>
-        <view class="CTextLabel" origin="824, 136" size="20, 38" font="Body" font-color="MutedText" back-color="Panel2" transparent="true" text-alignment="center" title="v"/>
-
-        <view class="CViewContainer" origin="32, 218" size="836, 252" background-color="Panel" transparent="false"/>
-        <view class="CTextLabel" origin="52, 238" size="796, 20" font="Small" font-color="MutedText" back-color="Panel" transparent="true" text-alignment="center" title="CURRENT ASSESSMENT"/>
-        <view class="CTextLabel" origin="52, 274" size="796, 52" font="Status" font-color="Text" back-color="Panel" transparent="true" text-alignment="center" title="READY"/>
-        <view class="CTextLabel" origin="82, 330" size="736, 26" font="Body" font-color="MutedText" back-color="Panel" transparent="true" text-alignment="center" title="Start playback to collect analysis data"/>
-        <view class="CViewContainer" origin="252, 382" size="396, 52" background-color="Panel2" transparent="false"/>
-        <view class="CTextLabel" origin="252, 382" size="396, 52" font="Section" font-color="Accent" back-color="Panel2" transparent="true" text-alignment="center" title="ANALYZE / RESET"/>
-
-        <view class="CViewContainer" origin="32, 492" size="836, 72" background-color="Panel" transparent="false"/>
-        <view class="CTextLabel" origin="48, 510" size="140, 28" font="Section" font-color="Text" back-color="Panel" transparent="true" title="DETAILS"/>
-        <view class="CTextLabel" origin="188, 510" size="620, 28" font="Body" font-color="MutedText" back-color="Panel" transparent="true" title="Loudness  •  Dynamics  •  Tonal Balance  •  Stereo  •  Technical Safety"/>
-        <view class="CTextLabel" origin="818, 510" size="28, 28" font="Body" font-color="MutedText" back-color="Panel" transparent="true" text-alignment="center" title="+"/>
-    </template>
+    <view class="CViewContainer" origin="24, 110" size="552, 220" transparent="false" background-color="Panel">
+      <view class="CTextLabel" origin="20, 24" size="512, 34" title="IF YOU CAN READ THIS, UIDESC WORKS" font-color="Text" text-alignment="center"/>
+      <view class="CTextLabel" origin="20, 78" size="512, 30" title="MIX   MASTER   LIVE   FINAL" font-color="Text" text-alignment="center"/>
+      <view class="CTextLabel" origin="20, 132" size="512, 30" title="GENRE: GENERAL   ERA: MODERN" font-color="MutedText" text-alignment="center"/>
+    </view>
+  </template>
 </vstgui-ui-description>
