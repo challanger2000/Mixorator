@@ -14,6 +14,7 @@ namespace VSTGUI
 class CControl;
 class COptionMenu;
 class CTextLabel;
+class CView;
 }
 
 namespace Mixorator
@@ -39,17 +40,14 @@ public:
     Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
     Steinberg::IPlugView* PLUGIN_API createView(Steinberg::FIDString name) override;
 
-    void PLUGIN_API queueOpened(
-        Steinberg::Vst::DataExchangeUserContextID userContextID,
-        Steinberg::uint32 blockSize,
-        Steinberg::TBool& dispatchOnBackgroundThread) override;
-    void PLUGIN_API queueClosed(
-        Steinberg::Vst::DataExchangeUserContextID userContextID) override;
-    void PLUGIN_API onDataExchangeBlocksReceived(
-        Steinberg::Vst::DataExchangeUserContextID userContextID,
-        Steinberg::uint32 numBlocks,
-        Steinberg::Vst::DataExchangeBlock* blocks,
-        Steinberg::TBool onBackgroundThread) override;
+    void PLUGIN_API queueOpened(Steinberg::Vst::DataExchangeUserContextID userContextID,
+                                Steinberg::uint32 blockSize,
+                                Steinberg::TBool& dispatchOnBackgroundThread) override;
+    void PLUGIN_API queueClosed(Steinberg::Vst::DataExchangeUserContextID userContextID) override;
+    void PLUGIN_API onDataExchangeBlocksReceived(Steinberg::Vst::DataExchangeUserContextID userContextID,
+                                                  Steinberg::uint32 numBlocks,
+                                                  Steinberg::Vst::DataExchangeBlock* blocks,
+                                                  Steinberg::TBool onBackgroundThread) override;
 
     Steinberg::tresult requestLiveAnalysis() noexcept;
     Steinberg::tresult requestFinalAnalysis() noexcept;
@@ -62,18 +60,14 @@ public:
     }
     const AnalysisExchangePacket& latestAnalysisPacket() const noexcept { return latestPacket_; }
 
-    Analysis::Assessment evaluateLatest(
-        Analysis::AnalysisMode mode,
-        Analysis::Genre genre,
-        Analysis::Era era) const noexcept;
+    Analysis::Assessment evaluateLatest(Analysis::AnalysisMode mode,
+                                        Analysis::Genre genre,
+                                        Analysis::Era era) const noexcept;
 
-    // VSTGUI delegate / local controls. These controls are deliberately not VST parameters,
-    // so Studio One cannot record them as automation lanes.
-    VSTGUI::CView* verifyView(
-        VSTGUI::CView* view,
-        const VSTGUI::UIAttributes& attributes,
-        const VSTGUI::IUIDescription* description,
-        VSTGUI::VST3Editor* editor) override;
+    VSTGUI::CView* verifyView(VSTGUI::CView* view,
+                              const VSTGUI::UIAttributes& attributes,
+                              const VSTGUI::IUIDescription* description,
+                              VSTGUI::VST3Editor* editor) override;
     void didOpen(VSTGUI::VST3Editor* editor) override;
     void willClose(VSTGUI::VST3Editor* editor) override;
     void valueChanged(VSTGUI::CControl* control) override;
@@ -88,7 +82,9 @@ private:
         kUiGenre = 10005,
         kUiEra = 10006,
         kUiReset = 10007,
-        kUiAnalyze = 10008
+        kUiAnalyze = 10008,
+        kUiDetails = 10009,
+        kUiBack = 10010
     };
 
     Steinberg::tresult requestAnalysisState(Steinberg::int64 state) noexcept;
@@ -99,6 +95,7 @@ private:
     void clearUiPointers() noexcept;
     void bindNamedView(VSTGUI::CView* view, const VSTGUI::UIAttributes& attributes) noexcept;
     void updateSelectionControls() noexcept;
+    void updatePageVisibility() noexcept;
 
     Steinberg::Vst::DataExchangeReceiverHandler dataExchange_ {this};
     AnalysisExchangePacket latestPacket_ {};
@@ -110,6 +107,7 @@ private:
     Analysis::Genre uiGenre_ {Analysis::Genre::General};
     Analysis::Era uiEra_ {Analysis::Era::Modern};
     bool uiFinalSelected_ {false};
+    bool uiDetailsVisible_ {false};
 
     VSTGUI::VST3Editor* editor_ {nullptr};
     VSTGUI::CControl* mixControl_ {nullptr};
@@ -118,6 +116,8 @@ private:
     VSTGUI::CControl* finalControl_ {nullptr};
     VSTGUI::COptionMenu* genreMenu_ {nullptr};
     VSTGUI::COptionMenu* eraMenu_ {nullptr};
+    VSTGUI::CView* simplePage_ {nullptr};
+    VSTGUI::CView* detailsPage_ {nullptr};
 
     VSTGUI::CTextLabel* technicalVerdict_ {nullptr};
     VSTGUI::CTextLabel* styleVerdict_ {nullptr};
