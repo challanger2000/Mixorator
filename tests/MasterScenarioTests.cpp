@@ -89,9 +89,12 @@ int main()
 
     {
         auto m = base();
-        m.integratedLufs = -16.0;
-        m.plrDb = 14.0;
-        m.lraLu = 10.0;
+        // Keep loudness/dynamics inside both modern Acoustic/Folk and Techno
+        // corridors so this scenario isolates tonal discrimination instead of
+        // letting the dynamics profile dominate the comparison.
+        m.integratedLufs = -12.0;
+        m.plrDb = 10.0;
+        m.lraLu = 6.0;
         m.tonalPercent = {{62.0, 18.0, 15.0, 5.0}};
         const auto acoustic = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::AcousticFolk, Era::Modern);
         const auto techno = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Techno, Era::Modern);
