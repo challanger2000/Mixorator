@@ -75,6 +75,7 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view, const VSTGUI::UIAttri
 void Controller::didOpen(VSTGUI::VST3Editor* editor)
 {
     editor_ = editor;
+    editor_->setEditorSizeConstrains(kCompactSize, kDetailsSize);
     refreshUi();
     editor_->requestResize(kCompactSize);
 }
