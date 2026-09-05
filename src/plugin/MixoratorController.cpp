@@ -19,11 +19,7 @@ Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* contex
 Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString name)
 {
     if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
-    {
-        auto* editor = new VSTGUI::AspectRatioVST3Editor(this, "view", "mixorator.uidesc");
-        editor->setMinZoomFactor(1.0);
-        return editor;
-    }
+        return new VSTGUI::VST3Editor(this, "view", "mixorator.uidesc");
     return nullptr;
 }
 
