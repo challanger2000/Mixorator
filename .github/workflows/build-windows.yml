@@ -21,19 +21,19 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Build plugin
-        run: cmake --build build --config Release --target Mixorator --parallel
+        run: cmake --build build --config Release --target Analysator --parallel
 
       - name: Stage VST3 bundle
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter Mixorator.vst3 | Select-Object -First 1
-          if (-not $plugin) { throw "Mixorator.vst3 bundle not found" }
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter Analysator.vst3 | Select-Object -First 1
+          if (-not $plugin) { throw "Analysator.vst3 bundle not found" }
           New-Item -ItemType Directory -Force -Path artifact | Out-Null
           Copy-Item -Path $plugin.FullName -Destination artifact -Recurse -Force
-          if (-not (Test-Path "artifact\Mixorator.vst3\Contents")) { throw "Staged VST3 bundle is incomplete" }
+          if (-not (Test-Path "artifact\Analysator.vst3\Contents")) { throw "Staged VST3 bundle is incomplete" }
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
-          name: Mixorator-Windows-VST3
+          name: Analysator-Windows-VST3
           path: artifact
