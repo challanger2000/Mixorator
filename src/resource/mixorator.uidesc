@@ -11,27 +11,30 @@
   <control-tags>
     <control-tag name="UI.Mix" tag="10001"/><control-tag name="UI.Master" tag="10002"/><control-tag name="UI.Live" tag="10003"/><control-tag name="UI.Final" tag="10004"/><control-tag name="UI.Genre" tag="10005"/><control-tag name="UI.Era" tag="10006"/><control-tag name="UI.Reset" tag="10007"/><control-tag name="UI.Analyze" tag="10008"/><control-tag name="UI.Details" tag="10009"/><control-tag name="UI.Back" tag="10010"/>
   </control-tags>
-  <template name="view" class="CViewContainer" origin="0, 0" size="1000, 700" transparent="false" background-color="Background">
-    <view class="CViewContainer" origin="0, 0" size="1000, 82" transparent="false" background-color="TopBar">
-      <view class="CTextLabel" origin="30, 14" size="230, 26" title="MIXORATOR" font-color="Text"/><view class="CTextLabel" origin="30, 42" size="230, 18" title="MIX / MASTER ASSESSMENT" font-color="DimText"/>
-      <view class="CTextButton" control-tag="UI.Mix" origin="292, 21" size="73, 40" title="MIX" font-color="MutedText" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/><view class="CTextButton" control-tag="UI.Master" origin="369, 21" size="73, 40" title="MASTER" font-color="MutedText" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
-      <view class="CTextButton" control-tag="UI.Live" origin="462, 21" size="73, 40" title="LIVE" font-color="MutedText" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/><view class="CTextButton" control-tag="UI.Final" origin="539, 21" size="73, 40" title="FINAL" font-color="MutedText" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
-      <view class="CTextLabel" origin="640, 17" size="160, 15" title="GENRE" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Genre" origin="632, 34" size="178, 30" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="10, 0"/>
-      <view class="CTextLabel" origin="832, 17" size="94, 15" title="ERA" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Era" origin="824, 34" size="110, 30" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="10, 0"/><view class="CTextLabel" origin="948, 28" size="34, 22" title="DE" font-color="MutedText" text-alignment="center"/>
+
+  <!-- Compact by default. DETAILS asks the host for 1000x700; BACK returns to 650x440. -->
+  <template name="view" class="CViewContainer" origin="0, 0" size="650, 440" transparent="false" background-color="Background">
+    <view class="CViewContainer" origin="0, 0" size="1000, 90" transparent="false" background-color="TopBar">
+      <view class="CTextLabel" origin="18, 12" size="120, 22" title="MIXORATOR" font-color="Text"/>
+      <view class="CTextButton" control-tag="UI.Mix" origin="150, 10" size="64, 32" title="MIX" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextButton" control-tag="UI.Master" origin="218, 10" size="72, 32" title="MASTER" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextButton" control-tag="UI.Live" origin="306, 10" size="64, 32" title="LIVE" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextButton" control-tag="UI.Final" origin="374, 10" size="64, 32" title="FINAL" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextLabel" origin="454, 10" size="58, 14" title="GENRE" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Genre" origin="448, 27" size="116, 28" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="8, 0"/>
+      <view class="CTextLabel" origin="578, 10" size="44, 14" title="ERA" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Era" origin="572, 27" size="70, 28" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="6, 0"/>
+      <view class="CTextLabel" origin="18, 58" size="420, 18" title="Compact mix / master assessment" font-color="DimText"/><view class="CTextLabel" origin="594, 60" size="40, 18" title="DE" font-color="MutedText" text-alignment="right"/>
     </view>
 
-    <!-- Default product view: intentionally simple. -->
-    <view class="CViewContainer" mixorator-id="simplePage" origin="28, 106" size="944, 438" transparent="false" background-color="Panel">
-      <view class="CTextLabel" origin="292, 24" size="360, 20" title="OVERALL ASSESSMENT" font-color="DimText" text-alignment="center"/>
-      <view class="CViewContainer" origin="377, 62" size="190, 190" transparent="false" background-color="AccentSoft"><view class="CTextLabel" origin="20, 73" size="150, 24" title="STATUS ASSET" font-color="Accent" text-alignment="center"/></view>
-      <view class="CTextLabel" mixorator-id="overallVerdict" origin="252, 270" size="440, 38" title="N/A" font-color="Text" text-alignment="center"/>
-      <view class="CTextLabel" mixorator-id="overallLine1" origin="202, 316" size="540, 24" title="Start playback to begin analysis." font-color="MutedText" text-alignment="center"/><view class="CTextLabel" mixorator-id="overallLine2" origin="202, 348" size="540, 20" title="No programme data received yet." font-color="DimText" text-alignment="center"/>
-      <view class="CTextButton" control-tag="UI.Details" origin="382, 386" size="180, 34" title="DETAILS" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
+    <view class="CViewContainer" mixorator-id="simplePage" origin="18, 102" size="614, 320" transparent="false" background-color="Panel">
+      <view class="CTextLabel" origin="157, 12" size="300, 18" title="OVERALL ASSESSMENT" font-color="DimText" text-alignment="center"/>
+      <view class="CViewContainer" origin="232, 38" size="150, 150" transparent="false" background-color="AccentSoft"><view class="CTextLabel" origin="10, 62" size="130, 24" title="STATUS ASSET" font-color="Accent" text-alignment="center"/></view>
+      <view class="CTextLabel" mixorator-id="overallVerdict" origin="107, 196" size="400, 30" title="N/A" font-color="Text" text-alignment="center"/>
+      <view class="CTextLabel" mixorator-id="overallLine1" origin="57, 228" size="500, 20" title="Start playback to begin analysis." font-color="MutedText" text-alignment="center"/><view class="CTextLabel" mixorator-id="overallLine2" origin="57, 250" size="500, 18" title="No programme data received yet." font-color="DimText" text-alignment="center"/>
+      <view class="CTextButton" control-tag="UI.Details" origin="217, 278" size="180, 32" title="DETAILS" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
     </view>
 
-    <!-- Expert view: only shown on explicit request. -->
-    <view class="CViewContainer" mixorator-id="detailsPage" origin="28, 106" size="944, 438" transparent="false" background-color="Panel" visible="false">
-      <view class="CTextLabel" origin="22, 16" size="200, 22" title="DETAILED ANALYSIS" font-color="Text"/><view class="CTextButton" control-tag="UI.Back" origin="790, 12" size="132, 32" title="BACK" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
+    <view class="CViewContainer" mixorator-id="detailsPage" origin="28, 106" size="944, 566" transparent="false" background-color="Panel" visible="false">
+      <view class="CTextLabel" origin="22, 16" size="260, 22" title="DETAILED ANALYSIS" font-color="Text"/><view class="CTextButton" control-tag="UI.Back" origin="790, 12" size="132, 32" title="BACK" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
       <view class="CViewContainer" origin="22, 58" size="420, 350" transparent="false" background-color="PanelDark">
         <view class="CTextLabel" origin="18, 18" size="180, 18" title="TECHNICAL QUALITY" font-color="MutedText"/><view class="CTextLabel" mixorator-id="technicalVerdict" origin="220, 14" size="180, 28" title="N/A" font-color="Good" text-alignment="right"/>
         <view class="CTextLabel" origin="18, 72" size="180, 18" title="STYLE MATCH" font-color="MutedText"/><view class="CTextLabel" mixorator-id="styleVerdict" origin="220, 68" size="180, 28" title="N/A" font-color="Good" text-alignment="right"/>
@@ -48,11 +51,9 @@
         <view class="CTextLabel" origin="18, 230" size="220, 18" title="CORRELATION" font-color="MutedText"/><view class="CTextLabel" mixorator-id="correlationValue" origin="250, 226" size="190, 24" title="--" font-color="Text" text-alignment="right"/>
         <view class="CTextLabel" origin="18, 272" size="220, 18" title="MONO" font-color="MutedText"/><view class="CTextLabel" mixorator-id="monoValue" origin="250, 268" size="190, 24" title="--" font-color="Text" text-alignment="right"/>
       </view>
-    </view>
-
-    <view class="CViewContainer" origin="28, 566" size="944, 106" transparent="false" background-color="TopBar">
-      <view class="CTextLabel" origin="20, 18" size="500, 20" title="Play the full programme for a definitive FINAL assessment." font-color="MutedText"/><view class="CTextLabel" origin="20, 48" size="500, 20" title="LIVE values are provisional and may change." font-color="DimText"/>
-      <view class="CTextButton" control-tag="UI.Reset" origin="612, 24" size="150, 58" title="RESET" font-color="MutedText" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/><view class="CTextButton" control-tag="UI.Analyze" origin="780, 24" size="170, 58" title="ANALYZE" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonAccent" gradient-highlighted="ButtonActive" kick-style="true"/>
+      <view class="CTextLabel" origin="22, 438" size="520, 20" title="Play the full programme for a definitive FINAL assessment." font-color="MutedText"/>
+      <view class="CTextLabel" origin="22, 466" size="520, 20" title="LIVE values are provisional and may change." font-color="DimText"/>
+      <view class="CTextButton" control-tag="UI.Reset" origin="612, 438" size="140, 54" title="RESET" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/><view class="CTextButton" control-tag="UI.Analyze" origin="770, 438" size="152, 54" title="ANALYZE" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonAccent" gradient-highlighted="ButtonActive" kick-style="true"/>
     </view>
   </template>
 </vstgui-ui-description>
