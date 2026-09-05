@@ -16,92 +16,105 @@
     <color name="Warning" rgba="#D9B66FFF"/>
   </colors>
 
-  <!-- Fixed deterministic 1000 x 700 layout = 100%. -->
+  <gradients>
+    <gradient name="ButtonIdle">
+      <color-stop rgba="#20252EFF" start="0"/>
+      <color-stop rgba="#20252EFF" start="1"/>
+    </gradient>
+    <gradient name="ButtonActive">
+      <color-stop rgba="#294D48FF" start="0"/>
+      <color-stop rgba="#294D48FF" start="1"/>
+    </gradient>
+    <gradient name="ButtonAccent">
+      <color-stop rgba="#294D48FF" start="0"/>
+      <color-stop rgba="#294D48FF" start="1"/>
+    </gradient>
+  </gradients>
+
+  <control-tags>
+    <control-tag name="UI.Mix" tag="10001"/>
+    <control-tag name="UI.Master" tag="10002"/>
+    <control-tag name="UI.Live" tag="10003"/>
+    <control-tag name="UI.Final" tag="10004"/>
+    <control-tag name="UI.Genre" tag="10005"/>
+    <control-tag name="UI.Era" tag="10006"/>
+    <control-tag name="UI.Reset" tag="10007"/>
+    <control-tag name="UI.Analyze" tag="10008"/>
+  </control-tags>
+
+  <!-- Fixed deterministic 1000 x 700 layout = 100%. UI controls are local-only, not VST parameters. -->
   <template name="view" class="CViewContainer" origin="0, 0" size="1000, 700" transparent="false" background-color="Background">
 
-    <!-- Header -->
     <view class="CViewContainer" origin="0, 0" size="1000, 82" transparent="false" background-color="TopBar">
       <view class="CTextLabel" origin="30, 14" size="230, 26" title="MIXORATOR" font-color="Text"/>
       <view class="CTextLabel" origin="30, 42" size="230, 18" title="MIX / MASTER ASSESSMENT" font-color="DimText"/>
 
-      <view class="CViewContainer" origin="292, 18" size="154, 46" transparent="false" background-color="PanelRaised">
-        <view class="CViewContainer" origin="3, 3" size="73, 40" transparent="false" background-color="AccentSoft">
-          <view class="CTextLabel" origin="0, 7" size="73, 26" title="MIX" font-color="Text" text-alignment="center"/>
-        </view>
-        <view class="CTextLabel" origin="79, 10" size="72, 26" title="MASTER" font-color="MutedText" text-alignment="center"/>
-      </view>
+      <view class="CTextButton" control-tag="UI.Mix" origin="292, 21" size="73, 40" title="MIX" font-color="MutedText" font-color-highlighted="Text" frame-color="PanelRaised" frame-color-highlighted="AccentSoft" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextButton" control-tag="UI.Master" origin="369, 21" size="73, 40" title="MASTER" font-color="MutedText" font-color-highlighted="Text" frame-color="PanelRaised" frame-color-highlighted="AccentSoft" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
 
-      <view class="CViewContainer" origin="462, 18" size="154, 46" transparent="false" background-color="PanelRaised">
-        <view class="CViewContainer" origin="3, 3" size="73, 40" transparent="false" background-color="AccentSoft">
-          <view class="CTextLabel" origin="0, 7" size="73, 26" title="LIVE" font-color="Text" text-alignment="center"/>
-        </view>
-        <view class="CTextLabel" origin="79, 10" size="72, 26" title="FINAL" font-color="MutedText" text-alignment="center"/>
-      </view>
+      <view class="CTextButton" control-tag="UI.Live" origin="462, 21" size="73, 40" title="LIVE" font-color="MutedText" font-color-highlighted="Text" frame-color="PanelRaised" frame-color-highlighted="AccentSoft" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
+      <view class="CTextButton" control-tag="UI.Final" origin="539, 21" size="73, 40" title="FINAL" font-color="MutedText" font-color-highlighted="Text" frame-color="PanelRaised" frame-color-highlighted="AccentSoft" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
 
-      <view class="CViewContainer" origin="632, 18" size="178, 46" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="12, 4" size="154, 16" title="GENRE" font-color="DimText"/>
-        <view class="CTextLabel" origin="12, 20" size="154, 22" title="GENERAL" font-color="Text"/>
-      </view>
+      <view class="CTextLabel" origin="640, 17" size="160, 15" title="GENRE" font-color="DimText"/>
+      <view class="COptionMenu" control-tag="UI.Genre" origin="632, 34" size="178, 30" font-color="Text" back-color="PanelRaised" frame-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="10, 0"/>
 
-      <view class="CViewContainer" origin="824, 18" size="110, 46" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="12, 4" size="86, 16" title="ERA" font-color="DimText"/>
-        <view class="CTextLabel" origin="12, 20" size="86, 22" title="MODERN" font-color="Text"/>
-      </view>
+      <view class="CTextLabel" origin="832, 17" size="94, 15" title="ERA" font-color="DimText"/>
+      <view class="COptionMenu" control-tag="UI.Era" origin="824, 34" size="110, 30" font-color="Text" back-color="PanelRaised" frame-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="10, 0"/>
+
       <view class="CTextLabel" origin="948, 28" size="34, 22" title="DE" font-color="MutedText" text-alignment="center"/>
     </view>
 
-    <!-- Main -->
     <view class="CViewContainer" origin="28, 106" size="944, 438" transparent="false" background-color="Panel">
-
-      <!-- Assessment summary -->
       <view class="CViewContainer" origin="22, 22" size="236, 394" transparent="false" background-color="PanelDark">
         <view class="CTextLabel" origin="18, 16" size="200, 20" title="ASSESSMENT" font-color="DimText"/>
 
         <view class="CTextLabel" origin="18, 58" size="200, 18" title="TECHNICAL QUALITY" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 78" size="200, 30" title="EXCELLENT" font-color="Good"/>
+        <view class="CTextLabel" mixorator-id="technicalVerdict" origin="18, 78" size="200, 30" title="N/A" font-color="Good"/>
 
         <view class="CTextLabel" origin="18, 132" size="200, 18" title="STYLE MATCH" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 152" size="200, 30" title="GOOD" font-color="Good"/>
+        <view class="CTextLabel" mixorator-id="styleVerdict" origin="18, 152" size="200, 30" title="N/A" font-color="Good"/>
 
         <view class="CTextLabel" origin="18, 206" size="200, 18" title="PCM / WAV" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 226" size="200, 30" title="EXCELLENT" font-color="Good"/>
+        <view class="CTextLabel" mixorator-id="pcmVerdict" origin="18, 226" size="200, 30" title="N/A" font-color="Good"/>
 
         <view class="CTextLabel" origin="18, 280" size="200, 18" title="STREAMING" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 300" size="200, 30" title="GOOD" font-color="Good"/>
+        <view class="CTextLabel" mixorator-id="streamingVerdict" origin="18, 300" size="200, 30" title="N/A" font-color="Good"/>
 
-        <view class="CTextLabel" origin="18, 352" size="200, 22" title="LIVE  /  PROVISIONAL" font-color="Warning"/>
+        <view class="CTextLabel" mixorator-id="stateLabel" origin="18, 352" size="200, 22" title="WAITING FOR AUDIO" font-color="Warning"/>
       </view>
 
-      <!-- Overall status -->
       <view class="CViewContainer" origin="276, 22" size="390, 394" transparent="false" background-color="PanelRaised">
         <view class="CTextLabel" origin="30, 18" size="330, 20" title="OVERALL ASSESSMENT" font-color="DimText" text-alignment="center"/>
 
-        <!-- Reserved for one immutable high-resolution status asset. -->
         <view class="CViewContainer" origin="100, 56" size="190, 190" transparent="false" background-color="AccentSoft">
           <view class="CTextLabel" origin="20, 73" size="150, 24" title="STATUS ASSET" font-color="Accent" text-alignment="center"/>
         </view>
 
-        <view class="CTextLabel" origin="30, 264" size="330, 34" title="PROFESSIONAL" font-color="Text" text-alignment="center"/>
-        <view class="CTextLabel" origin="36, 304" size="318, 24" title="Technically safe. Stylistically consistent." font-color="MutedText" text-alignment="center"/>
-        <view class="CTextLabel" origin="36, 338" size="318, 20" title="No critical issues detected." font-color="DimText" text-alignment="center"/>
+        <view class="CTextLabel" mixorator-id="overallVerdict" origin="30, 264" size="330, 34" title="N/A" font-color="Text" text-alignment="center"/>
+        <view class="CTextLabel" mixorator-id="overallLine1" origin="36, 304" size="318, 24" title="Start playback to begin analysis." font-color="MutedText" text-alignment="center"/>
+        <view class="CTextLabel" mixorator-id="overallLine2" origin="36, 338" size="318, 20" title="No programme data received yet." font-color="DimText" text-alignment="center"/>
       </view>
 
-      <!-- Quick metrics -->
       <view class="CViewContainer" origin="684, 22" size="238, 394" transparent="false" background-color="PanelDark">
         <view class="CTextLabel" origin="18, 16" size="202, 20" title="QUICK VIEW" font-color="DimText"/>
 
         <view class="CTextLabel" origin="18, 58" size="120, 18" title="INTEGRATED" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 55" size="82, 24" title="-- LUFS" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="integratedValue" origin="138, 55" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+
         <view class="CTextLabel" origin="18, 101" size="120, 18" title="TRUE PEAK" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 98" size="82, 24" title="-- dBTP" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="truePeakValue" origin="138, 98" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+
         <view class="CTextLabel" origin="18, 144" size="120, 18" title="PLR" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 141" size="82, 24" title="-- dB" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="plrValue" origin="138, 141" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+
         <view class="CTextLabel" origin="18, 187" size="120, 18" title="LRA" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 184" size="82, 24" title="-- LU" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="lraValue" origin="138, 184" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+
         <view class="CTextLabel" origin="18, 230" size="120, 18" title="CORRELATION" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 227" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="correlationValue" origin="138, 227" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+
         <view class="CTextLabel" origin="18, 273" size="120, 18" title="MONO" font-color="MutedText"/>
-        <view class="CTextLabel" origin="138, 270" size="82, 24" title="-- dB" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" mixorator-id="monoValue" origin="138, 270" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
 
         <view class="CViewContainer" origin="18, 330" size="202, 46" transparent="false" background-color="PanelRaised">
           <view class="CTextLabel" origin="0, 11" size="202, 24" title="DETAILS" font-color="Text" text-alignment="center"/>
@@ -109,17 +122,12 @@
       </view>
     </view>
 
-    <!-- Footer -->
     <view class="CViewContainer" origin="28, 566" size="944, 106" transparent="false" background-color="TopBar">
       <view class="CTextLabel" origin="20, 18" size="500, 20" title="Play the full programme for a definitive FINAL assessment." font-color="MutedText"/>
       <view class="CTextLabel" origin="20, 48" size="500, 20" title="LIVE values are provisional and may change." font-color="DimText"/>
 
-      <view class="CViewContainer" origin="584, 24" size="150, 58" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="0, 16" size="150, 26" title="RESET" font-color="MutedText" text-alignment="center"/>
-      </view>
-      <view class="CViewContainer" origin="752, 24" size="170, 58" transparent="false" background-color="AccentSoft">
-        <view class="CTextLabel" origin="0, 16" size="170, 26" title="ANALYZE" font-color="Text" text-alignment="center"/>
-      </view>
+      <view class="CTextButton" control-tag="UI.Reset" origin="612, 24" size="150, 58" title="RESET" font-color="MutedText" font-color-highlighted="Text" frame-color="PanelRaised" frame-color-highlighted="PanelRaised" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
+      <view class="CTextButton" control-tag="UI.Analyze" origin="780, 24" size="170, 58" title="ANALYZE" font-color="Text" font-color-highlighted="Text" frame-color="AccentSoft" frame-color-highlighted="AccentSoft" frame-width="0" gradient="ButtonAccent" gradient-highlighted="ButtonActive" kick-style="true"/>
     </view>
   </template>
 </vstgui-ui-description>
