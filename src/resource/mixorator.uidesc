@@ -4,8 +4,13 @@
     <bitmap name="AnalysatorMainBg" path="analysator_main_bg.png"/>
   </bitmaps>
   <colors>
-    <color name="Background" rgba="#0B1014FF"/><color name="TopBar" rgba="#10171DFF"/><color name="Panel" rgba="#111A20F2"/><color name="PanelRaised" rgba="#1B2730FF"/><color name="PanelDark" rgba="#0D151AFF"/><color name="Text" rgba="#F2F4F6FF"/><color name="MutedText" rgba="#929DA6FF"/><color name="DimText" rgba="#64727CFF"/><color name="Accent" rgba="#69D7C0FF"/><color name="AccentSoft" rgba="#173A38FF"/><color name="Good" rgba="#78D2AAFF"/><color name="Warning" rgba="#D9B66FFF"/>
+    <color name="Background" rgba="#0B1014FF"/><color name="TopBar" rgba="#10171DFF"/><color name="Panel" rgba="#111A20F2"/><color name="PanelRaised" rgba="#17232BEE"/><color name="PanelDark" rgba="#0D151AFF"/><color name="Text" rgba="#F2F4F6FF"/><color name="MutedText" rgba="#A9B1B7FF"/><color name="DimText" rgba="#7E8A93FF"/><color name="Accent" rgba="#69D7C0FF"/><color name="AccentSoft" rgba="#173A38FF"/><color name="Good" rgba="#78D2AAFF"/><color name="Warning" rgba="#D9B66FFF"/>
   </colors>
+  <fonts>
+    <font name="VerdictFont" font-name="Arial" size="24" bold="true" italic="false"/>
+    <font name="HintFont" font-name="Arial" size="11" bold="false" italic="false"/>
+    <font name="SmallFont" font-name="Arial" size="10" bold="false" italic="false"/>
+  </fonts>
   <gradients>
     <gradient name="ButtonIdle"><color-stop rgba="#1B2730EE" start="0"/><color-stop rgba="#111A20EE" start="1"/></gradient>
     <gradient name="ButtonActive"><color-stop rgba="#28524EFF" start="0"/><color-stop rgba="#173A38FF" start="1"/></gradient>
@@ -18,27 +23,27 @@
   <template name="compactView" class="CViewContainer" origin="0, 0" size="650, 440" minSize="650, 440" maxSize="650, 440" transparent="false" background-color="Background" bitmap="AnalysatorMainBg">
     <view class="CViewContainer" mixorator-id="simplePage" origin="0, 0" size="650, 440" transparent="true">
       <view class="CTextLabel" origin="18, 10" size="190, 24" title="A N A L Y S A T O R" font-color="Text" transparent="true"/>
-      <view class="CTextLabel" origin="18, 34" size="190, 16" title="Mix &amp; Master Assessment" font-color="MutedText" transparent="true"/>
+      <view class="CTextLabel" origin="18, 34" size="190, 16" title="Mix &amp; Master Assessment" font-color="MutedText" font="SmallFont" transparent="true"/>
       <view class="CTextLabel" origin="602, 14" size="30, 18" title="DE" font-color="MutedText" text-alignment="center" transparent="true"/>
 
-      <view class="CTextLabel" mixorator-id="overallVerdict" origin="235, 126" size="180, 40" title="N/A" font-color="Good" text-alignment="center" transparent="true"/>
-      <view class="CTextLabel" mixorator-id="overallLine1" origin="225, 176" size="200, 34" title="Start playback to begin analysis." font-color="Text" text-alignment="center" transparent="true"/>
-      <view class="CTextLabel" mixorator-id="overallLine2" origin="225, 210" size="200, 30" title="No programme data received yet." font-color="MutedText" text-alignment="center" transparent="true"/>
+      <view class="CTextLabel" mixorator-id="overallVerdict" origin="220, 116" size="210, 46" title="N/A" font-color="Good" font="VerdictFont" text-alignment="center" transparent="true"/>
+      <view class="CTextLabel" mixorator-id="overallLine1" origin="205, 170" size="240, 22" title="Start playback to begin analysis." font-color="Text" font="HintFont" text-alignment="center" transparent="true"/>
+      <view class="CTextLabel" mixorator-id="overallLine2" origin="195, 194" size="260, 22" title="No programme data received yet." font-color="MutedText" font="SmallFont" text-alignment="center" transparent="true"/>
 
-      <view class="CTextLabel" origin="18, 294" size="190, 16" title="MODE" font-color="DimText" text-alignment="center" transparent="true"/>
+      <view class="CTextLabel" origin="18, 294" size="190, 16" title="MODE" font-color="DimText" font="SmallFont" text-alignment="center" transparent="true"/>
       <view class="CTextButton" control-tag="UI.Mix" origin="18, 316" size="87, 35" title="MIX" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
       <view class="CTextButton" control-tag="UI.Master" origin="110, 316" size="101, 35" title="MASTER" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
 
-      <view class="CTextLabel" origin="440, 294" size="190, 16" title="STATE" font-color="DimText" text-alignment="center" transparent="true"/>
+      <view class="CTextLabel" origin="440, 294" size="190, 16" title="STATE" font-color="DimText" font="SmallFont" text-alignment="center" transparent="true"/>
       <view class="CTextButton" control-tag="UI.Live" origin="438, 316" size="104, 35" title="LIVE" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
       <view class="CTextButton" control-tag="UI.Final" origin="546, 316" size="86, 35" title="FINAL" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
 
       <view class="CTextButton" control-tag="UI.Details" origin="239, 339" size="172, 40" title="DETAILS" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonAccent" gradient-highlighted="ButtonActive" kick-style="true"/>
 
-      <view class="CTextLabel" origin="118, 397" size="60, 15" title="GENRE" font-color="DimText" text-alignment="right" transparent="true"/>
-      <view class="COptionMenu" control-tag="UI.Genre" origin="184, 394" size="142, 27" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="8, 0"/>
-      <view class="CTextLabel" origin="344, 397" size="38, 15" title="ERA" font-color="DimText" text-alignment="right" transparent="true"/>
-      <view class="COptionMenu" control-tag="UI.Era" origin="388, 394" size="110, 27" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="8, 0"/>
+      <view class="CTextLabel" origin="110, 397" size="68, 15" title="GENRE" font-color="DimText" font="SmallFont" text-alignment="right" transparent="true"/>
+      <view class="COptionMenu" control-tag="UI.Genre" origin="184, 394" size="142, 27" font-color="Text" back-color="PanelRaised" frame-color="AccentSoft" frame-width="1" menu-popup-style="true" text-inset="8, 0"/>
+      <view class="CTextLabel" origin="338, 397" size="44, 15" title="ERA" font-color="DimText" font="SmallFont" text-alignment="right" transparent="true"/>
+      <view class="COptionMenu" control-tag="UI.Era" origin="388, 394" size="110, 27" font-color="Text" back-color="PanelRaised" frame-color="AccentSoft" frame-width="1" menu-popup-style="true" text-inset="8, 0"/>
     </view>
   </template>
 
