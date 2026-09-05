@@ -1,32 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <vstgui-ui-description version="1">
   <colors>
-    <color name="Background" rgba="#111318FF"/>
-    <color name="TopBar" rgba="#171A20FF"/>
-    <color name="Panel" rgba="#1B1F26FF"/>
-    <color name="PanelRaised" rgba="#222730FF"/>
-    <color name="PanelDark" rgba="#15181EFF"/>
-    <color name="Border" rgba="#303640FF"/>
-    <color name="Text" rgba="#F1F3F5FF"/>
-    <color name="MutedText" rgba="#969EAAFF"/>
-    <color name="Accent" rgba="#57C7B0FF"/>
-    <color name="AccentSoft" rgba="#2A514BFF"/>
-    <color name="Good" rgba="#77D0A8FF"/>
+    <color name="Background" rgba="#101217FF"/>
+    <color name="TopBar" rgba="#161920FF"/>
+    <color name="Panel" rgba="#191D24FF"/>
+    <color name="PanelRaised" rgba="#20252EFF"/>
+    <color name="PanelDark" rgba="#14171DFF"/>
+    <color name="Border" rgba="#2C323CFF"/>
+    <color name="Text" rgba="#F2F4F6FF"/>
+    <color name="MutedText" rgba="#929AA6FF"/>
+    <color name="DimText" rgba="#6F7782FF"/>
+    <color name="Accent" rgba="#63CBB6FF"/>
+    <color name="AccentSoft" rgba="#294D48FF"/>
+    <color name="Good" rgba="#78D2AAFF"/>
     <color name="Warning" rgba="#D9B66FFF"/>
   </colors>
 
-  <!--
-      MIXORATOR GUI FOUNDATION
-      Fixed logical size: 1000 x 700 = 100%
-      No free host resize. Future zoom variants must scale this exact layout;
-      they must not be re-rendered as separate artwork.
-  -->
+  <!-- Fixed deterministic 1000 x 700 layout = 100%. -->
   <template name="view" class="CViewContainer" origin="0, 0" size="1000, 700" transparent="false" background-color="Background">
 
     <!-- Header -->
     <view class="CViewContainer" origin="0, 0" size="1000, 82" transparent="false" background-color="TopBar">
-      <view class="CTextLabel" origin="30, 16" size="230, 28" title="MIXORATOR" font-color="Text"/>
-      <view class="CTextLabel" origin="30, 45" size="230, 20" title="MIX / MASTER ASSESSMENT" font-color="MutedText"/>
+      <view class="CTextLabel" origin="30, 14" size="230, 26" title="MIXORATOR" font-color="Text"/>
+      <view class="CTextLabel" origin="30, 42" size="230, 18" title="MIX / MASTER ASSESSMENT" font-color="DimText"/>
 
       <view class="CViewContainer" origin="292, 18" size="154, 46" transparent="false" background-color="PanelRaised">
         <view class="CViewContainer" origin="3, 3" size="73, 40" transparent="false" background-color="AccentSoft">
@@ -43,95 +39,87 @@
       </view>
 
       <view class="CViewContainer" origin="632, 18" size="178, 46" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="12, 4" size="154, 16" title="GENRE" font-color="MutedText"/>
+        <view class="CTextLabel" origin="12, 4" size="154, 16" title="GENRE" font-color="DimText"/>
         <view class="CTextLabel" origin="12, 20" size="154, 22" title="GENERAL" font-color="Text"/>
       </view>
 
       <view class="CViewContainer" origin="824, 18" size="110, 46" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="12, 4" size="86, 16" title="ERA" font-color="MutedText"/>
+        <view class="CTextLabel" origin="12, 4" size="86, 16" title="ERA" font-color="DimText"/>
         <view class="CTextLabel" origin="12, 20" size="86, 22" title="MODERN" font-color="Text"/>
       </view>
-
       <view class="CTextLabel" origin="948, 28" size="34, 22" title="DE" font-color="MutedText" text-alignment="center"/>
     </view>
 
-    <!-- Main assessment area -->
+    <!-- Main -->
     <view class="CViewContainer" origin="28, 106" size="944, 438" transparent="false" background-color="Panel">
 
-      <!-- Left summary -->
+      <!-- Assessment summary -->
       <view class="CViewContainer" origin="22, 22" size="236, 394" transparent="false" background-color="PanelDark">
-        <view class="CTextLabel" origin="18, 18" size="200, 20" title="ASSESSMENT" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 16" size="200, 20" title="ASSESSMENT" font-color="DimText"/>
 
-        <view class="CTextLabel" origin="18, 62" size="200, 18" title="TECHNICAL QUALITY" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 83" size="200, 28" title="EXCELLENT" font-color="Good"/>
+        <view class="CTextLabel" origin="18, 58" size="200, 18" title="TECHNICAL QUALITY" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 78" size="200, 30" title="EXCELLENT" font-color="Good"/>
 
-        <view class="CTextLabel" origin="18, 137" size="200, 18" title="STYLE MATCH" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 158" size="200, 28" title="GOOD" font-color="Good"/>
+        <view class="CTextLabel" origin="18, 132" size="200, 18" title="STYLE MATCH" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 152" size="200, 30" title="GOOD" font-color="Good"/>
 
-        <view class="CTextLabel" origin="18, 212" size="200, 18" title="PCM / WAV" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 233" size="200, 28" title="EXCELLENT" font-color="Good"/>
+        <view class="CTextLabel" origin="18, 206" size="200, 18" title="PCM / WAV" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 226" size="200, 30" title="EXCELLENT" font-color="Good"/>
 
-        <view class="CTextLabel" origin="18, 287" size="200, 18" title="STREAMING" font-color="MutedText"/>
-        <view class="CTextLabel" origin="18, 308" size="200, 28" title="GOOD" font-color="Good"/>
+        <view class="CTextLabel" origin="18, 280" size="200, 18" title="STREAMING" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 300" size="200, 30" title="GOOD" font-color="Good"/>
 
-        <view class="CTextLabel" origin="18, 355" size="200, 20" title="LIVE / PROVISIONAL" font-color="Warning"/>
+        <view class="CTextLabel" origin="18, 352" size="200, 22" title="LIVE  /  PROVISIONAL" font-color="Warning"/>
       </view>
 
-      <!-- Central status -->
+      <!-- Overall status -->
       <view class="CViewContainer" origin="276, 22" size="390, 394" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="30, 28" size="330, 20" title="OVERALL" font-color="MutedText" text-alignment="center"/>
+        <view class="CTextLabel" origin="30, 18" size="330, 20" title="OVERALL ASSESSMENT" font-color="DimText" text-alignment="center"/>
 
-        <!-- deterministic placeholder for future high-resolution status asset -->
-        <view class="CViewContainer" origin="95, 70" size="200, 200" transparent="false" background-color="AccentSoft">
-          <view class="CTextLabel" origin="20, 72" size="160, 28" title="STATUS" font-color="Accent" text-alignment="center"/>
-          <view class="CTextLabel" origin="20, 104" size="160, 20" title="ASSET AREA" font-color="MutedText" text-alignment="center"/>
+        <!-- Reserved for one immutable high-resolution status asset. -->
+        <view class="CViewContainer" origin="100, 56" size="190, 190" transparent="false" background-color="AccentSoft">
+          <view class="CTextLabel" origin="20, 73" size="150, 24" title="STATUS ASSET" font-color="Accent" text-alignment="center"/>
         </view>
 
-        <view class="CTextLabel" origin="30, 290" size="330, 32" title="PROFESSIONAL" font-color="Text" text-alignment="center"/>
-        <view class="CTextLabel" origin="34, 328" size="322, 42" title="Technically safe and stylistically consistent." font-color="MutedText" text-alignment="center"/>
+        <view class="CTextLabel" origin="30, 264" size="330, 34" title="PROFESSIONAL" font-color="Text" text-alignment="center"/>
+        <view class="CTextLabel" origin="36, 304" size="318, 24" title="Technically safe. Stylistically consistent." font-color="MutedText" text-alignment="center"/>
+        <view class="CTextLabel" origin="36, 338" size="318, 20" title="No critical issues detected." font-color="DimText" text-alignment="center"/>
       </view>
 
-      <!-- Right quick metrics -->
+      <!-- Quick metrics -->
       <view class="CViewContainer" origin="684, 22" size="238, 394" transparent="false" background-color="PanelDark">
-        <view class="CTextLabel" origin="18, 18" size="202, 20" title="QUICK VIEW" font-color="MutedText"/>
+        <view class="CTextLabel" origin="18, 16" size="202, 20" title="QUICK VIEW" font-color="DimText"/>
 
-        <view class="CTextLabel" origin="18, 61" size="115, 18" title="INTEGRATED" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 57" size="87, 25" title="-- LUFS" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 58" size="120, 18" title="INTEGRATED" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 55" size="82, 24" title="-- LUFS" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 101" size="120, 18" title="TRUE PEAK" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 98" size="82, 24" title="-- dBTP" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 144" size="120, 18" title="PLR" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 141" size="82, 24" title="-- dB" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 187" size="120, 18" title="LRA" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 184" size="82, 24" title="-- LU" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 230" size="120, 18" title="CORRELATION" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 227" size="82, 24" title="--" font-color="Text" text-alignment="right"/>
+        <view class="CTextLabel" origin="18, 273" size="120, 18" title="MONO" font-color="MutedText"/>
+        <view class="CTextLabel" origin="138, 270" size="82, 24" title="-- dB" font-color="Text" text-alignment="right"/>
 
-        <view class="CTextLabel" origin="18, 105" size="115, 18" title="TRUE PEAK" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 101" size="87, 25" title="-- dBTP" font-color="Text" text-alignment="right"/>
-
-        <view class="CTextLabel" origin="18, 149" size="115, 18" title="PLR" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 145" size="87, 25" title="-- dB" font-color="Text" text-alignment="right"/>
-
-        <view class="CTextLabel" origin="18, 193" size="115, 18" title="LRA" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 189" size="87, 25" title="-- LU" font-color="Text" text-alignment="right"/>
-
-        <view class="CTextLabel" origin="18, 237" size="115, 18" title="CORRELATION" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 233" size="87, 25" title="--" font-color="Text" text-alignment="right"/>
-
-        <view class="CTextLabel" origin="18, 281" size="115, 18" title="MONO" font-color="MutedText"/>
-        <view class="CTextLabel" origin="133, 277" size="87, 25" title="-- dB" font-color="Text" text-alignment="right"/>
-
-        <view class="CViewContainer" origin="18, 332" size="202, 44" transparent="false" background-color="PanelRaised">
-          <view class="CTextLabel" origin="0, 10" size="202, 24" title="DETAILS  >" font-color="Text" text-alignment="center"/>
+        <view class="CViewContainer" origin="18, 330" size="202, 46" transparent="false" background-color="PanelRaised">
+          <view class="CTextLabel" origin="0, 11" size="202, 24" title="DETAILS" font-color="Text" text-alignment="center"/>
         </view>
       </view>
     </view>
 
-    <!-- Footer controls -->
+    <!-- Footer -->
     <view class="CViewContainer" origin="28, 566" size="944, 106" transparent="false" background-color="TopBar">
-      <view class="CTextLabel" origin="20, 18" size="430, 20" title="Play the full programme for a definitive FINAL assessment." font-color="MutedText"/>
-      <view class="CTextLabel" origin="20, 49" size="430, 20" title="LIVE values are provisional and may change." font-color="MutedText"/>
+      <view class="CTextLabel" origin="20, 18" size="500, 20" title="Play the full programme for a definitive FINAL assessment." font-color="MutedText"/>
+      <view class="CTextLabel" origin="20, 48" size="500, 20" title="LIVE values are provisional and may change." font-color="DimText"/>
 
       <view class="CViewContainer" origin="584, 24" size="150, 58" transparent="false" background-color="PanelRaised">
-        <view class="CTextLabel" origin="0, 16" size="150, 26" title="RESET" font-color="Text" text-alignment="center"/>
+        <view class="CTextLabel" origin="0, 16" size="150, 26" title="RESET" font-color="MutedText" text-alignment="center"/>
       </view>
-
       <view class="CViewContainer" origin="752, 24" size="170, 58" transparent="false" background-color="AccentSoft">
         <view class="CTextLabel" origin="0, 16" size="170, 26" title="ANALYZE" font-color="Text" text-alignment="center"/>
       </view>
     </view>
-
   </template>
 </vstgui-ui-description>
