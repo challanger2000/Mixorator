@@ -4,6 +4,7 @@
 #include "public.sdk/source/vst/utility/dataexchange.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "vstgui/lib/controls/icontrollistener.h"
+#include "vstgui/lib/iviewlistener.h"
 #include "vstgui/uidescription/uiattributes.h"
 #include "AnalysisExchange.h"
 
@@ -22,7 +23,8 @@ namespace Mixorator
 class Controller : public Steinberg::Vst::EditController,
                    public Steinberg::Vst::IDataExchangeReceiver,
                    public VSTGUI::VST3EditorDelegate,
-                   public VSTGUI::IControlListener
+                   public VSTGUI::IControlListener,
+                   public VSTGUI::IViewEventListener
 {
 public:
     OBJ_METHODS(Controller, Steinberg::Vst::EditController)
@@ -71,6 +73,7 @@ public:
     void didOpen(VSTGUI::VST3Editor* editor) override;
     void willClose(VSTGUI::VST3Editor* editor) override;
     void valueChanged(VSTGUI::CControl* control) override;
+    void viewOnEvent(VSTGUI::CView* view, VSTGUI::Event& event) override;
 
 private:
     enum UiTag : std::int32_t
