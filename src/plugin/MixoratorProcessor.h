@@ -17,6 +17,7 @@ class Processor : public Steinberg::Vst::AudioEffect
 public:
     enum class AnalysisState : std::uint8_t
     {
+        Idle,
         Live,
         Final
     };
@@ -44,6 +45,7 @@ public:
     Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) override;
     Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) override;
 
+    void requestResetAnalysis() noexcept;
     void requestLiveAnalysis() noexcept;
     void requestFinalAnalysis() noexcept;
     AnalysisState analysisState() const noexcept;
@@ -56,6 +58,7 @@ private:
     enum class AnalysisCommand : std::uint8_t
     {
         None,
+        Reset,
         StartLive,
         Finalize
     };
@@ -72,7 +75,7 @@ private:
     std::uint64_t exchangeIntervalSamples_ {2400};
 
     std::atomic<AnalysisCommand> analysisCommand_ {AnalysisCommand::None};
-    std::atomic<AnalysisState> analysisState_ {AnalysisState::Live};
+    std::atomic<AnalysisState> analysisState_ {AnalysisState::Idle};
     std::atomic<std::uint64_t> finalizationGeneration_ {0};
     mutable std::atomic<std::uint32_t> snapshotReaders_ {0};
 };
