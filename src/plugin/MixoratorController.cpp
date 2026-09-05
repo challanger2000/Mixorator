@@ -153,13 +153,13 @@ void Controller::refreshUi() noexcept
     setLabel(pcmVerdict_, verdictText(assessment.pcmDeliveryVerdict)); setLabel(streamingVerdict_, verdictText(assessment.streamingDeliveryVerdict)); setLabel(overallVerdict_, verdictText(assessment.overallVerdict));
     if (!hasPacket_)
     {
-        setLabel(stateLabel_, "WAITING FOR AUDIO"); setLabel(overallLine1_, "Start playback to begin analysis."); setLabel(overallLine2_, "No programme data received yet.");
+        setLabel(stateLabel_, "WAITING FOR AUDIO"); setLabel(overallLine1_, "Start playback to analyze"); setLabel(overallLine2_, "Waiting for programme data");
         formatValue(integratedValue_,0,"LUFS",false); formatValue(truePeakValue_,0,"dBTP",false); formatValue(plrValue_,0,"dB",false); formatValue(lraValue_,0,"LU",false); formatValue(correlationValue_,0,"",false); formatValue(monoValue_,0,"dB",false); return;
     }
     const auto& metrics = latestPacket_.metrics; const bool finalPacket = latestPacket_.finalState != 0; const bool definitive = finalPacket && hasDefinitiveFinalSnapshot();
-    if (finalPacket && !definitive) { setLabel(stateLabel_,"FINAL / PENDING"); setLabel(overallLine1_,"Final snapshot requested."); setLabel(overallLine2_,"Waiting for definitive programme metrics."); }
-    else if (definitive) { setLabel(stateLabel_,"FINAL / DEFINITIVE"); setLabel(overallLine1_,"Definitive full-programme assessment."); setLabel(overallLine2_,"Snapshot frozen until a new analysis starts."); }
-    else { setLabel(stateLabel_,"LIVE / PROVISIONAL"); setLabel(overallLine1_,"Live analysis in progress."); setLabel(overallLine2_,"Values may change until FINAL is requested."); }
+    if (finalPacket && !definitive) { setLabel(stateLabel_,"FINAL / PENDING"); setLabel(overallLine1_,"Final snapshot requested"); setLabel(overallLine2_,"Waiting for programme metrics"); }
+    else if (definitive) { setLabel(stateLabel_,"FINAL / DEFINITIVE"); setLabel(overallLine1_,"Definitive programme assessment"); setLabel(overallLine2_,"Snapshot frozen until restart"); }
+    else { setLabel(stateLabel_,"LIVE / PROVISIONAL"); setLabel(overallLine1_,"Live analysis in progress"); setLabel(overallLine2_,"Provisional until FINAL"); }
     const bool programmeAvailable = metrics.loudnessAvailable;
     formatValue(integratedValue_,metrics.integratedLufs,"LUFS",programmeAvailable && metrics.integratedLufs > -999.0); formatValue(truePeakValue_,metrics.truePeakDbtp,"dBTP",programmeAvailable && metrics.truePeakDbtp > -999.0);
     formatValue(plrValue_,metrics.plrDb,"dB",metrics.plrAvailable); formatValue(lraValue_,metrics.lraLu,"LU",metrics.lraAvailable); formatValue(correlationValue_,metrics.correlation,"",programmeAvailable,2); formatValue(monoValue_,metrics.monoCompatibilityDb,"dB",programmeAvailable);
@@ -193,12 +193,12 @@ void PLUGIN_API Controller::queueOpened(Steinberg::Vst::DataExchangeUserContextI
 void PLUGIN_API Controller::queueClosed(Steinberg::Vst::DataExchangeUserContextID userContextID) { if(userContextID==kAnalysisExchangeContext) { hasPacket_=false; requestedFinalGeneration_=0; finalSnapshotGeneration_=0; refreshUi(); } }
 void PLUGIN_API Controller::onDataExchangeBlocksReceived(Steinberg::Vst::DataExchangeUserContextID userContextID, Steinberg::uint32 numBlocks, Steinberg::Vst::DataExchangeBlock* blocks, Steinberg::TBool)
 {
-    if(userContextID!=kAnalysisExchangeContext || !blocks) return; bool changed=false; for(Steinberg::uint32 i=0;i<numBlocks;++i) { if(!blocks[i].data || blocks[i].size<sizeof(AnalysisExchangePacket)) continue; AnalysisExchangePacket packet; std::memcpy(&packet,blocks[i].data,sizeof(packet)); if(hasPacket_ && packet.sequence<latestPacket_.sequence) continue; latestPacket_=packet; hasPacket_=true; uiFinalSelected_=packet.finalState!=0; changed=true; if(packet.finalState!=0) requestFinalSnapshot(packet.finalizationGeneration); else { requestedFinalGeneration_=0; finalSnapshotGeneration_=0; } } if(changed) refreshUi();
+    if(userContextID!=kAnalysisExchangeContext || !blocks) return; bool changed=false; for(Steinberg::uint32 i=0;i<numBlocks;++i) { if(!blocks[i].data || blocks[i].size<sizeof(AnalysisExchangePacket)) continue; AnalysisExchangePacket packet; std::memcpy(&packet,blocks[i].data,sizeof(packet)); if(hasPacket_ && packet.sequence<latestPacket_.sequence) continue; latestPacket_=packet; hasPacket_=true; uiFinalSelected_=packet.finalState!=0; if(!uiFinalSelected_) { requestedFinalGeneration_=0; finalSnapshotGeneration_=0; } else if(packet.finalizationGeneration!=0 && packet.finalizationGeneration!=finalSnapshotGeneration_) requestFinalSnapshot(packet.finalizationGeneration); changed=true; }
+    if(changed) refreshUi();
 }
-Analysis::Assessment Controller::evaluateLatest(Analysis::AnalysisMode mode, Analysis::Genre genre, Analysis::Era era) const noexcept
+bool Controller::hasDefinitiveFinalSnapshot() const noexcept { return hasPacket_ && latestPacket_.finalState!=0 && latestPacket_.finalizationGeneration!=0 && finalSnapshotGeneration_==latestPacket_.finalizationGeneration; }
+Analysis::AssessmentResult Controller::evaluateLatest(Analysis::AnalysisMode mode, Analysis::Genre genre, Analysis::Era era) const noexcept
 {
-    if(!hasPacket_) { Analysis::Metrics unavailable; unavailable.loudnessAvailable=false; unavailable.plrAvailable=false; unavailable.lraAvailable=false; unavailable.provisional=true; return Analysis::AssessmentModel::evaluate(unavailable,mode,genre,era); }
-    if(latestPacket_.finalState!=0 && !hasDefinitiveFinalSnapshot()) { auto waiting=latestPacket_.metrics; waiting.loudnessAvailable=false; waiting.plrAvailable=false; waiting.lraAvailable=false; waiting.provisional=true; return Analysis::AssessmentModel::evaluate(waiting,mode,genre,era); }
-    return Analysis::AssessmentModel::evaluate(latestPacket_.metrics,mode,genre,era);
+    Analysis::AssessmentInput input; if(hasPacket_) input=latestPacket_.metrics; if(!hasPacket_ || (latestPacket_.finalState!=0 && !hasDefinitiveFinalSnapshot())) { input.loudnessAvailable=false; input.plrAvailable=false; input.lraAvailable=false; } input.provisional=hasPacket_ ? (latestPacket_.finalState==0 || !hasDefinitiveFinalSnapshot()) : true; return assessment_.evaluate(input,mode,genre,era);
 }
 }
