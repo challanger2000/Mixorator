@@ -1,6 +1,7 @@
 #include "MixoratorController.h"
 #include "../analysis/AssessmentInput.h"
 #include "../dsp/AnalysisSnapshot.h"
+#include "vstgui/lib/ccolor.h"
 #include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/lib/controls/coptionmenu.h"
 #include "vstgui/lib/controls/ctextlabel.h"
@@ -15,6 +16,17 @@ namespace
 const VSTGUI::CPoint kCompactSize {650., 440.};
 const VSTGUI::CPoint kDetailsSize {1000., 700.};
 
+const VSTGUI::CColor kVerdictGood {120, 210, 170, 255};
+const VSTGUI::CColor kVerdictAttention {217, 182, 111, 255};
+const VSTGUI::CColor kVerdictCritical {224, 103, 103, 255};
+const VSTGUI::CColor kVerdictUnusual {105, 215, 192, 255};
+const VSTGUI::CColor kVerdictUnavailable {126, 138, 147, 255};
+const VSTGUI::CColor kStateLive {105, 215, 192, 255};
+const VSTGUI::CColor kStateFinal {120, 210, 170, 255};
+const VSTGUI::CColor kStatePending {217, 182, 111, 255};
+const VSTGUI::CColor kMetricAvailable {242, 244, 246, 255};
+const VSTGUI::CColor kMetricUnavailable {126, 138, 147, 255};
+
 const char* verdictText(Analysis::Verdict verdict) noexcept
 {
     switch (verdict)
@@ -28,14 +40,62 @@ const char* verdictText(Analysis::Verdict verdict) noexcept
     }
     return "N/A";
 }
-void setLabel(VSTGUI::CTextLabel* label, const char* text) noexcept { if (label) label->setText(text ? text : ""); }
+
+const VSTGUI::CColor& verdictColor(Analysis::Verdict verdict) noexcept
+{
+    switch (verdict)
+    {
+        case Analysis::Verdict::Excellent:
+        case Analysis::Verdict::Good: return kVerdictGood;
+        case Analysis::Verdict::Attention: return kVerdictAttention;
+        case Analysis::Verdict::Critical: return kVerdictCritical;
+        case Analysis::Verdict::Unusual: return kVerdictUnusual;
+        case Analysis::Verdict::InsufficientData: return kVerdictUnavailable;
+    }
+    return kVerdictUnavailable;
+}
+
+void setLabel(VSTGUI::CTextLabel* label, const char* text) noexcept
+{
+    if (!label) return;
+    label->setText(text ? text : "");
+    label->invalid();
+}
+
+void setColoredLabel(VSTGUI::CTextLabel* label, const char* text, const VSTGUI::CColor& color) noexcept
+{
+    if (!label) return;
+    label->setText(text ? text : "");
+    label->setFontColor(color);
+    label->invalid();
+}
+
+void setVerdictLabel(VSTGUI::CTextLabel* label, Analysis::Verdict verdict) noexcept
+{
+    setColoredLabel(label, verdictText(verdict), verdictColor(verdict));
+}
+
 void formatValue(VSTGUI::CTextLabel* label, double value, const char* suffix, bool available, int precision = 1) noexcept
 {
     if (!label) return;
-    if (!available) { label->setText("--"); return; }
+    if (!available)
+    {
+        label->setText("--");
+        label->setFontColor(kMetricUnavailable);
+        label->invalid();
+        return;
+    }
+
     char buffer[64] {};
-    std::snprintf(buffer, sizeof(buffer), precision == 2 ? "%.2f %s" : "%.1f %s", value, suffix ? suffix : "");
+    const bool hasSuffix = suffix && suffix[0] != '\0';
+    if (precision == 2)
+        std::snprintf(buffer, sizeof(buffer), hasSuffix ? "%.2f %s" : "%.2f", value, hasSuffix ? suffix : "");
+    else
+        std::snprintf(buffer, sizeof(buffer), hasSuffix ? "%.1f %s" : "%.1f", value, hasSuffix ? suffix : "");
+
     label->setText(buffer);
+    label->setFontColor(kMetricAvailable);
+    label->invalid();
 }
 }
 
@@ -148,21 +208,63 @@ void Controller::updateSelectionControls() noexcept
 }
 void Controller::refreshUi() noexcept
 {
-    updateSelectionControls(); const auto assessment = evaluateLatest(uiMode_, uiGenre_, uiEra_);
-    setLabel(technicalVerdict_, verdictText(assessment.technicalVerdict)); setLabel(styleVerdict_, verdictText(assessment.styleVerdict));
-    setLabel(pcmVerdict_, verdictText(assessment.pcmDeliveryVerdict)); setLabel(streamingVerdict_, verdictText(assessment.streamingDeliveryVerdict)); setLabel(overallVerdict_, verdictText(assessment.overallVerdict));
+    updateSelectionControls();
+    const auto assessment = evaluateLatest(uiMode_, uiGenre_, uiEra_);
+
+    setVerdictLabel(technicalVerdict_, assessment.technicalVerdict);
+    setVerdictLabel(styleVerdict_, assessment.styleVerdict);
+    setVerdictLabel(pcmVerdict_, assessment.pcmDeliveryVerdict);
+    setVerdictLabel(streamingVerdict_, assessment.streamingDeliveryVerdict);
+    setVerdictLabel(overallVerdict_, assessment.overallVerdict);
+
     if (!hasPacket_)
     {
-        setLabel(stateLabel_, "WAITING FOR AUDIO"); setLabel(overallLine1_, "Start playback to analyze"); setLabel(overallLine2_, "Waiting for programme data");
+        if (uiFinalSelected_)
+        {
+            setColoredLabel(stateLabel_, "FINAL / PENDING", kStatePending);
+            setLabel(overallLine1_, "Final snapshot requested");
+            setLabel(overallLine2_, "Start playback to finalize");
+        }
+        else
+        {
+            setColoredLabel(stateLabel_, "WAITING FOR AUDIO", kVerdictUnavailable);
+            setLabel(overallLine1_, "Start playback to analyze");
+            setLabel(overallLine2_, "Waiting for programme data");
+        }
         formatValue(integratedValue_,0,"LUFS",false); formatValue(truePeakValue_,0,"dBTP",false); formatValue(plrValue_,0,"dB",false); formatValue(lraValue_,0,"LU",false); formatValue(correlationValue_,0,"",false); formatValue(monoValue_,0,"dB",false); return;
     }
-    const auto& metrics = latestPacket_.metrics; const bool finalPacket = latestPacket_.finalState != 0; const bool definitive = finalPacket && hasDefinitiveFinalSnapshot();
-    if (finalPacket && !definitive) { setLabel(stateLabel_,"FINAL / PENDING"); setLabel(overallLine1_,"Final snapshot requested"); setLabel(overallLine2_,"Waiting for programme metrics"); }
-    else if (definitive) { setLabel(stateLabel_,"FINAL / DEFINITIVE"); setLabel(overallLine1_,"Definitive programme assessment"); setLabel(overallLine2_,"Snapshot frozen until restart"); }
-    else { setLabel(stateLabel_,"LIVE / PROVISIONAL"); setLabel(overallLine1_,"Live analysis in progress"); setLabel(overallLine2_,"Provisional until FINAL"); }
+
+    const auto& metrics = latestPacket_.metrics;
+    const bool finalPacket = latestPacket_.finalState != 0;
+    const bool definitive = finalPacket && hasDefinitiveFinalSnapshot();
+    const bool finalPending = uiFinalSelected_ && !definitive;
+
+    if (finalPending)
+    {
+        setColoredLabel(stateLabel_, "FINAL / PENDING", kStatePending);
+        setLabel(overallLine1_, "Final snapshot requested");
+        setLabel(overallLine2_, finalPacket ? "Waiting for programme metrics" : "Waiting for processor finalize");
+    }
+    else if (definitive)
+    {
+        setColoredLabel(stateLabel_, "FINAL / DEFINITIVE", kStateFinal);
+        setLabel(overallLine1_, "Definitive programme assessment");
+        setLabel(overallLine2_, "Snapshot frozen until restart");
+    }
+    else
+    {
+        setColoredLabel(stateLabel_, "LIVE / PROVISIONAL", kStateLive);
+        setLabel(overallLine1_, "Live analysis in progress");
+        setLabel(overallLine2_, "Provisional until FINAL");
+    }
+
     const bool programmeAvailable = metrics.loudnessAvailable;
-    formatValue(integratedValue_,metrics.integratedLufs,"LUFS",programmeAvailable && metrics.integratedLufs > -999.0); formatValue(truePeakValue_,metrics.truePeakDbtp,"dBTP",programmeAvailable && metrics.truePeakDbtp > -999.0);
-    formatValue(plrValue_,metrics.plrDb,"dB",metrics.plrAvailable); formatValue(lraValue_,metrics.lraLu,"LU",metrics.lraAvailable); formatValue(correlationValue_,metrics.correlation,"",programmeAvailable,2); formatValue(monoValue_,metrics.monoCompatibilityDb,"dB",programmeAvailable);
+    formatValue(integratedValue_,metrics.integratedLufs,"LUFS",programmeAvailable && metrics.integratedLufs > -999.0);
+    formatValue(truePeakValue_,metrics.truePeakDbtp,"dBTP",programmeAvailable && metrics.truePeakDbtp > -999.0);
+    formatValue(plrValue_,metrics.plrDb,"dB",metrics.plrAvailable);
+    formatValue(lraValue_,metrics.lraLu,"LU",metrics.lraAvailable);
+    formatValue(correlationValue_,metrics.correlation,"",programmeAvailable,2);
+    formatValue(monoValue_,metrics.monoCompatibilityDb,"dB",programmeAvailable);
 }
 void Controller::clearUiPointers() noexcept
 {
@@ -193,7 +295,29 @@ void PLUGIN_API Controller::queueOpened(Steinberg::Vst::DataExchangeUserContextI
 void PLUGIN_API Controller::queueClosed(Steinberg::Vst::DataExchangeUserContextID userContextID) { if(userContextID==kAnalysisExchangeContext) { hasPacket_=false; requestedFinalGeneration_=0; finalSnapshotGeneration_=0; refreshUi(); } }
 void PLUGIN_API Controller::onDataExchangeBlocksReceived(Steinberg::Vst::DataExchangeUserContextID userContextID, Steinberg::uint32 numBlocks, Steinberg::Vst::DataExchangeBlock* blocks, Steinberg::TBool)
 {
-    if(userContextID!=kAnalysisExchangeContext || !blocks) return; bool changed=false; for(Steinberg::uint32 i=0;i<numBlocks;++i) { if(!blocks[i].data || blocks[i].size<sizeof(AnalysisExchangePacket)) continue; AnalysisExchangePacket packet; std::memcpy(&packet,blocks[i].data,sizeof(packet)); if(hasPacket_ && packet.sequence<latestPacket_.sequence) continue; latestPacket_=packet; hasPacket_=true; uiFinalSelected_=packet.finalState!=0; changed=true; if(packet.finalState!=0) requestFinalSnapshot(packet.finalizationGeneration); else { requestedFinalGeneration_=0; finalSnapshotGeneration_=0; } } if(changed) refreshUi();
+    if(userContextID!=kAnalysisExchangeContext || !blocks) return;
+    bool changed=false;
+    for(Steinberg::uint32 i=0;i<numBlocks;++i)
+    {
+        if(!blocks[i].data || blocks[i].size<sizeof(AnalysisExchangePacket)) continue;
+        AnalysisExchangePacket packet;
+        std::memcpy(&packet,blocks[i].data,sizeof(packet));
+        if(hasPacket_ && packet.sequence<latestPacket_.sequence) continue;
+        latestPacket_=packet;
+        hasPacket_=true;
+        changed=true;
+        if(packet.finalState!=0)
+        {
+            uiFinalSelected_=true;
+            requestFinalSnapshot(packet.finalizationGeneration);
+        }
+        else
+        {
+            requestedFinalGeneration_=0;
+            finalSnapshotGeneration_=0;
+        }
+    }
+    if(changed) refreshUi();
 }
 Analysis::Assessment Controller::evaluateLatest(Analysis::AnalysisMode mode, Analysis::Genre genre, Analysis::Era era) const noexcept
 {
