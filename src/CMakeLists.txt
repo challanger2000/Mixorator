@@ -31,6 +31,7 @@ endif()
 smtg_target_add_plugin_resources(Analysator
     RESOURCES
         resource/mixorator.uidesc
+        resource/analysator_main_bg.png
 )
 
 target_compile_definitions(Analysator
