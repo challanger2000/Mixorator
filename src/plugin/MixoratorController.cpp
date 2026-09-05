@@ -222,14 +222,14 @@ void Controller::refreshUi() noexcept
         if (uiFinalSelected_)
         {
             setColoredLabel(stateLabel_, "FINAL / PENDING", kStatePending);
-            setLabel(overallLine1_, "Final snapshot requested");
-            setLabel(overallLine2_, "Start playback to finalize");
+            setLabel(overallLine1_, "Final result requested");
+            setLabel(overallLine2_, "Start playback if processing is stopped");
         }
         else
         {
-            setColoredLabel(stateLabel_, "WAITING FOR AUDIO", kVerdictUnavailable);
-            setLabel(overallLine1_, "Start playback to analyze");
-            setLabel(overallLine2_, "Waiting for programme data");
+            setColoredLabel(stateLabel_, "READY / LIVE", kStateLive);
+            setLabel(overallLine1_, "Choose MIX or MASTER, then ANALYZE");
+            setLabel(overallLine2_, "Play the complete song from the start");
         }
         formatValue(integratedValue_,0,"LUFS",false); formatValue(truePeakValue_,0,"dBTP",false); formatValue(plrValue_,0,"dB",false); formatValue(lraValue_,0,"LU",false); formatValue(correlationValue_,0,"",false); formatValue(monoValue_,0,"dB",false); return;
     }
@@ -242,20 +242,20 @@ void Controller::refreshUi() noexcept
     if (finalPending)
     {
         setColoredLabel(stateLabel_, "FINAL / PENDING", kStatePending);
-        setLabel(overallLine1_, "Final snapshot requested");
-        setLabel(overallLine2_, finalPacket ? "Waiting for programme metrics" : "Waiting for processor finalize");
+        setLabel(overallLine1_, "Final result requested");
+        setLabel(overallLine2_, finalPacket ? "Preparing definitive result" : "Waiting for processor finalize");
     }
     else if (definitive)
     {
         setColoredLabel(stateLabel_, "FINAL / DEFINITIVE", kStateFinal);
-        setLabel(overallLine1_, "Definitive programme assessment");
-        setLabel(overallLine2_, "Snapshot frozen until restart");
+        setLabel(overallLine1_, "Analysis complete - definitive result");
+        setLabel(overallLine2_, "Press ANALYZE for a new measurement");
     }
     else
     {
         setColoredLabel(stateLabel_, "LIVE / PROVISIONAL", kStateLive);
-        setLabel(overallLine1_, "Live analysis in progress");
-        setLabel(overallLine2_, "Provisional until FINAL");
+        setLabel(overallLine1_, "Play the complete song from the start");
+        setLabel(overallLine2_, "When finished, press FINAL for result");
     }
 
     const bool programmeAvailable = metrics.loudnessAvailable;
@@ -289,7 +289,7 @@ bool Controller::consumeFinalSnapshotMessage(Steinberg::Vst::IMessage* message) 
 void Controller::requestFinalSnapshot(std::uint64_t generation) noexcept
 {
     if(generation==0 || generation==requestedFinalGeneration_) return; auto* message=allocateMessage(); if(!message) return; message->setMessageID(kRequestFinalSnapshotMessage);
-    if(auto* attributes=message->getAttributes()) { attributes->setInt(kFinalSnapshotGenerationKey,static_cast<Steinberg::int64>(generation)); if(sendMessage(message)==Steinberg::kResultTrue) requestedFinalGeneration_=generation; } message->release();
+    if(auto* attributes=message->getAttributes()) { attributes->setInt(kFinalSnapshotGenerationKey,static_cast<Steinberg::int64_t>(generation)); if(sendMessage(message)==Steinberg::kResultTrue) requestedFinalGeneration_=generation; } message->release();
 }
 void PLUGIN_API Controller::queueOpened(Steinberg::Vst::DataExchangeUserContextID userContextID, Steinberg::uint32 blockSize, Steinberg::TBool& dispatchOnBackgroundThread) { if(userContextID==kAnalysisExchangeContext && blockSize>=sizeof(AnalysisExchangePacket)) dispatchOnBackgroundThread=false; }
 void PLUGIN_API Controller::queueClosed(Steinberg::Vst::DataExchangeUserContextID userContextID) { if(userContextID==kAnalysisExchangeContext) { hasPacket_=false; requestedFinalGeneration_=0; finalSnapshotGeneration_=0; refreshUi(); } }
