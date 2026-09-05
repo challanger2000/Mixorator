@@ -7,15 +7,15 @@
     <color name="MutedText" rgba="#969CA6FF"/>
   </colors>
 
-  <template name="view" class="CViewContainer" origin="0, 0" size="600, 400" minSize="600, 400" maxSize="1200, 800" autosize="left top right bottom" transparent="false" background-color="Background">
-    <view class="CTextLabel" origin="28, 24" size="544, 38" title="MIXORATOR TEST GUI" font-color="Text" autosize="left top right"/>
-    <view class="CTextLabel" origin="30, 62" size="540, 24" title="VSTGUI RESOURCE + RESIZE TEST" font-color="MutedText" autosize="left top right"/>
+  <template name="view" class="CViewContainer" origin="0, 0" size="600, 400" transparent="false" background-color="Background">
+    <view class="CTextLabel" origin="28, 24" size="544, 38" title="MIXORATOR TEST GUI" font-color="Text"/>
+    <view class="CTextLabel" origin="30, 62" size="540, 24" title="VSTGUI PROPORTIONAL RESIZE TEST" font-color="MutedText"/>
 
-    <view class="CViewContainer" origin="24, 110" size="552, 266" transparent="false" background-color="Panel" autosize="left top right bottom">
-      <view class="CTextLabel" origin="20, 24" size="512, 34" title="IF YOU CAN READ THIS, UIDESC WORKS" font-color="Text" text-alignment="center" autosize="left top right"/>
-      <view class="CTextLabel" origin="20, 88" size="512, 30" title="MIX   MASTER   LIVE   FINAL" font-color="Text" text-alignment="center" autosize="left top right"/>
-      <view class="CTextLabel" origin="20, 152" size="512, 30" title="GENRE: GENERAL   ERA: MODERN" font-color="MutedText" text-alignment="center" autosize="left top right"/>
-      <view class="CTextLabel" origin="20, 212" size="512, 30" title="RESIZE ME: PANEL SHOULD FOLLOW THE WINDOW" font-color="MutedText" text-alignment="center" autosize="left right bottom"/>
+    <view class="CViewContainer" origin="24, 110" size="552, 266" transparent="false" background-color="Panel">
+      <view class="CTextLabel" origin="20, 24" size="512, 34" title="IF YOU CAN READ THIS, UIDESC WORKS" font-color="Text" text-alignment="center"/>
+      <view class="CTextLabel" origin="20, 88" size="512, 30" title="MIX   MASTER   LIVE   FINAL" font-color="Text" text-alignment="center"/>
+      <view class="CTextLabel" origin="20, 152" size="512, 30" title="GENRE: GENERAL   ERA: MODERN" font-color="MutedText" text-alignment="center"/>
+      <view class="CTextLabel" origin="20, 212" size="512, 30" title="RESIZE: WHOLE GUI SHOULD SCALE TOGETHER" font-color="MutedText" text-alignment="center"/>
     </view>
   </template>
 </vstgui-ui-description>
