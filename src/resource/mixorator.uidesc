@@ -22,7 +22,7 @@
       <view class="CTextButton" control-tag="UI.Final" origin="374, 10" size="64, 32" title="FINAL" font-color="Text" font-color-highlighted="Text" frame-width="0" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false"/>
       <view class="CTextLabel" origin="454, 10" size="58, 14" title="GENRE" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Genre" origin="448, 27" size="116, 28" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="8, 0"/>
       <view class="CTextLabel" origin="578, 10" size="44, 14" title="ERA" font-color="DimText"/><view class="COptionMenu" control-tag="UI.Era" origin="572, 27" size="70, 28" font-color="Text" back-color="PanelRaised" frame-width="0" menu-popup-style="true" text-inset="6, 0"/>
-      <view class="CTextLabel" origin="18, 58" size="420, 18" title="Compact mix / master assessment" font-color="DimText"/><view class="CTextLabel" origin="594, 60" size="40, 18" title="DE" font-color="MutedText" text-alignment="right"/>
+      <view class="CTextLabel" origin="18, 58" size="420, 18" title="Compact mix / master assessment" font-color="DimText"/><view class="CTextLabel" origin="582, 60" size="40, 18" title="DE" font-color="MutedText" text-alignment="right"/>
     </view>
 
     <view class="CViewContainer" mixorator-id="simplePage" origin="18, 102" size="614, 320" transparent="false" background-color="Panel">
