@@ -1,6 +1,7 @@
 #include "MixoratorController.h"
 #include "../analysis/AssessmentInput.h"
 #include "../dsp/AnalysisSnapshot.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
 
 #include <cstring>
 
@@ -13,6 +14,17 @@ Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* contex
     requestedFinalGeneration_ = 0;
     finalSnapshotGeneration_ = 0;
     return EditController::initialize(context);
+}
+
+Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString name)
+{
+    if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
+    {
+        auto* editor = new VSTGUI::VST3Editor(this, "view", "mixorator.uidesc");
+        editor->setEditorSizeConstrains({720., 480.}, {1440., 960.});
+        return editor;
+    }
+    return nullptr;
 }
 
 Steinberg::tresult PLUGIN_API Controller::notify(Steinberg::Vst::IMessage* message)
