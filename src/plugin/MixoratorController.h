@@ -51,6 +51,7 @@ public:
                                                   Steinberg::Vst::DataExchangeBlock* blocks,
                                                   Steinberg::TBool onBackgroundThread) override;
 
+    Steinberg::tresult requestResetAnalysis() noexcept;
     Steinberg::tresult requestLiveAnalysis() noexcept;
     Steinberg::tresult requestFinalAnalysis() noexcept;
 
@@ -109,6 +110,7 @@ private:
     Analysis::AnalysisMode uiMode_ {Analysis::AnalysisMode::Mix};
     Analysis::Genre uiGenre_ {Analysis::Genre::General};
     Analysis::Era uiEra_ {Analysis::Era::Modern};
+    bool uiAnalysisActive_ {false};
     bool uiFinalSelected_ {false};
     bool uiDetailsVisible_ {false};
 
