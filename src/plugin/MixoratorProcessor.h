@@ -69,6 +69,7 @@ private:
 
     DSP::AnalysisEngine analysis_;
     std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange_;
+    double preparedSampleRate_ {0.0};
     std::uint64_t exchangeSequence_ {0};
     std::uint64_t lastPublishedFinalizationGeneration_ {0};
     std::uint64_t exchangeSampleCounter_ {0};
