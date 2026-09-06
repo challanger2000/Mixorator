@@ -2,6 +2,7 @@
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "public.sdk/source/vst/utility/dataexchange.h"
+#include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "../dsp/AnalysisEngine.h"
 #include "../dsp/AnalysisSnapshot.h"
 #include "AnalysisExchange.h"
