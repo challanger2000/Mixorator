@@ -29,9 +29,13 @@ Important study findings relevant to Mixorator include:
 - 79% of masters are louder than -14 LUFS and 91.55% are louder than -16 LUFS.
 - Mixes show more under-compression; 46.43% were categorised as under-compressed.
 - 51.63% of masters were categorised as optimally compressed.
+- 68.58% of mixes but only 42.53% of masters were reported free from clipping.
 - Mono-compatibility issues were reported for about 16.9% of mixes and 12.0% of masters.
 - Phase issues were reported for about 16.3% of mixes and 15.6% of masters.
+- Mix stereo fields were reported as wide in 17.94% and narrow in 39.04%; master stereo fields were wide in 39.36% and narrow in 16.45%.
 - Electronic, drum'n'bass and techno show stronger bass emphasis; acoustic, folk and blues lean more toward mid/high energy; orchestral and metal can show stronger high-frequency energy.
+- The paper ranks the most common MIX issues as: undercompression, stereo-field issues, too loud, clipping, too quiet, overcompression, mono incompatibility, phase issues.
+- The paper ranks the most common MASTER issues as: too loud, clipping, overcompression, stereo-field issues, undercompression, phase issues, mono incompatibility, too quiet.
 
 ## What the RoEx study directly supports in Mixorator
 
@@ -86,10 +90,58 @@ For Mixorator this means:
 - severe technical faults cap the overall result;
 - technically clean stylistic outliers can become `Unusual`.
 
-The current design is therefore conceptually consistent with the RoEx findings, but the exact per-genre calibration constants should be described as Mixorator calibration rather than as numbers directly taken from the RoEx dataset.
+### Paper-to-code directional checks
+
+The current profile directions agree with the published RoEx trends in several important places:
+- General MIX includes approximately -23 LUFS comfortably inside its accepted loudness range, matching the study's observed MIX density peak around -23 LUFS.
+- General MASTER includes approximately -14 LUFS comfortably inside its accepted loudness range, matching the study's observed MASTER clustering around -14 LUFS.
+- MIX profiles preserve wider dynamic ranges than dense modern MASTER profiles, consistent with the study's finding that undercompression is much more prevalent in mixes and masters are generally more tightly controlled.
+- Techno / House-EDM tonal profiles allow substantially more low-band energy than Acoustic/Folk, consistent with the published genre trend.
+- Metal permits more high-frequency energy than several mainstream profiles, consistent with the paper's observation of high-frequency peaks in metal.
+- Technical clipping, phase and mono checks are intentionally genre-independent. This matches the distinction between universal technical faults and genre-dependent aesthetics.
+
+No production scoring constant needs to be changed merely to make these qualitative findings line up; the architecture already does.
+
+### Important caution: loud masters
+
+The RoEx dataset shows that a large majority of masters are louder than -14 LUFS, and the paper ranks `too loud` as the most common master issue. This does **not** mean a genre-style score should automatically reject every master above -14 LUFS. The dataset describes submitted music, not a verified corpus of ideal masters, and loudness normalization itself is not a technical defect.
+
+Mixorator therefore keeps three concepts separate:
+1. genre/style plausibility,
+2. PCM technical safety,
+3. streaming delivery compatibility.
+
+This separation is important because a loud modern Metal/EDM master can be stylistically plausible while still needing adequate true-peak headroom for streaming encoding.
+
+## Streaming reference check
+
+Spotify's current artist guidance remains consistent with Mixorator's streaming headroom rule:
+- normal playback normalization target: approximately -14 LUFS;
+- recommended maximum True Peak: -1 dBTP for masters at or below -14 LUFS;
+- if the master is louder than -14 LUFS, Spotify recommends keeping True Peak below -2 dBTP to reduce encoding distortion risk.
+
+That matches the current `AssessmentModel.cpp` branch that uses a -2 dBTP recommendation for masters louder than -14 LUFS and -1 dBTP otherwise. The calculated `streamingGainDb = -14 - integratedLufs` is therefore a useful normalization estimate, not a command to remaster every track to exactly -14 LUFS.
+
+## Calibration conclusion as of 2026-09-06
+
+The current production scoring should remain unchanged for now.
+
+Reason:
+- the RoEx/AES evidence supports the structure and direction of the Mixorator model;
+- the exact per-genre LUFS/PLR/LRA/tonal boundaries are not directly published as authoritative targets;
+- RoEx compression is not the same metric as PLR/LRA;
+- the source dataset contains both good and problematic submissions, so empirical frequency must not be mistaken for a quality target;
+- current streaming True Peak handling agrees with Spotify's published delivery guidance.
+
+The main remaining calibration risk is therefore not an obvious contradiction with the RoEx data, but the precision of Mixorator's own derived per-genre ranges. Those should only be narrowed or shifted when a reproducible reference distribution or additional trusted mastering references justify it.
 
 ## Next calibration step
 
-Before changing production scoring, use the public Zenodo dataset where practical to calculate distributions that can be mapped onto Mixorator's supported genres. Because the raw RoEx compression descriptor differs from PLR/LRA and the tonal results are categorical, any translation to Mixorator metrics must be explicitly documented as a derived mapping rather than a direct import.
+Where practical, process the public Zenodo dataset to calculate genre-specific distributions for fields that map directly to Mixorator (especially integrated loudness, true peak, clipping category and tonal-band category). Treat compression only as a directional cross-check because the source metric differs from PLR/LRA.
+
+Any future mapping should explicitly distinguish:
+- directly observed source statistics,
+- derived Mixorator calibration,
+- independent engineering / delivery safety rules.
 
 No scoring constants should be changed merely to make Mixorator imitate the most common values in the dataset. The dataset contains many problematic mixes/masters and describes what users submitted, not a corpus of verified reference masters. It is best used to establish realistic distributions, prevalence and genre trends, while technical recommendations and delivery safety remain grounded in metering standards and engineering practice.
