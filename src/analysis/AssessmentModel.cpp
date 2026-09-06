@@ -33,8 +33,11 @@ Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
             case Genre::Pop:                return {-25,-13, 8,19, 2,14, 7,6,8, .35,.45,.20};
             case Genre::Techno:
             case Genre::HouseEdm:           return {-23,-12, 7,17, 1.5,12, 6,6,7, .35,.45,.20};
+            case Genre::DrumAndBass:        return {-24,-12, 7,18, 1.5,13, 7,6,8, .35,.45,.20};
             case Genre::HipHopTrap:         return {-24,-12, 7,18, 1.5,13, 7,6,8, .35,.45,.20};
-            case Genre::ElectronicAmbient: return {-29,-13, 8,24, 2,20, 8,8,10,.30,.40,.30};
+            case Genre::RnBSoul:            return {-28,-14, 9,23, 3,18, 8,8,9, .30,.40,.30};
+            case Genre::Electronic:         return {-28,-12, 8,23, 2,19, 8,8,10,.30,.40,.30};
+            case Genre::Ambient:            return {-33,-14,11,29, 4,25,10,10,12,.20,.40,.40};
             case Genre::AcousticFolk:       return {-30,-15,11,26, 4,22, 8,8,10,.25,.40,.35};
             case Genre::Jazz:               return {-30,-15,11,27, 4,23, 8,8,10,.25,.40,.35};
             case Genre::Classical:          return {-34,-16,14,32, 6,28, 9,10,12,.20,.40,.40};
@@ -50,12 +53,15 @@ Profile profileFor(AnalysisMode mode, Genre genre, Era era) noexcept
         case Genre::Pop:  return vintage ? Profile{-19,-9,9,21,2,16,6,7,8,.40,.40,.20} : Profile{-15,-6.5,6,15,1,11,5,5,7,.45,.40,.15};
         case Genre::Techno:
         case Genre::HouseEdm:return vintage ? Profile{-18,-8.5,8,19,2,14,6,6,8,.45,.40,.15} : Profile{-13,-5.5,4.5,13,1,9,5,5,6,.45,.40,.15};
+        case Genre::DrumAndBass:return vintage ? Profile{-19,-8,8,20,2,15,6,7,8,.45,.40,.15} : Profile{-14,-5,4.5,13,1,9,5,5,6,.45,.40,.15};
         case Genre::HipHopTrap:return vintage ? Profile{-19,-9,9,21,2,15,6,7,8,.40,.40,.20} : Profile{-14,-5.5,5,14,1,10,5,5,7,.45,.40,.15};
-        case Genre::ElectronicAmbient:return vintage ? Profile{-23,-10,10,26,4,22,7,8,10,.30,.40,.30} : Profile{-20,-8,8,22,3,19,7,7,9,.30,.40,.30};
+        case Genre::RnBSoul:return vintage ? Profile{-22,-10,10,25,3,20,7,8,10,.30,.40,.30} : Profile{-18,-7.5,7,19,2,15,6,7,9,.35,.40,.25};
+        case Genre::Electronic:return vintage ? Profile{-23,-9.5,10,26,4,22,7,8,10,.30,.40,.30} : Profile{-18,-6.5,6,19,2,16,6,7,9,.35,.40,.25};
+        case Genre::Ambient:return vintage ? Profile{-27,-11,13,31,5,27,9,10,12,.15,.40,.45} : Profile{-24,-9,10,27,4,23,8,9,11,.20,.40,.40};
         case Genre::AcousticFolk:return vintage ? Profile{-24,-12,12,28,5,23,7,8,10,.25,.40,.35} : Profile{-21,-9.5,9,23,3,20,7,7,9,.25,.40,.35};
         case Genre::Jazz:return vintage ? Profile{-24,-12,13,29,5,24,7,8,10,.25,.40,.35} : Profile{-22,-10,10,25,4,21,7,8,9,.25,.40,.35};
         case Genre::Classical:return {-27,-13,15,34,7,30,9,11,13,.15,.40,.45};
-        case Genre::Cinematic:return {-24,-9,11,29,4,25,8,9,11,.25,.40,.35};
+        case Genre::Cinematic:return vintage ? Profile{-26,-11,13,31,5,27,9,10,12,.20,.40,.40} : Profile{-22,-8,9,25,3,21,8,8,10,.25,.40,.35};
         case Genre::General:return vintage ? Profile{-22,-10,11,26,4,21,7,8,10,.30,.45,.25} : Profile{-18,-7.5,7,20,2,16,6,7,9,.35,.45,.20};
     }
     return {-18,-7.5,7,20,2,16,6,7,9,.35,.45,.20};
@@ -70,8 +76,11 @@ TonalProfile tonalProfileFor(Genre genre) noexcept
         case Genre::Pop:                return {{{20,25,18,2}}, {{45,50,40,15}}, {{15,15,15,8}}};
         case Genre::Techno:
         case Genre::HouseEdm:           return {{{30,18,12,1}}, {{60,40,35,12}}, {{18,15,15,7}}};
+        case Genre::DrumAndBass:        return {{{32,16,12,1}}, {{65,40,35,12}}, {{18,15,15,7}}};
         case Genre::HipHopTrap:         return {{{30,18,10,1}}, {{65,40,30,10}}, {{18,15,15,7}}};
-        case Genre::ElectronicAmbient: return {{{20,20,12,1}}, {{55,50,40,18}}, {{18,18,18,9}}};
+        case Genre::RnBSoul:            return {{{20,25,12,1}}, {{50,55,35,12}}, {{15,17,15,7}}};
+        case Genre::Electronic:         return {{{22,18,12,1}}, {{58,48,38,16}}, {{18,17,17,8}}};
+        case Genre::Ambient:            return {{{12,22,10,0.5}}, {{48,58,38,15}}, {{17,18,18,9}}};
         case Genre::AcousticFolk:       return {{{10,30,20,2}}, {{35,60,45,18}}, {{12,18,15,9}}};
         case Genre::Jazz:               return {{{10,28,20,2}}, {{38,58,45,18}}, {{13,18,15,9}}};
         case Genre::Classical:          return {{{10,25,20,4}}, {{35,50,45,20}}, {{13,16,15,10}}};

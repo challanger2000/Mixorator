@@ -139,9 +139,13 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  Metrics m=cleanMetrics();m.integratedLufs=-18;m.plrDb=20;m.lraLu=14;
  const auto classicalModern=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Classical,Era::Modern);
  const auto classicalVintage=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Classical,Era::Vintage);
+ if(!approx(classicalModern.styleScore,classicalVintage.styleScore,1e-9))return fail("Classical should remain era-neutral without defensible historical calibration data");
+}
+{
+ Metrics m=cleanMetrics();m.integratedLufs=-10;m.plrDb=10;m.lraLu=5;
  const auto cinematicModern=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Cinematic,Era::Modern);
  const auto cinematicVintage=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Cinematic,Era::Vintage);
- if(!approx(classicalModern.styleScore,classicalVintage.styleScore,1e-9)||!approx(cinematicModern.styleScore,cinematicVintage.styleScore,1e-9))return fail("Era changed a genre whose profile is intentionally era-neutral");
+ if(cinematicModern.styleScore<=cinematicVintage.styleScore+5.0)return fail("Modern/vintage Cinematic profiles are not differentiated");
 }
 {
  Metrics m=cleanMetrics();m.integratedLufs=-20;m.plrDb=15;m.lraLu=9;
@@ -154,6 +158,23 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  const auto metal=AssessmentModel::evaluate(dense,AnalysisMode::Master,Genre::Metal,Era::Modern);
  const auto classical=AssessmentModel::evaluate(dense,AnalysisMode::Master,Genre::Classical,Era::Modern);
  if(metal.styleScore<=classical.styleScore+25.0)return fail("Dense modern master did not meaningfully separate Metal from Classical style");
+}
+{
+ Metrics dnb=cleanMetrics();dnb.integratedLufs=-9;dnb.plrDb=7;dnb.lraLu=4;dnb.tonalPercent={{58,20,17,5}};
+ const auto dnbScore=AssessmentModel::evaluate(dnb,AnalysisMode::Master,Genre::DrumAndBass,Era::Modern);
+ const auto acousticScore=AssessmentModel::evaluate(dnb,AnalysisMode::Master,Genre::AcousticFolk,Era::Modern);
+ if(dnbScore.styleScore<=acousticScore.styleScore+10.0)return fail("Drum & Bass profile did not recognize dense bass-forward material");
+}
+{
+ Metrics ambient=cleanMetrics();ambient.integratedLufs=-20;ambient.plrDb=22;ambient.lraLu=18;
+ const auto ambientScore=AssessmentModel::evaluate(ambient,AnalysisMode::Master,Genre::Ambient,Era::Modern);
+ const auto electronicScore=AssessmentModel::evaluate(ambient,AnalysisMode::Master,Genre::Electronic,Era::Modern);
+ if(ambientScore.styleScore<=electronicScore.styleScore+10.0)return fail("Ambient and Electronic profiles are not meaningfully separated");
+}
+{
+ Metrics rnb=cleanMetrics();rnb.integratedLufs=-12;rnb.plrDb=12;rnb.lraLu=7;
+ const auto a=AssessmentModel::evaluate(rnb,AnalysisMode::Master,Genre::RnBSoul,Era::Modern);
+ if(a.styleScore<90.0)return fail("Representative modern R&B/Soul master was unexpectedly penalized");
 }
 {
  Metrics m=cleanMetrics();m.integratedLufs=-9;m.truePeakDbtp=2;m.plrDb=8;m.lraLu=4;m.correlation=-1;m.monoCompatibilityDb=-1000;m.worstLocalCorrelation=-1;m.worstLocalMonoCompatibilityDb=-1000;m.negativeCorrelationPercent=100;m.dcOffsetLeftDbfs=-20;m.dcOffsetRightDbfs=-20;m.clippedSamples=100;

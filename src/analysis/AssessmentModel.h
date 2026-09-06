@@ -9,8 +9,8 @@ enum class AnalysisMode : std::uint8_t { Mix, Master };
 enum class Era : std::uint8_t { Modern, Vintage };
 enum class Genre : std::uint8_t
 {
-    Rock, Metal, Pop, Techno, HouseEdm, HipHopTrap, ElectronicAmbient,
-    AcousticFolk, Jazz, Classical, Cinematic, General
+    Rock, Metal, Pop, Techno, HouseEdm, DrumAndBass, HipHopTrap, RnBSoul,
+    Electronic, Ambient, AcousticFolk, Jazz, Classical, Cinematic, General
 };
 
 enum class Verdict : std::uint8_t { Excellent, Good, Attention, Critical, Unusual, InsufficientData };
