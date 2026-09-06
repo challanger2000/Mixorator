@@ -10,6 +10,7 @@ namespace Mixorator::DSP
 struct AnalysisSnapshot
 {
     bool valid {false};
+    bool programmeContext {false};
 
     double samplePeakDbfs {-1000.0};
     double truePeakDbtp {-1000.0};
@@ -40,6 +41,7 @@ struct AnalysisSnapshot
     {
         AnalysisSnapshot s;
         s.valid = true;
+        s.programmeContext = engine.hasProgrammeContext();
         s.samplePeakDbfs = engine.samplePeakDbfs();
         s.truePeakDbtp = engine.truePeakDbtp();
         s.rmsDbfs = engine.rmsDbfs();
