@@ -164,6 +164,47 @@ int testStateTransitions()
 
     return 0;
 }
+
+int testSetupProcessingLifecyclePreservation()
+{
+    Mixorator::Processor processor;
+    auto setup = makeSetup(48000.0, Steinberg::Vst::kSample32);
+    if (processor.setupProcessing(setup) != Steinberg::kResultOk)
+        return fail("Initial setup failed for lifecycle-preservation test");
+
+    processor.requestLiveAnalysis();
+    if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
+        return 1;
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+        return fail("Lifecycle test did not enter LIVE state");
+
+    if (processor.setupProcessing(setup) != Steinberg::kResultOk)
+        return fail("Repeated same-rate setup failed");
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+        return fail("Repeated same-rate setup erased LIVE analysis state");
+
+    processor.requestFinalAnalysis();
+    if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
+        return 1;
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final ||
+        processor.finalizationGeneration() != 1)
+        return fail("Lifecycle test did not enter FINAL state");
+
+    if (processor.setupProcessing(setup) != Steinberg::kResultOk)
+        return fail("Repeated same-rate setup failed in FINAL state");
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final ||
+        processor.finalizationGeneration() != 1)
+        return fail("Repeated same-rate setup erased FINAL analysis state");
+
+    auto changedRate = makeSetup(44100.0, Steinberg::Vst::kSample32);
+    if (processor.setupProcessing(changedRate) != Steinberg::kResultOk)
+        return fail("Changed-rate setup failed");
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle ||
+        processor.finalizationGeneration() != 0)
+        return fail("Real sample-rate change did not reinitialize analysis safely");
+
+    return 0;
+}
 }
 
 int main()
@@ -192,6 +233,8 @@ int main()
     }
 
     if (testStateTransitions() != 0)
+        return 1;
+    if (testSetupProcessingLifecyclePreservation() != 0)
         return 1;
 
     std::cout << "All Mixorator processor robustness tests passed.\n";
