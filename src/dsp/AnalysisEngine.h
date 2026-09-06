@@ -22,6 +22,7 @@ public:
     double crestFactorDb() const noexcept { return crestFactorDb_.load(std::memory_order_relaxed); }
     double momentaryLufs() const noexcept { return momentaryLufs_.load(std::memory_order_relaxed); }
     double shortTermLufs() const noexcept { return shortTermLufs_.load(std::memory_order_relaxed); }
+    bool hasProgrammeContext() const noexcept { return hasProgrammeContext_.load(std::memory_order_relaxed); }
     double lrBalanceDb() const noexcept { return lrBalanceDb_.load(std::memory_order_relaxed); }
     double correlation() const noexcept { return correlation_.load(std::memory_order_relaxed); }
     double stereoWidthDb() const noexcept { return stereoWidthDb_.load(std::memory_order_relaxed); }
@@ -140,6 +141,7 @@ private:
     std::atomic<double> crestFactorDb_ {0.0};
     std::atomic<double> momentaryLufs_ {-1000.0};
     std::atomic<double> shortTermLufs_ {-1000.0};
+    std::atomic<bool> hasProgrammeContext_ {false};
     std::atomic<double> lrBalanceDb_ {0.0};
     std::atomic<double> correlation_ {1.0};
     std::atomic<double> stereoWidthDb_ {-1000.0};
