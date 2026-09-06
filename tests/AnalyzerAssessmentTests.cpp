@@ -29,8 +29,9 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(e.truePeakDbtp()+1e-9<e.samplePeakDbfs())return fail("True Peak fell below Sample Peak");
  if(!approx(e.correlation(),1,1e-6)||!approx(e.lrBalanceDb(),0,1e-6)||!approx(e.monoCompatibilityDb(),0,1e-6))return fail("In-phase stereo metrics failed");
  if(std::abs(e.calculateLoudnessRangeLu())>.2)return fail("Constant programme LRA is not approximately 0 LU");
+ if(!e.hasProgrammeContext())return fail("Valid programme did not latch programme context");
  const auto s=Mixorator::DSP::AnalysisSnapshot::capture(e);
- if(!s.valid||!approx(s.samplePeakDbfs,e.samplePeakDbfs(),1e-12)||!approx(s.truePeakDbtp,e.truePeakDbtp(),1e-12)||!approx(s.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("Final snapshot did not preserve analyzer metrics");
+ if(!s.valid||!s.programmeContext||!approx(s.samplePeakDbfs,e.samplePeakDbfs(),1e-12)||!approx(s.truePeakDbtp,e.truePeakDbtp(),1e-12)||!approx(s.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("Final snapshot did not preserve analyzer metrics");
  if(!std::isfinite(s.plrDb))return fail("Final snapshot produced invalid PLR");
  const double directLra=e.calculateLoudnessRangeLu();
  if(std::isfinite(directLra)){if(!std::isfinite(s.loudnessRangeLu)||!approx(s.loudnessRangeLu,directLra,1e-12))return fail("Final snapshot did not preserve LRA");}
@@ -50,15 +51,31 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,1,.5);auto r=l;processStereo(e,l,r);
+ if(e.hasProgrammeContext())return fail("Short programme latched programme context too early");
  const auto liveMetrics=AssessmentInput::fromLive(e);
  const auto a=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Mix,Genre::Pop,Era::Modern);
- if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough Short-Term data");
+ if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough programme context");
  const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
  if(!snapshot.valid)return fail("Short FINAL capture was not marked as a captured snapshot");
+ if(snapshot.programmeContext)return fail("Short FINAL snapshot incorrectly carried programme context");
  const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
  if(finalMetrics.loudnessAvailable||finalMetrics.plrAvailable||finalMetrics.lraAvailable)return fail("Short FINAL programme incorrectly exposed definitive whole-program metrics");
  const auto finalAssessment=AssessmentModel::evaluate(finalMetrics,AnalysisMode::Master,Genre::Pop,Era::Modern);
  if(finalAssessment.overallVerdict!=Verdict::InsufficientData)return fail("Short FINAL programme produced a definitive verdict");
+}
+{
+ AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;processStereo(e,l,r);
+ if(!e.hasProgrammeContext())return fail("End-silence test never acquired programme context");
+ std::vector<double> silence(static_cast<std::size_t>(sr*4.0),0.0);processStereo(e,silence,silence);
+ if(!e.hasProgrammeContext())return fail("End silence erased latched programme context");
+ const auto liveMetrics=AssessmentInput::fromLive(e);
+ if(!liveMetrics.loudnessAvailable)return fail("End silence erased valid LIVE whole-programme result");
+ const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ if(!snapshot.programmeContext)return fail("FINAL snapshot lost historical programme context after silence");
+ const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
+ if(!finalMetrics.loudnessAvailable||!finalMetrics.plrAvailable)return fail("FINAL after end silence discarded a valid full-programme result");
+ const auto finalAssessment=AssessmentModel::evaluate(finalMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
+ if(finalAssessment.overallVerdict==Verdict::InsufficientData)return fail("FINAL after end silence collapsed to N/A");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;for(auto&x:r)x=-x;processStereo(e,l,r);
