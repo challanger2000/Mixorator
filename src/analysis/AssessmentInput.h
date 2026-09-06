@@ -14,20 +14,17 @@ struct AssessmentInput
     {
         Metrics m;
 
-        // Keep the familiar Short-Term LIVE behaviour while programme material
-        // is present. Once a complete programme context has existed, fall back
-        // to cumulative Integrated Loudness if the current 3 s Short-Term
-        // window becomes invalid during song-end silence. This prevents the
-        // verdict from collapsing to N/A before the user presses FINALIZE.
+        // LIVE is a provisional whole-programme estimate, not a rolling 3 s
+        // loudness display. Use the same cumulative Integrated Loudness basis
+        // that FINAL will freeze so the verdict represents everything heard
+        // since ANALYZE and cannot swing merely because the song enters an
+        // outro or end silence. A valid Short-Term window is still used as the
+        // minimum programme-context guard, matching FINAL's data sufficiency.
         const double shortTerm = engine.shortTermLufs();
         const double integrated = engine.calculateIntegratedLufs();
-        const double lraHistory = engine.calculateLoudnessRangeLu();
-        const bool shortTermAvailable = std::isfinite(shortTerm) && shortTerm > -999.0;
-        const bool priorProgrammeContext = std::isfinite(lraHistory);
-        const bool useIntegratedFallback = !shortTermAvailable && priorProgrammeContext &&
-                                           std::isfinite(integrated) && integrated > -999.0;
+        const bool minimumProgrammeContext = std::isfinite(shortTerm) && shortTerm > -999.0;
 
-        m.integratedLufs = useIntegratedFallback ? integrated : shortTerm;
+        m.integratedLufs = integrated;
         m.truePeakDbtp = engine.truePeakDbtp();
         m.plrDb = 0.0;
         m.lraLu = 0.0;
@@ -43,7 +40,9 @@ struct AssessmentInput
         m.clippedSamples = engine.clippedSampleCount();
         m.nonFiniteSamples = engine.nonFiniteSampleCount();
         m.tonalPercent = {{engine.lowBandPercent(),engine.lowMidBandPercent(),engine.highMidBandPercent(),engine.highBandPercent()}};
-        m.loudnessAvailable = shortTermAvailable || useIntegratedFallback;
+        m.loudnessAvailable = minimumProgrammeContext
+            && std::isfinite(integrated)
+            && integrated > -999.0;
         m.plrAvailable = false;
         m.lraAvailable = false;
         m.provisional = true;
