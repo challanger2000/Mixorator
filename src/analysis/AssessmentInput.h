@@ -13,8 +13,13 @@ struct AssessmentInput
     static Metrics fromLive(const DSP::AnalysisEngine& engine) noexcept
     {
         Metrics m;
-        const double shortTerm = engine.shortTermLufs();
-        m.integratedLufs = shortTerm;
+        // LIVE is a cumulative programme estimate since ANALYZE, not a rolling
+        // three-second snapshot. Using Short-Term loudness here made the main
+        // verdict collapse to N/A when the musical material ended but the DAW
+        // transport kept running through silence. Integrated loudness is gated
+        // and therefore remains representative of everything heard so far.
+        const double integrated = engine.calculateIntegratedLufs();
+        m.integratedLufs = integrated;
         m.truePeakDbtp = engine.truePeakDbtp();
         m.plrDb = 0.0;
         m.lraLu = 0.0;
@@ -30,7 +35,7 @@ struct AssessmentInput
         m.clippedSamples = engine.clippedSampleCount();
         m.nonFiniteSamples = engine.nonFiniteSampleCount();
         m.tonalPercent = {{engine.lowBandPercent(),engine.lowMidBandPercent(),engine.highMidBandPercent(),engine.highBandPercent()}};
-        m.loudnessAvailable = std::isfinite(shortTerm) && shortTerm > -999.0;
+        m.loudnessAvailable = std::isfinite(integrated) && integrated > -999.0;
         m.plrAvailable = false;
         m.lraAvailable = false;
         m.provisional = true;
