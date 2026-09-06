@@ -319,8 +319,23 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     if (data.processContext != nullptr)
         transportAllowsAnalysis = (data.processContext->state & Steinberg::Vst::ProcessContext::kPlaying) != 0;
 
+    // VST3 hosts can keep calling process() after the musical programme has
+    // ended.  When the host explicitly marks every input channel as silent,
+    // that block contains no programme material and must not advance any
+    // cumulative analysis statistic.  Do not infer silence from an arbitrary
+    // amplitude threshold here: genuinely quiet intros, fades, ambience and
+    // reverb tails remain part of the programme unless the host itself marks
+    // the block silent.
+    Steinberg::uint64 allInputChannelsMask = 0;
+    const auto silenceChannelCount = std::min<Steinberg::int32>(input.numChannels, 64);
+    for (Steinberg::int32 ch = 0; ch < silenceChannelCount; ++ch)
+        allInputChannelsMask |= (Steinberg::uint64{1} << ch);
+    const bool hostMarksInputSilent = input.numChannels > 0 &&
+        (input.silenceFlags & allInputChannelsMask) == allInputChannelsMask;
+
     const bool analyse = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live &&
-                         transportAllowsAnalysis;
+                         transportAllowsAnalysis &&
+                         !hostMarksInputSilent;
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
