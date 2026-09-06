@@ -7,6 +7,30 @@
 
 namespace Mixorator
 {
+namespace
+{
+template <typename Sample>
+bool isDigitallySilent(Sample** buffers, Steinberg::int32 numChannels, Steinberg::int32 numSamples) noexcept
+{
+    if (buffers == nullptr || numChannels <= 0 || numSamples <= 0)
+        return true;
+
+    for (Steinberg::int32 ch = 0; ch < numChannels; ++ch)
+    {
+        const auto* samples = buffers[ch];
+        if (!samples)
+            continue;
+
+        for (Steinberg::int32 i = 0; i < numSamples; ++i)
+        {
+            if (samples[i] != static_cast<Sample>(0))
+                return false;
+        }
+    }
+    return true;
+}
+}
+
 Processor::Processor()
 {
     setControllerClass(kControllerUID);
@@ -319,13 +343,6 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     if (data.processContext != nullptr)
         transportAllowsAnalysis = (data.processContext->state & Steinberg::Vst::ProcessContext::kPlaying) != 0;
 
-    // VST3 hosts can keep calling process() after the musical programme has
-    // ended.  When the host explicitly marks every input channel as silent,
-    // that block contains no programme material and must not advance any
-    // cumulative analysis statistic.  Do not infer silence from an arbitrary
-    // amplitude threshold here: genuinely quiet intros, fades, ambience and
-    // reverb tails remain part of the programme unless the host itself marks
-    // the block silent.
     Steinberg::uint64 allInputChannelsMask = 0;
     const auto silenceChannelCount = std::min<Steinberg::int32>(input.numChannels, 64);
     for (Steinberg::int32 ch = 0; ch < silenceChannelCount; ++ch)
@@ -333,13 +350,14 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     const bool hostMarksInputSilent = input.numChannels > 0 &&
         (input.silenceFlags & allInputChannelsMask) == allInputChannelsMask;
 
-    const bool analyse = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live &&
-                         transportAllowsAnalysis &&
-                         !hostMarksInputSilent;
+    const bool analysisIsLive = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live;
+    const bool mayAnalyse = analysisIsLive && transportAllowsAnalysis && !hostMarksInputSilent;
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
-        if (analyse)
+        const bool digitalSilence = mayAnalyse &&
+            isDigitallySilent(input.channelBuffers32, input.numChannels, data.numSamples);
+        if (mayAnalyse && !digitalSilence)
             analysis_.process(input.channelBuffers32, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
@@ -355,7 +373,9 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
-        if (analyse)
+        const bool digitalSilence = mayAnalyse &&
+            isDigitallySilent(input.channelBuffers64, input.numChannels, data.numSamples);
+        if (mayAnalyse && !digitalSilence)
             analysis_.process(input.channelBuffers64, input.numChannels, data.numSamples);
 
         for (Steinberg::int32 ch = 0; ch < channels; ++ch)
