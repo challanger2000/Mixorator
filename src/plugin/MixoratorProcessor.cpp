@@ -145,17 +145,6 @@ Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
             dataExchange_->onDeactivate();
     }
 
-    if (state)
-    {
-        analysis_.reset();
-        exchangeSampleCounter_ = 0;
-        exchangeSequence_ = 0;
-        lastPublishedFinalizationGeneration_ = 0;
-        analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
-        analysisState_.store(AnalysisState::Idle, std::memory_order_release);
-        finalizationGeneration_.store(0, std::memory_order_relaxed);
-    }
-
     return AudioEffect::setActive(state);
 }
 
