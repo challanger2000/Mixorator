@@ -15,6 +15,7 @@ namespace VSTGUI
 {
 class CControl;
 class COptionMenu;
+class CTextButton;
 class CTextLabel;
 class CView;
 }
@@ -89,7 +90,9 @@ private:
         kUiReset = 10007,
         kUiAnalyze = 10008,
         kUiDetails = 10009,
-        kUiBack = 10010
+        kUiBack = 10010,
+        kUiHelp = 10011,
+        kUiHelpClose = 10012
     };
 
     Steinberg::tresult requestAnalysisState(Steinberg::int64 state) noexcept;
@@ -116,6 +119,7 @@ private:
     bool uiAnalysisActive_ {false};
     bool uiFinalSelected_ {false};
     bool uiDetailsVisible_ {false};
+    bool uiHelpVisible_ {false};
 
     VSTGUI::VST3Editor* editor_ {nullptr};
     VSTGUI::CControl* mixControl_ {nullptr};
@@ -126,7 +130,17 @@ private:
     VSTGUI::COptionMenu* eraMenu_ {nullptr};
     VSTGUI::CView* simplePage_ {nullptr};
     VSTGUI::CView* detailsPage_ {nullptr};
+    VSTGUI::CView* helpPage_ {nullptr};
     VSTGUI::CTextLabel* languageLabel_ {nullptr};
+    VSTGUI::CTextButton* helpButton_ {nullptr};
+    VSTGUI::CTextButton* helpCloseButton_ {nullptr};
+    VSTGUI::CTextLabel* helpTitle_ {nullptr};
+    VSTGUI::CTextLabel* helpWorkflowTitle_ {nullptr};
+    VSTGUI::CTextLabel* helpWorkflowBody_ {nullptr};
+    VSTGUI::CTextLabel* helpMetricsTitle_ {nullptr};
+    VSTGUI::CTextLabel* helpMetricsBody_ {nullptr};
+    VSTGUI::CTextLabel* helpSafetyTitle_ {nullptr};
+    VSTGUI::CTextLabel* helpSafetyBody_ {nullptr};
 
     VSTGUI::CTextLabel* technicalVerdict_ {nullptr};
     VSTGUI::CTextLabel* styleVerdict_ {nullptr};
