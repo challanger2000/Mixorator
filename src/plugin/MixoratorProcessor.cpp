@@ -314,7 +314,13 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     auto& input = data.inputs[0];
     auto& output = data.outputs[0];
     const auto channels = input.numChannels < output.numChannels ? input.numChannels : output.numChannels;
-    const bool analyse = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live;
+
+    bool transportAllowsAnalysis = true;
+    if (data.processContext != nullptr)
+        transportAllowsAnalysis = (data.processContext->state & Steinberg::Vst::ProcessContext::kPlaying) != 0;
+
+    const bool analyse = analysisState_.load(std::memory_order_acquire) == AnalysisState::Live &&
+                         transportAllowsAnalysis;
 
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
     {
