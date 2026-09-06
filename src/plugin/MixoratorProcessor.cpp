@@ -124,14 +124,22 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
     if (result != Steinberg::kResultOk)
         return result;
 
-    analysis_.prepare(setup.sampleRate);
+    const bool firstSetup = preparedSampleRate_ <= 1.0;
+    const bool sampleRateChanged = !firstSetup && preparedSampleRate_ != setup.sampleRate;
+
+    if (firstSetup || sampleRateChanged)
+    {
+        analysis_.prepare(setup.sampleRate);
+        preparedSampleRate_ = setup.sampleRate;
+        exchangeSampleCounter_ = 0;
+        exchangeSequence_ = 0;
+        lastPublishedFinalizationGeneration_ = 0;
+        analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
+        analysisState_.store(AnalysisState::Idle, std::memory_order_release);
+        finalizationGeneration_.store(0, std::memory_order_relaxed);
+    }
+
     exchangeIntervalSamples_ = static_cast<std::uint64_t>(std::max(1.0, setup.sampleRate / 20.0));
-    exchangeSampleCounter_ = 0;
-    exchangeSequence_ = 0;
-    lastPublishedFinalizationGeneration_ = 0;
-    analysisCommand_.store(AnalysisCommand::None, std::memory_order_relaxed);
-    analysisState_.store(AnalysisState::Idle, std::memory_order_release);
-    finalizationGeneration_.store(0, std::memory_order_relaxed);
     return Steinberg::kResultOk;
 }
 
