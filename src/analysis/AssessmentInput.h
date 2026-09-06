@@ -14,16 +14,19 @@ struct AssessmentInput
     {
         Metrics m;
 
-        // LIVE is a provisional whole-programme estimate. Programme context is
-        // latched once a valid 3 s Short-Term window has existed and remains
-        // true across later end silence until RESET/new ANALYZE.
+        // LIVE is provisional, but once enough programme context exists it
+        // uses the same cumulative whole-programme metrics as FINAL. This
+        // makes the running verdict converge naturally toward the definitive
+        // result instead of introducing PLR/LRA only when FINALIZE is pressed.
         const double integrated = engine.calculateIntegratedLufs();
+        const double plr = engine.calculatePlrDb();
+        const double lra = engine.calculateLoudnessRangeLu();
         const bool minimumProgrammeContext = engine.hasProgrammeContext();
 
         m.integratedLufs = integrated;
         m.truePeakDbtp = engine.truePeakDbtp();
-        m.plrDb = 0.0;
-        m.lraLu = 0.0;
+        m.plrDb = plr;
+        m.lraLu = lra;
         m.crestFactorDb = engine.crestFactorDb();
         m.correlation = engine.correlation();
         m.monoCompatibilityDb = engine.monoCompatibilityDb();
@@ -39,8 +42,10 @@ struct AssessmentInput
         m.loudnessAvailable = minimumProgrammeContext
             && std::isfinite(integrated)
             && integrated > -999.0;
-        m.plrAvailable = false;
-        m.lraAvailable = false;
+        m.plrAvailable = m.loudnessAvailable
+            && std::isfinite(plr);
+        m.lraAvailable = minimumProgrammeContext
+            && std::isfinite(lra);
         m.provisional = true;
         return m;
     }
