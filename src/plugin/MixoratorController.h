@@ -5,6 +5,7 @@
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "vstgui/lib/controls/icontrollistener.h"
 #include "vstgui/lib/iviewlistener.h"
+#include "vstgui/lib/cvstguitimer.h"
 #include "vstgui/uidescription/uiattributes.h"
 #include "AnalysisExchange.h"
 
@@ -100,6 +101,9 @@ private:
     void bindNamedView(VSTGUI::CView* view, const VSTGUI::UIAttributes& attributes) noexcept;
     void updateSelectionControls() noexcept;
     void updatePageVisibility() noexcept;
+    void updateAnalysisLightState() noexcept;
+    void tickAnalysisLight() noexcept;
+    void positionAnalysisLights() noexcept;
 
     Steinberg::Vst::DataExchangeReceiverHandler dataExchange_ {this};
     AnalysisExchangePacket latestPacket_ {};
@@ -139,5 +143,10 @@ private:
     VSTGUI::CTextLabel* lraValue_ {nullptr};
     VSTGUI::CTextLabel* correlationValue_ {nullptr};
     VSTGUI::CTextLabel* monoValue_ {nullptr};
+    VSTGUI::CTextLabel* analysisLight1_ {nullptr};
+    VSTGUI::CTextLabel* analysisLight2_ {nullptr};
+    VSTGUI::CTextLabel* analysisLight3_ {nullptr};
+    VSTGUI::SharedPointer<VSTGUI::CVSTGUITimer> analysisLightTimer_ {};
+    double analysisLightPhase_ {0.0};
 };
 }
