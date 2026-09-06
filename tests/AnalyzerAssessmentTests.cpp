@@ -38,8 +38,10 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  else if(std::isfinite(s.loudnessRangeLu))return fail("Final snapshot changed insufficient LRA data into a finite value");
 
  const auto liveMetrics=AssessmentInput::fromLive(e);
- if(!liveMetrics.provisional||!liveMetrics.loudnessAvailable||liveMetrics.plrAvailable||liveMetrics.lraAvailable)return fail("LIVE metric availability flags are wrong");
- if(!approx(liveMetrics.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("LIVE loudness does not use cumulative Integrated LUFS");
+ if(!liveMetrics.provisional||!liveMetrics.loudnessAvailable||!liveMetrics.plrAvailable)return fail("LIVE metric availability flags are wrong");
+ if(std::isfinite(directLra)!=liveMetrics.lraAvailable)return fail("LIVE LRA availability does not match analyzer data");
+ if(!approx(liveMetrics.integratedLufs,e.calculateIntegratedLufs(),1e-12)||!approx(liveMetrics.plrDb,s.plrDb,1e-12))return fail("LIVE whole-program metrics do not match current cumulative analysis");
+ if(liveMetrics.lraAvailable&&!approx(liveMetrics.lraLu,directLra,1e-12))return fail("LIVE LRA does not match current cumulative analysis");
  const auto liveAssessment=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
  if(!liveAssessment.provisional||liveAssessment.overallVerdict==Verdict::InsufficientData)return fail("LIVE assessment was not produced as provisional");
 
@@ -48,6 +50,7 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(!approx(finalMetrics.integratedLufs,s.integratedLufs,1e-12)||!approx(finalMetrics.plrDb,s.plrDb,1e-12))return fail("FINAL assessment mapping changed whole-program metrics");
  const auto finalAssessment=AssessmentModel::evaluate(finalMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
  if(finalAssessment.provisional||finalAssessment.overallVerdict==Verdict::InsufficientData)return fail("FINAL assessment was not produced as definitive");
+ if(!approx(liveAssessment.technicalScore,finalAssessment.technicalScore,1e-12)||!approx(liveAssessment.styleScore,finalAssessment.styleScore,1e-12)||!approx(liveAssessment.overallScore,finalAssessment.overallScore,1e-12))return fail("Mature LIVE assessment does not converge to immediate FINAL assessment");
 }
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,1,.5);auto r=l;processStereo(e,l,r);
