@@ -7,6 +7,7 @@
 #include "vstgui/lib/iviewlistener.h"
 #include "vstgui/uidescription/uiattributes.h"
 #include "AnalysisExchange.h"
+#include "Localization.h"
 
 #include <cstdint>
 
@@ -111,6 +112,7 @@ private:
     Analysis::AnalysisMode uiMode_ {Analysis::AnalysisMode::Mix};
     Analysis::Genre uiGenre_ {Analysis::Genre::General};
     Analysis::Era uiEra_ {Analysis::Era::Modern};
+    Localization::Language uiLanguage_ {Localization::Language::German};
     bool uiAnalysisActive_ {false};
     bool uiFinalSelected_ {false};
     bool uiDetailsVisible_ {false};
@@ -124,6 +126,7 @@ private:
     VSTGUI::COptionMenu* eraMenu_ {nullptr};
     VSTGUI::CView* simplePage_ {nullptr};
     VSTGUI::CView* detailsPage_ {nullptr};
+    VSTGUI::CTextLabel* languageLabel_ {nullptr};
 
     VSTGUI::CTextLabel* technicalVerdict_ {nullptr};
     VSTGUI::CTextLabel* styleVerdict_ {nullptr};
