@@ -27,15 +27,10 @@ const VSTGUI::CColor kStateFinal {120,210,170,255};
 const VSTGUI::CColor kStatePending {217,182,111,255};
 const VSTGUI::CColor kMetricAvailable {242,244,246,255};
 const VSTGUI::CColor kMetricUnavailable {126,138,147,255};
-const VSTGUI::CColor kAnalysisLightHead {105,215,192,235};
-const VSTGUI::CColor kAnalysisLightTrail1 {105,215,192,145};
-const VSTGUI::CColor kAnalysisLightTrail2 {105,215,192,75};
-constexpr double kAnalysisLightCenterX = 325.0;
-constexpr double kAnalysisLightCenterY = 158.0;
-constexpr double kAnalysisLightRadiusX = 116.0;
-constexpr double kAnalysisLightRadiusY = 84.0;
-constexpr double kAnalysisLightStep = 0.038;
-constexpr double kAnalysisLightTrailStep = 0.145;
+const VSTGUI::CColor kAnalysisLight1 {255,193,73,255};
+const VSTGUI::CColor kAnalysisLight2 {255,226,112,255};
+const VSTGUI::CColor kAnalysisLight3 {231,239,105,255};
+constexpr double kAnalysisLightStep = 0.035;
 
 const char* verdictText(Analysis::Verdict v) noexcept { switch(v){case Analysis::Verdict::Excellent:return "EXCELLENT";case Analysis::Verdict::Good:return "GOOD";case Analysis::Verdict::Attention:return "ATTENTION";case Analysis::Verdict::Critical:return "CRITICAL";case Analysis::Verdict::Unusual:return "UNUSUAL";case Analysis::Verdict::InsufficientData:return "N/A";} return "N/A"; }
 const VSTGUI::CColor& verdictColor(Analysis::Verdict v) noexcept { switch(v){case Analysis::Verdict::Excellent:case Analysis::Verdict::Good:return kVerdictGood;case Analysis::Verdict::Attention:return kVerdictAttention;case Analysis::Verdict::Critical:return kVerdictCritical;case Analysis::Verdict::Unusual:return kVerdictUnusual;case Analysis::Verdict::InsufficientData:return kVerdictUnavailable;} return kVerdictUnavailable; }
@@ -77,17 +72,15 @@ void Controller::updateSelectionControls() noexcept {if(mixControl_){mixControl_
 void Controller::positionAnalysisLights() noexcept
 {
     VSTGUI::CTextLabel* lights[] = {analysisLight1_,analysisLight2_,analysisLight3_};
-    const VSTGUI::CColor colors[] = {kAnalysisLightHead,kAnalysisLightTrail1,kAnalysisLightTrail2};
+    const VSTGUI::CColor colors[] = {kAnalysisLight1,kAnalysisLight2,kAnalysisLight3};
+    const double hotspot=1.0+std::sin(analysisLightPhase_);
     for(int i=0;i<3;++i)
     {
         auto* light=lights[i];if(!light)continue;
-        const double phase=analysisLightPhase_-static_cast<double>(i)*kAnalysisLightTrailStep;
-        const double x=kAnalysisLightCenterX+std::cos(phase)*kAnalysisLightRadiusX;
-        const double y=kAnalysisLightCenterY+std::sin(phase)*kAnalysisLightRadiusY;
-        VSTGUI::CRect r{x-8.0,y-8.0,x+8.0,y+8.0};
-        light->setViewSize(r);
-        light->setMouseableArea(r);
+        const double distance=hotspot-static_cast<double>(i);
+        const double glow=0.16+0.82*std::exp(-2.35*distance*distance);
         light->setFontColor(colors[i]);
+        light->setAlphaValue(static_cast<float>(glow));
         light->setVisible(true);
         light->invalid();
     }
@@ -105,17 +98,24 @@ void Controller::tickAnalysisLight() noexcept
 void Controller::updateAnalysisLightState() noexcept
 {
     const bool running=uiAnalysisActive_&&!uiFinalSelected_;
-    if(!running)
+    if(running)
     {
-        analysisLightTimer_=nullptr;
-        if(analysisLight1_){analysisLight1_->setVisible(false);analysisLight1_->invalid();}
-        if(analysisLight2_){analysisLight2_->setVisible(false);analysisLight2_->invalid();}
-        if(analysisLight3_){analysisLight3_->setVisible(false);analysisLight3_->invalid();}
+        positionAnalysisLights();
+        if(!analysisLightTimer_&&editor_)
+            analysisLightTimer_=VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([this](VSTGUI::CVSTGUITimer*){tickAnalysisLight();},33);
         return;
     }
-    positionAnalysisLights();
-    if(!analysisLightTimer_&&editor_)
-        analysisLightTimer_=VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([this](VSTGUI::CVSTGUITimer*){tickAnalysisLight();},33);
+
+    analysisLightTimer_=nullptr;
+    if(uiFinalSelected_)
+    {
+        positionAnalysisLights();
+        return;
+    }
+
+    if(analysisLight1_){analysisLight1_->setVisible(false);analysisLight1_->invalid();}
+    if(analysisLight2_){analysisLight2_->setVisible(false);analysisLight2_->invalid();}
+    if(analysisLight3_){analysisLight3_->setVisible(false);analysisLight3_->invalid();}
 }
 
 void Controller::refreshUi() noexcept {updateSelectionControls();updateAnalysisLightState();const auto a=evaluateLatest(uiMode_,uiGenre_,uiEra_);setVerdictLabel(technicalVerdict_,a.technicalVerdict);setVerdictLabel(styleVerdict_,a.styleVerdict);setVerdictLabel(pcmVerdict_,a.pcmDeliveryVerdict);setVerdictLabel(streamingVerdict_,a.streamingDeliveryVerdict);setVerdictLabel(overallVerdict_,a.overallVerdict);if(!hasPacket_){if(uiFinalSelected_){setColoredLabel(stateLabel_,"FINAL / PENDING",kStatePending);setLabel(overallLine1_,"Final result requested");setLabel(overallLine2_,"Start playback if processing is stopped");}else if(uiAnalysisActive_){setColoredLabel(stateLabel_,"LIVE / PROVISIONAL",kStateLive);setLabel(overallLine1_,"Play the complete song from the start");setLabel(overallLine2_,"When finished, press FINALIZE for result");}else{setColoredLabel(stateLabel_,"READY",kStateLive);setLabel(overallLine1_,"Choose MIX or MASTER, then ANALYZE");setLabel(overallLine2_,"Play the complete song from the start");}formatValue(integratedValue_,0,"LUFS",false);formatValue(truePeakValue_,0,"dBTP",false);formatValue(plrValue_,0,"dB",false);formatValue(lraValue_,0,"LU",false);formatValue(correlationValue_,0,"",false);formatValue(monoValue_,0,"dB",false);return;}const auto& m=latestPacket_.metrics;const bool fp=latestPacket_.finalState!=0;const bool definitive=fp&&hasDefinitiveFinalSnapshot();const bool pending=uiFinalSelected_&&!definitive;if(pending){setColoredLabel(stateLabel_,"FINAL / PENDING",kStatePending);setLabel(overallLine1_,"Final result requested");setLabel(overallLine2_,fp?"Preparing definitive result":"Waiting for processor finalize");}else if(definitive){setColoredLabel(stateLabel_,"FINAL / DEFINITIVE",kStateFinal);setLabel(overallLine1_,"Analysis complete - definitive result");setLabel(overallLine2_,"Press ANALYZE for a new measurement");}else{setColoredLabel(stateLabel_,"LIVE / PROVISIONAL",kStateLive);setLabel(overallLine1_,"Play the complete song from the start");setLabel(overallLine2_,"When finished, press FINALIZE for result");}const bool p=m.loudnessAvailable;formatValue(integratedValue_,m.integratedLufs,"LUFS",p&&m.integratedLufs>-999.0);formatValue(truePeakValue_,m.truePeakDbtp,"dBTP",p&&m.truePeakDbtp>-999.0);formatValue(plrValue_,m.plrDb,"dB",m.plrAvailable);formatValue(lraValue_,m.lraLu,"LU",m.lraAvailable);formatValue(correlationValue_,m.correlation,"",p,2);formatValue(monoValue_,m.monoCompatibilityDb,"dB",p);}
