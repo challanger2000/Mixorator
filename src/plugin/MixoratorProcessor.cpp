@@ -228,8 +228,11 @@ void Processor::handleAnalysisCommandAtBlockBoundary() noexcept
 
     if (command == AnalysisCommand::Finalize)
     {
-        analysisState_.store(AnalysisState::Final, std::memory_order_release);
-        finalizationGeneration_.fetch_add(1, std::memory_order_release);
+        if (analysisState_.load(std::memory_order_acquire) == AnalysisState::Live)
+        {
+            analysisState_.store(AnalysisState::Final, std::memory_order_release);
+            finalizationGeneration_.fetch_add(1, std::memory_order_release);
+        }
 
         AnalysisCommand expected = AnalysisCommand::Finalize;
         analysisCommand_.compare_exchange_strong(
