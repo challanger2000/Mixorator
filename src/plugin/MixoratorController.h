@@ -104,6 +104,7 @@ private:
     Steinberg::Vst::DataExchangeReceiverHandler dataExchange_ {this};
     AnalysisExchangePacket latestPacket_ {};
     bool hasPacket_ {false};
+    bool acceptFirstPacketAfterQueueOpen_ {true};
     std::uint64_t requestedFinalGeneration_ {0};
     std::uint64_t finalSnapshotGeneration_ {0};
 
