@@ -38,7 +38,7 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
 
  const auto liveMetrics=AssessmentInput::fromLive(e);
  if(!liveMetrics.provisional||!liveMetrics.loudnessAvailable||liveMetrics.plrAvailable||liveMetrics.lraAvailable)return fail("LIVE metric availability flags are wrong");
- if(!approx(liveMetrics.integratedLufs,e.shortTermLufs(),1e-12))return fail("LIVE loudness does not use Short-Term LUFS");
+ if(!approx(liveMetrics.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("LIVE loudness does not use cumulative Integrated LUFS");
  const auto liveAssessment=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Master,Genre::General,Era::Modern);
  if(!liveAssessment.provisional||liveAssessment.overallVerdict==Verdict::InsufficientData)return fail("LIVE assessment was not produced as provisional");
 
