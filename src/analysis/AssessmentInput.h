@@ -14,15 +14,11 @@ struct AssessmentInput
     {
         Metrics m;
 
-        // LIVE is a provisional whole-programme estimate, not a rolling 3 s
-        // loudness display. Use the same cumulative Integrated Loudness basis
-        // that FINAL will freeze so the verdict represents everything heard
-        // since ANALYZE and cannot swing merely because the song enters an
-        // outro or end silence. A valid Short-Term window is still used as the
-        // minimum programme-context guard, matching FINAL's data sufficiency.
-        const double shortTerm = engine.shortTermLufs();
+        // LIVE is a provisional whole-programme estimate. Programme context is
+        // latched once a valid 3 s Short-Term window has existed and remains
+        // true across later end silence until RESET/new ANALYZE.
         const double integrated = engine.calculateIntegratedLufs();
-        const bool minimumProgrammeContext = std::isfinite(shortTerm) && shortTerm > -999.0;
+        const bool minimumProgrammeContext = engine.hasProgrammeContext();
 
         m.integratedLufs = integrated;
         m.truePeakDbtp = engine.truePeakDbtp();
@@ -69,15 +65,14 @@ struct AssessmentInput
         m.nonFiniteSamples = snapshot.nonFiniteSampleCount;
         m.tonalPercent = snapshot.tonalPercent;
 
-        // A snapshot being captured only means that FINAL successfully froze the analyzer.
-        // It must not imply that enough programme material exists for a definitive verdict.
-        // Requiring a valid Short-Term value guarantees at least one complete 3 s window,
-        // while Integrated Loudness still comes from the full gated programme calculation.
-        const bool minimumProgrammeContext = snapshot.valid
-            && std::isfinite(snapshot.shortTermLufs)
-            && snapshot.shortTermLufs > -999.0;
+        // FINAL must use historical programme sufficiency, not the current
+        // Short-Term window. Otherwise several seconds of silence before the
+        // user presses FINALIZE can incorrectly turn a valid full-song result
+        // into N/A even though the cumulative programme analysis is intact.
+        const bool minimumProgrammeContext = snapshot.valid && snapshot.programmeContext;
         m.loudnessAvailable = minimumProgrammeContext
-            && std::isfinite(snapshot.integratedLufs);
+            && std::isfinite(snapshot.integratedLufs)
+            && snapshot.integratedLufs > -999.0;
         m.plrAvailable = m.loudnessAvailable
             && std::isfinite(snapshot.plrDb);
         m.lraAvailable = minimumProgrammeContext
