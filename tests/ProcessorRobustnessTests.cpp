@@ -107,10 +107,26 @@ int testStateTransitions()
     if (processor.setupProcessing(setup) != Steinberg::kResultOk)
         return fail("Processor setup failed for state-transition test");
 
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
-        return fail("Processor did not start in LIVE state");
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+        return fail("Processor did not start in IDLE state");
     if (processor.finalizationGeneration() != 0)
         return fail("Initial FINAL generation was not zero");
+
+    processor.requestFinalAnalysis();
+    if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
+        return 1;
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+        return fail("FINAL request must be ignored while IDLE");
+    if (processor.finalizationGeneration() != 0)
+        return fail("FINAL generation changed while IDLE");
+
+    processor.requestLiveAnalysis();
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+        return fail("ANALYZE request changed state before a process boundary");
+    if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
+        return 1;
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+        return fail("ANALYZE request was not applied at process boundary");
 
     processor.requestFinalAnalysis();
     if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
@@ -127,11 +143,17 @@ int testStateTransitions()
     if (processor.finalizationGeneration() != 1)
         return fail("FINAL generation changed without a new FINAL request");
 
+    processor.requestResetAnalysis();
+    if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
+        return 1;
+    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+        return fail("RESET did not return processor to IDLE");
+
     processor.requestLiveAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
     if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
-        return fail("LIVE request was not applied at process boundary");
+        return fail("Second ANALYZE request was not applied");
 
     processor.requestFinalAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
