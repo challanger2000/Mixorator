@@ -82,6 +82,38 @@ int main()
         }
     }
 
+    // EBU Tech 3342 (2023), Table 1, synthetic minimum-requirements tests 1-4.
+    // Each segment is an in-phase stereo 1 kHz sine of 20 s duration. The
+    // prescribed accepted tolerance is +/-1 LU. Authentic-programme tests 5-6
+    // require the EBU audio fixtures and are intentionally not synthesized here.
+    {
+        constexpr double sr = 48000.0;
+        struct LraProgramme
+        {
+            std::vector<double> levelsDbfs;
+            double expectedLra;
+        };
+        const std::vector<LraProgramme> programmes {
+            {{-20.0, -30.0}, 10.0},
+            {{-20.0, -15.0}, 5.0},
+            {{-40.0, -20.0}, 20.0},
+            {{-50.0, -35.0, -20.0, -35.0, -50.0}, 15.0}
+        };
+        for (const auto& programme : programmes)
+        {
+            AnalysisEngine engine;
+            engine.prepare(sr);
+            std::vector<double> left;
+            for (double level : programme.levelsDbfs)
+                appendDbfsTone(left, sr, 20.0, level);
+            auto right = left;
+            processStereo(engine, left, right);
+            const double lra = engine.calculateLoudnessRangeLu();
+            if (!std::isfinite(lra) || !approx(lra, programme.expectedLra, 1.0))
+                return fail("EBU Tech 3342 synthetic LRA reference failed");
+        }
+    }
+
     // Determinism across common music sample rates. These complement the
     // external EBU fixtures above by catching block-boundary regressions.
     for (double sampleRate : {44100.0, 48000.0, 96000.0})
