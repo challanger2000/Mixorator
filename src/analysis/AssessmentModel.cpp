@@ -142,6 +142,22 @@ double localStereoPenalty(const Metrics& m) noexcept
     return std::min(16.0,severity+prevalencePenalty);
 }
 
+// Extremely loud masters with simultaneously low PLR are a technical
+// trade-off even when they are stylistically correct. Keep this deliberately
+// conservative: density alone can move EXCELLENT to GOOD, but can never make
+// an otherwise clean master ATTENTION or CRITICAL.
+double masterDensityPenalty(const Metrics& m, AnalysisMode mode) noexcept
+{
+    if (mode != AnalysisMode::Master || !m.plrAvailable ||
+        !std::isfinite(m.integratedLufs) || !std::isfinite(m.plrDb))
+        return 0.0;
+
+    const double loudnessStress=std::max(0.0,m.integratedLufs+8.0);
+    const double plrStress=std::max(0.0,8.0-m.plrDb);
+    const double jointStress=std::min(loudnessStress,plrStress);
+    return std::min(15.0,6.0*jointStress);
+}
+
 Verdict verdictFor(double s) noexcept
 {
     if (s>=90) return Verdict::Excellent;
@@ -172,6 +188,7 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     technical-=localStereoPenalty(m);
     if (std::abs(m.lrBalanceDb)>3.0) technical-=std::min(15.0,(std::abs(m.lrBalanceDb)-3.0)*3.0);
     if (m.dcOffsetLeftDbfs>-50.0 || m.dcOffsetRightDbfs>-50.0) technical-=10.0;
+    technical-=masterDensityPenalty(m,mode);
     technical=std::clamp(technical,0.0,100.0);
 
     const Profile p=profileFor(mode,genre,era);
