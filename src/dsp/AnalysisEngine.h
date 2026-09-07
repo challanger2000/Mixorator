@@ -65,6 +65,7 @@ private:
     void pushWindowSample(std::vector<double>& ring, std::size_t& writeIndex,
                           std::size_t& validSamples, double& sum, double value) noexcept;
     void processTruePeakSample(int channel, double sample) noexcept;
+    void trackClippingSample(int channel, double sample) noexcept;
     void updateStereoMetrics() noexcept;
     void finishLocalStereoWindow() noexcept;
     void updateTechnicalMetrics() noexcept;
@@ -126,6 +127,11 @@ private:
     std::uint64_t dcSampleCount_[2] {0, 0};
     std::uint64_t clippedSampleCountRaw_ {0};
     std::uint64_t nonFiniteSampleCountRaw_ {0};
+    // Isolated samples at exactly +/-1.0 are legal. Three or more consecutive
+    // same-polarity full-scale samples form a conservative digital flat-top
+    // signature and are counted as clipping, including the first two samples.
+    std::uint32_t fullScaleRun_[2] {0, 0};
+    int fullScalePolarity_[2] {0, 0};
 
     double tonalInput_[kFftSize] {};
     double fftReal_[kFftSize] {};
