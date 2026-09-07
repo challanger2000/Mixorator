@@ -143,6 +143,45 @@ int main()
             return fail("Healthy dynamic classical master was not recognized as an excellent style match");
     }
 
+    // Real orchestral stereo can contain a few strongly decorrelated 100 ms
+    // windows from room/instrument transients. The overall programme remains
+    // mono-safe, so a ~4% negative-window prevalence must not turn the master
+    // into a technical warning solely because of the single worst window.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -13.7;
+        m.truePeakDbtp = -0.4;
+        m.plrDb = 13.2;
+        m.lraLu = 14.2;
+        m.correlation = 0.34;
+        m.monoCompatibilityDb = -1.7;
+        m.worstLocalCorrelation = -0.53;
+        m.worstLocalMonoCompatibilityDb = -6.23;
+        m.negativeCorrelationPercent = 4.26;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Classical, Era::Modern);
+        if (a.technicalVerdict != Verdict::Excellent)
+            return fail("Transient orchestral stereo outliers were over-weighted in technical quality");
+    }
+
+    // The same local severity becomes a genuine technical problem when it is
+    // prevalent. Sustained phase/decorrelation must therefore still produce a
+    // clear technical downgrade; the prevalence weighting must not hide it.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -13.7;
+        m.truePeakDbtp = -1.2;
+        m.plrDb = 13.2;
+        m.lraLu = 8.0;
+        m.correlation = 0.20;
+        m.monoCompatibilityDb = -2.0;
+        m.worstLocalCorrelation = -0.53;
+        m.worstLocalMonoCompatibilityDb = -6.23;
+        m.negativeCorrelationPercent = 35.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::General, Era::Modern);
+        if (a.technicalVerdict == Verdict::Excellent)
+            return fail("Sustained stereo phase problem was hidden by prevalence weighting");
+    }
+
     // The exact same safe signal may be stylistically unusual for a modern
     // dense genre, but technical integrity must remain identical.
     {
