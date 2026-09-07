@@ -94,3 +94,17 @@ target_include_directories(MixoratorMasterScenarioTests PRIVATE
 )
 
 add_test(NAME MixoratorMasterScenarioTests COMMAND MixoratorMasterScenarioTests)
+
+add_executable(MixoratorControllerStateCodecTests
+    ControllerStateCodecTests.cpp
+    ../src/plugin/ControllerStateCodec.cpp
+    ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
+)
+
+target_include_directories(MixoratorControllerStateCodecTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+target_link_libraries(MixoratorControllerStateCodecTests PRIVATE base)
+
+add_test(NAME MixoratorControllerStateCodecTests COMMAND MixoratorControllerStateCodecTests)
