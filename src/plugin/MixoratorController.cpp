@@ -135,10 +135,16 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
         setLabel(line2, de ? "Signalweg/Export prüfen und erneut analysieren." : "Check the signal path/export and analyze again.");
         return;
     }
+    if (m.clippedSamples > 0 && m.truePeakDbtp > 0.0)
+    {
+        setLabel(line1, de ? "Full-Scale-/True-Peak-Problem erkannt." : "Full-scale/true-peak ceiling issue detected.");
+        setLabel(line2, de ? "Limiter/Output-Ceiling und Signalweg prüfen; Ursache nicht eindeutig." : "Check limiter/output ceiling and signal path; origin is not unambiguous.");
+        return;
+    }
     if (m.clippedSamples > 0)
     {
-        setLabel(line1, de ? "Clipping erkannt: Samples erreichen/überschreiten die Grenze." : "Clipping detected: samples reach/exceed the ceiling.");
-        setLabel(line2, de ? "Pegel bzw. Limiter reduzieren und erneut prüfen." : "Reduce level or limiting and check again.");
+        setLabel(line1, de ? "Full-Scale-Plateaus erkannt: mögliches Clipping." : "Full-scale plateaus detected: possible clipping.");
+        setLabel(line2, de ? "Limiter, Pegel und Signalweg gezielt prüfen." : "Check limiter, level and signal path.");
         return;
     }
     if (m.truePeakDbtp > 0.0)
