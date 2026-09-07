@@ -141,6 +141,8 @@ private:
     VSTGUI::CTextLabel* helpMetricsBody_ {nullptr};
     VSTGUI::CTextLabel* helpSafetyTitle_ {nullptr};
     VSTGUI::CTextLabel* helpSafetyBody_ {nullptr};
+    VSTGUI::CTextLabel* analysisLedGlow_ {nullptr};
+    VSTGUI::CTextLabel* analysisLedCore_ {nullptr};
 
     VSTGUI::CTextLabel* technicalVerdict_ {nullptr};
     VSTGUI::CTextLabel* styleVerdict_ {nullptr};
