@@ -137,9 +137,15 @@ double localStereoPenalty(const Metrics& m) noexcept
     if (std::isfinite(m.worstLocalMonoCompatibilityDb) && m.worstLocalMonoCompatibilityDb<-3.0)
         severity += std::min(8.0,(-3.0-m.worstLocalMonoCompatibilityDb)*1.5);
 
+    // A worst 100 ms stereo window is evidence of severity, not prevalence.
+    // Natural stereo recordings can contain a few strongly decorrelated room
+    // or instrument transients without having a persistent mono problem. Scale
+    // those worst-case excursions by how often negative-correlation windows
+    // actually occur; sustained phase problems still retain the full penalty.
     const double prevalence=std::clamp(m.negativeCorrelationPercent,0.0,100.0);
-    const double prevalencePenalty = prevalence<=1.0 ? 0.0 : std::min(8.0,(prevalence-1.0)*0.35);
-    return std::min(16.0,severity+prevalencePenalty);
+    const double severityWeight=std::clamp(prevalence/10.0,0.0,1.0);
+    const double prevalencePenalty=prevalence<=1.0 ? 0.0 : std::min(8.0,(prevalence-1.0)*0.35);
+    return std::min(16.0,severity*severityWeight+prevalencePenalty);
 }
 
 // Extremely loud masters with simultaneously low PLR are a technical
