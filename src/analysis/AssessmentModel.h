@@ -120,7 +120,11 @@ public:
                 case Genre::Ambient:
                     return {{{1,6,6,16,4,2,.5,.1}}, {{24,30,28,50,24,18,14,10}}, {{10,11,10,14,10,8,7,6}}};
                 case Genre::AcousticFolk:
-                    return {{{.2,5,10,28,7,3,.5,.1}}, {{9,23,32,55,27,16,10,7}}, {{5,9,10,15,10,7,5,4}}};
+                    // Real acoustic references can be dominated by instrument/body
+                    // energy around 250-500 Hz (for example voice + ukulele) while
+                    // remaining spectrally healthy. Keep this envelope deliberately
+                    // broad instead of forcing acoustic material toward a pop curve.
+                    return {{{.01,4,8,5,.4,.1,.03,.005}}, {{10,28,75,58,28,17,11,8}}, {{6,10,18,18,10,8,6,5}}};
                 case Genre::Jazz:
                     return {{{.2,5,10,25,7,3,.5,.1}}, {{11,25,32,55,28,17,11,8}}, {{6,9,10,15,10,7,5,4}}};
                 case Genre::Classical:
