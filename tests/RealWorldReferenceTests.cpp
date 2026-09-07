@@ -128,6 +128,89 @@ int main()
             return fail("Streaming robustness still depends on a universal loudness target");
     }
 
+    // Dynamic genres must not be punished technically merely for having high
+    // PLR and LRA. These are musical traits, not safety faults.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -18.0;
+        m.truePeakDbtp = -2.0;
+        m.plrDb = 22.0;
+        m.lraLu = 14.0;
+        const auto classical = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Classical, Era::Modern);
+        if (classical.technicalVerdict != Verdict::Excellent)
+            return fail("Healthy dynamic classical master was penalized technically for dynamics");
+        if (classical.styleVerdict != Verdict::Excellent)
+            return fail("Healthy dynamic classical master was not recognized as an excellent style match");
+    }
+
+    // The exact same safe signal may be stylistically unusual for a modern
+    // dense genre, but technical integrity must remain identical.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -18.0;
+        m.truePeakDbtp = -2.0;
+        m.plrDb = 22.0;
+        m.lraLu = 14.0;
+        const auto classical = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Classical, Era::Modern);
+        const auto techno = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Techno, Era::Modern);
+        if (!approx(classical.technicalScore, techno.technicalScore))
+            return fail("Genre selection changed technical integrity for identical audio");
+        if (techno.styleScore >= classical.styleScore)
+            return fail("Highly dynamic programme did not distinguish classical from modern techno style context");
+    }
+
+    // Jazz and acoustic material should tolerate healthy headroom and broad
+    // macro-dynamics without being labelled technically weak.
+    {
+        Metrics jazz = cleanReference();
+        jazz.integratedLufs = -16.0;
+        jazz.truePeakDbtp = -1.5;
+        jazz.plrDb = 17.0;
+        jazz.lraLu = 10.0;
+        const auto j = AssessmentModel::evaluate(jazz, AnalysisMode::Master, Genre::Jazz, Era::Modern);
+        if (j.technicalVerdict != Verdict::Excellent || j.styleVerdict == Verdict::Critical)
+            return fail("Healthy jazz-like dynamics were misclassified");
+
+        Metrics folk = cleanReference();
+        folk.integratedLufs = -15.0;
+        folk.truePeakDbtp = -1.5;
+        folk.plrDb = 16.0;
+        folk.lraLu = 9.0;
+        const auto f = AssessmentModel::evaluate(folk, AnalysisMode::Master, Genre::AcousticFolk, Era::Modern);
+        if (f.technicalVerdict != Verdict::Excellent || f.styleVerdict == Verdict::Critical)
+            return fail("Healthy acoustic/folk-like dynamics were misclassified");
+    }
+
+    // Very loud material can still be technically safe at the peak. Density
+    // may reduce technical quality to GOOD, but must not spill into delivery
+    // safety when true peak remains controlled.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -6.3;
+        m.truePeakDbtp = -1.2;
+        m.plrDb = 5.8;
+        m.lraLu = 3.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::HouseEdm, Era::Modern);
+        if (a.technicalVerdict != Verdict::Good)
+            return fail("Safe but strongly dense EDM master was not classified as GOOD technical quality");
+        if (a.pcmDeliveryVerdict != Verdict::Excellent || a.streamingDeliveryVerdict != Verdict::Excellent)
+            return fail("Safe true-peak headroom was contaminated by artistic loudness/density");
+    }
+
+    // A quiet master with positive true peak is still unsafe. Loudness must
+    // never hide inter-sample overs.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -18.0;
+        m.truePeakDbtp = 0.8;
+        m.plrDb = 15.0;
+        m.lraLu = 8.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Jazz, Era::Modern);
+        if (a.technicalVerdict == Verdict::Excellent || a.pcmDeliveryVerdict == Verdict::Excellent ||
+            a.streamingDeliveryVerdict == Verdict::Excellent)
+            return fail("Quiet programme incorrectly hid a positive true-peak fault");
+    }
+
     std::cout << "Real-world reference assessment tests passed.\n";
     return 0;
 }
