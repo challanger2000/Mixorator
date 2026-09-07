@@ -28,11 +28,15 @@ void AnalysisEngine::prepare(double sr)
 }
 void AnalysisEngine::reset()
 {
-    std::fill(momentaryRing_.begin(),momentaryRing_.end(),0.0); std::fill(shortTermRing_.begin(),shortTermRing_.end(),0.0); momentaryWrite_=shortTermWrite_=momentaryValid_=shortTermValid_=samplesSinceBlock_=loudnessBlockCount_=lraShortTermBlockCount_=lraHopCounter_=0; momentarySum_=shortTermSum_=0.0;
+    // Ring/history payloads are deliberately left untouched here. Resetting their
+    // valid counts/write positions makes old samples unreachable, and every slot
+    // is overwritten before it can contribute again. This keeps ANALYZE/RESET
+    // bounded and avoids clearing multi-megabyte buffers on the audio thread.
+    momentaryWrite_=shortTermWrite_=momentaryValid_=shortTermValid_=samplesSinceBlock_=loudnessBlockCount_=lraShortTermBlockCount_=lraHopCounter_=0; momentarySum_=shortTermSum_=0.0;
     samplePeakLinear_=truePeakLinear_=0.0; rmsSumSquares_=0.0L; rmsSampleCount_=0; leftSumSquares_=rightSumSquares_=lrCrossSum_=midSumSquares_=sideSumSquares_=0.0L; stereoSampleCount_=0;
     localLeftSumSquares_=localRightSumSquares_=localCrossSum_=localMidSumSquares_=0.0L; localStereoSamples_=0; localStereoWindowCount_=negativeCorrelationWindowCount_=0; worstLocalCorrelationRaw_=1.0; worstLocalMonoCompatibilityDbRaw_=0.0;
     dcSum_[0]=dcSum_[1]=0.0L; dcSampleCount_[0]=dcSampleCount_[1]=0; clippedSampleCountRaw_=nonFiniteSampleCountRaw_=0;
-    tonalWrite_=0; tonalFrameChannel_=0; std::fill(tonalInput_,tonalInput_+kFftSize,0.0); std::fill(fftReal_,fftReal_+kFftSize,0.0); std::fill(fftImag_,fftImag_+kFftSize,0.0); for(auto& e:tonalBandEnergy_) e=0.0L; for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
+    tonalWrite_=0; tonalFrameChannel_=0; for(auto& e:tonalBandEnergy_) e=0.0L; for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
     samplePeakDbfs_.store(-1000.0); truePeakDbtp_.store(-1000.0); rmsDbfs_.store(-1000.0); crestFactorDb_.store(0.0); momentaryLufs_.store(-1000.0); shortTermLufs_.store(-1000.0); hasProgrammeContext_.store(false); lrBalanceDb_.store(0.0); correlation_.store(1.0); stereoWidthDb_.store(-1000.0); monoCompatibilityDb_.store(0.0); worstLocalCorrelation_.store(1.0); worstLocalMonoCompatibilityDb_.store(0.0); negativeCorrelationPercent_.store(0.0); dcOffsetLeftDbfs_.store(-1000.0); dcOffsetRightDbfs_.store(-1000.0); clippedSampleCount_.store(0); nonFiniteSampleCount_.store(0); lowBandPercent_.store(0.0); lowMidBandPercent_.store(0.0); highMidBandPercent_.store(0.0); highBandPercent_.store(0.0);
 }
 void AnalysisEngine::pushWindowSample(std::vector<double>& r,std::size_t& w,std::size_t& valid,double& sum,double v) noexcept { if(r.empty()) return; if(valid==r.size()) sum-=r[w]; else ++valid; r[w]=v; sum+=v; w=(w+1)%r.size(); }
