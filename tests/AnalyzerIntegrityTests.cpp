@@ -61,27 +61,31 @@ int main()
         if (!approx(engine.crestFactorDb(), 3.0102999566, 0.001)) return fail("Sine crest-factor calibration failed");
     }
 
-    // Each detailed tonal band must respond predominantly to a tone placed well
-    // inside that band. The 20-80 Hz sub band is narrower than two FFT bins at
-    // 48 kHz / 1024 samples, so Hann-window leakage into the adjacent bass bin
-    // is physically unavoidable. It therefore only needs to remain the dominant
-    // band; the other seven bands retain the strict 90-percent concentration test.
+    // The detailed tonal bands must classify the same physical frequencies at
+    // 48, 96 and 192 kHz. The engine scales the active FFT size with sample rate,
+    // keeping bin spacing essentially constant. The 20-80 Hz sub band remains
+    // resolution-limited and therefore uses a conservative 50-percent threshold;
+    // all other bands retain the strict 90-percent concentration requirement.
     {
+        constexpr std::array<double, 3> sampleRates {48000.0, 96000.0, 192000.0};
         constexpr std::array<double, 8> frequencies {46.875, 140.625, 375.0, 984.375,
                                                       3000.0, 6000.0, 10000.0, 15000.0};
-        for (std::size_t expected = 0; expected < frequencies.size(); ++expected)
+        for (double sr : sampleRates)
         {
-            AnalysisEngine engine;
-            engine.prepare(sampleRate);
-            auto left = sine(sampleRate, frequencies[expected], 1.0, 0.25);
-            auto right = left;
-            processStereo(engine, left, right, 257);
-            const auto bands = detailedTonal(engine);
-            const auto dominant = static_cast<std::size_t>(std::distance(
-                bands.begin(), std::max_element(bands.begin(), bands.end())));
-            const double minimumConcentration = expected == 0 ? 50.0 : 90.0;
-            if (dominant != expected || bands[expected] < minimumConcentration)
-                return fail("Detailed tonal band frequency classification failed");
+            for (std::size_t expected = 0; expected < frequencies.size(); ++expected)
+            {
+                AnalysisEngine engine;
+                engine.prepare(sr);
+                auto left = sine(sr, frequencies[expected], 1.0, 0.25);
+                auto right = left;
+                processStereo(engine, left, right, 257);
+                const auto bands = detailedTonal(engine);
+                const auto dominant = static_cast<std::size_t>(std::distance(
+                    bands.begin(), std::max_element(bands.begin(), bands.end())));
+                const double minimumConcentration = expected == 0 ? 50.0 : 90.0;
+                if (dominant != expected || bands[expected] < minimumConcentration)
+                    return fail("Detailed tonal band sample-rate invariance failed");
+            }
         }
     }
 
