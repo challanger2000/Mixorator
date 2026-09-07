@@ -104,6 +104,39 @@ int main()
             return fail("Reset did not clear level state");
     }
 
+    // The realtime reset intentionally leaves large ring/FFT payloads in memory.
+    // Their old contents must be unreachable: after reset, processing the same
+    // programme must match a freshly prepared engine.
+    {
+        AnalysisEngine reused;
+        AnalysisEngine fresh;
+        reused.prepare(sampleRate);
+        fresh.prepare(sampleRate);
+
+        auto oldLeft = sine(sampleRate, 100.0, 4.0, 0.9);
+        auto oldRight = oldLeft;
+        processStereo(reused, oldLeft, oldRight, 127);
+        reused.reset();
+
+        auto newLeftA = sine(sampleRate, 4000.0, 4.0, 0.05);
+        auto newRightA = newLeftA;
+        auto newLeftB = newLeftA;
+        auto newRightB = newRightA;
+        processStereo(reused, newLeftA, newRightA, 127);
+        processStereo(fresh, newLeftB, newRightB, 127);
+
+        if (!approx(reused.calculateIntegratedLufs(), fresh.calculateIntegratedLufs(), 1e-12) ||
+            !approx(reused.momentaryLufs(), fresh.momentaryLufs(), 1e-12) ||
+            !approx(reused.shortTermLufs(), fresh.shortTermLufs(), 1e-12) ||
+            !approx(reused.truePeakDbtp(), fresh.truePeakDbtp(), 1e-12))
+            return fail("Reset leaked stale loudness/peak history into the next analysis");
+        if (!approx(reused.lowBandPercent(), fresh.lowBandPercent(), 1e-12) ||
+            !approx(reused.lowMidBandPercent(), fresh.lowMidBandPercent(), 1e-12) ||
+            !approx(reused.highMidBandPercent(), fresh.highMidBandPercent(), 1e-12) ||
+            !approx(reused.highBandPercent(), fresh.highBandPercent(), 1e-12))
+            return fail("Reset leaked stale tonal history into the next analysis");
+    }
+
     std::cout << "All Mixorator analyzer integrity tests passed.\n";
     return 0;
 }
