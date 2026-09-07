@@ -155,8 +155,9 @@ int main()
     }
 
     // Intentional crushed/industrial aesthetics can be very loud and flat while
-    // remaining technically valid. Style may be unusual, but technical safety
-    // must not be punished merely because PLR/LRA are extreme.
+    // remaining valid PCM delivery. The combined loudness/PLR trade-off should
+    // prevent an EXCELLENT technical-quality claim, but must not become a hard
+    // safety fault or contaminate PCM delivery.
     {
         auto m = base();
         m.integratedLufs = -6.0;
@@ -165,8 +166,10 @@ int main()
         m.lraLu = 0.5;
         m.crestFactorDb = 3.0;
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
-        if (!safeTechnical(a))
-            return fail("Clean crushed Industrial/Metal aesthetic contaminated technical safety");
+        if (a.technicalVerdict != Verdict::Good || a.technicalScore < 75.0)
+            return fail("Clean crushed Industrial/Metal aesthetic was not conservatively graded GOOD");
+        if (a.pcmDeliveryVerdict != Verdict::Excellent)
+            return fail("Clean crushed Industrial/Metal density contaminated PCM delivery safety");
         if (a.styleVerdict == Verdict::Critical)
             return fail("Clean intentional extreme was mislabeled CRITICAL style");
         if (a.overallVerdict == Verdict::Critical)
@@ -218,10 +221,13 @@ int main()
         m.plrDb = 15.0;
         m.lraLu = 10.0;
         const auto mix = AssessmentModel::evaluate(m, AnalysisMode::Mix, Genre::Rock, Era::Modern);
+        const auto master = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Rock, Era::Modern);
+        if (mix.styleScore <= master.styleScore)
+            return fail("MIX and MASTER profiles did not remain distinct");
         if (mix.pcmDeliveryVerdict != Verdict::InsufficientData || mix.streamingDeliveryVerdict != Verdict::InsufficientData)
-            return fail("MIX scenario received finished-master delivery verdicts");
+            return fail("MIX incorrectly exposed finished-master delivery verdicts");
     }
 
-    std::cout << "All Mixorator master scenario tests passed.\n";
+    std::cout << "Master scenario tests passed.\n";
     return 0;
 }
