@@ -1,6 +1,7 @@
 #include "dsp/AnalysisEngine.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -32,6 +33,14 @@ void processStereo(Mixorator::DSP::AnalysisEngine& engine,
         engine.process(channels, 2, count);
     }
 }
+
+std::array<double, 8> detailedTonal(const Mixorator::DSP::AnalysisEngine& engine)
+{
+    return {engine.subBandPercent(), engine.bassBandPercent(),
+            engine.lowMidBodyBandPercent(), engine.midBandPercent(),
+            engine.presenceBandPercent(), engine.upperPresenceBandPercent(),
+            engine.brillianceBandPercent(), engine.airBandPercent()};
+}
 }
 
 int main()
@@ -50,6 +59,52 @@ int main()
         const double expectedRms = 20.0 * std::log10(0.5 / std::sqrt(2.0));
         if (!approx(engine.rmsDbfs(), expectedRms, 0.001)) return fail("Sine RMS calibration failed");
         if (!approx(engine.crestFactorDb(), 3.0102999566, 0.001)) return fail("Sine crest-factor calibration failed");
+    }
+
+    // Each detailed tonal band must respond predominantly to a tone placed well
+    // inside that band. Frequencies are deliberately kept away from boundaries
+    // so Hann-window leakage and FFT-bin spacing cannot make the test brittle.
+    {
+        constexpr std::array<double, 8> frequencies {46.875, 140.625, 375.0, 984.375,
+                                                      3000.0, 6000.0, 10000.0, 15000.0};
+        for (std::size_t expected = 0; expected < frequencies.size(); ++expected)
+        {
+            AnalysisEngine engine;
+            engine.prepare(sampleRate);
+            auto left = sine(sampleRate, frequencies[expected], 1.0, 0.25);
+            auto right = left;
+            processStereo(engine, left, right, 257);
+            const auto bands = detailedTonal(engine);
+            const auto dominant = static_cast<std::size_t>(std::distance(
+                bands.begin(), std::max_element(bands.begin(), bands.end())));
+            if (dominant != expected || bands[expected] < 90.0)
+                return fail("Detailed tonal band frequency classification failed");
+        }
+    }
+
+    // The legacy four-band outputs must remain exact sums of adjacent detailed
+    // bands. This protects all existing genre/style scoring while the finer
+    // measurements are still measurement-only.
+    {
+        AnalysisEngine engine;
+        engine.prepare(sampleRate);
+        auto left = sine(sampleRate, 140.625, 1.0, 0.20);
+        auto component = sine(sampleRate, 375.0, 1.0, 0.16);
+        auto presence = sine(sampleRate, 3000.0, 1.0, 0.12);
+        auto air = sine(sampleRate, 15000.0, 1.0, 0.08);
+        for (std::size_t i = 0; i < left.size(); ++i)
+            left[i] += component[i] + presence[i] + air[i];
+        auto right = left;
+        processStereo(engine, left, right, 257);
+        const auto b = detailedTonal(engine);
+        if (!approx(engine.lowBandPercent(), b[0] + b[1], 1e-9) ||
+            !approx(engine.lowMidBandPercent(), b[2] + b[3], 1e-9) ||
+            !approx(engine.highMidBandPercent(), b[4] + b[5], 1e-9) ||
+            !approx(engine.highBandPercent(), b[6] + b[7], 1e-9))
+            return fail("Legacy tonal compatibility aggregation failed");
+        double total = 0.0;
+        for (double value : b) total += value;
+        if (!approx(total, 100.0, 1e-9)) return fail("Detailed tonal percentages do not normalize to 100 percent");
     }
 
     // Floating-point samples above full scale can occur after lossy decoding
@@ -190,6 +245,11 @@ int main()
             !approx(reused.highMidBandPercent(), fresh.highMidBandPercent(), 1e-12) ||
             !approx(reused.highBandPercent(), fresh.highBandPercent(), 1e-12))
             return fail("Reset leaked stale tonal history into the next analysis");
+        const auto reusedDetailed = detailedTonal(reused);
+        const auto freshDetailed = detailedTonal(fresh);
+        for (std::size_t i = 0; i < reusedDetailed.size(); ++i)
+            if (!approx(reusedDetailed[i], freshDetailed[i], 1e-12))
+                return fail("Reset leaked stale detailed tonal history into the next analysis");
     }
 
     std::cout << "All Mixorator analyzer integrity tests passed.\n";
