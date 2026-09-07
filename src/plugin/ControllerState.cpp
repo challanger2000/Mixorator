@@ -71,7 +71,7 @@ Steinberg::tresult PLUGIN_API Controller::getState(Steinberg::IBStream* state)
     if (!state)
         return Steinberg::kInvalidArgument;
 
-    Steinberg::IBStreamer streamer(state, Steinberg::kLittleEndian);
+    Steinberg::IBStreamer streamer(state, kLittleEndian);
     const bool saveFinal = hasDefinitiveFinalSnapshot();
 
     if (!streamer.writeInt32u(kStateMagic) ||
@@ -95,7 +95,7 @@ Steinberg::tresult PLUGIN_API Controller::setState(Steinberg::IBStream* state)
     if (!state)
         return Steinberg::kInvalidArgument;
 
-    Steinberg::IBStreamer streamer(state, Steinberg::kLittleEndian);
+    Steinberg::IBStreamer streamer(state, kLittleEndian);
     Steinberg::uint32 magic = 0;
     Steinberg::uint32 version = 0;
     Steinberg::int32 mode = 0;
