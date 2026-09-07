@@ -154,6 +154,64 @@ int main()
             return fail("Clean stylistic outlier was mislabeled CRITICAL overall");
     }
 
+    // Intentional crushed/industrial aesthetics can be very loud and flat while
+    // remaining technically valid. Style may be unusual, but technical safety
+    // must not be punished merely because PLR/LRA are extreme.
+    {
+        auto m = base();
+        m.integratedLufs = -6.0;
+        m.truePeakDbtp = -0.2;
+        m.plrDb = 3.0;
+        m.lraLu = 0.5;
+        m.crestFactorDb = 3.0;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (!safeTechnical(a))
+            return fail("Clean crushed Industrial/Metal aesthetic contaminated technical safety");
+        if (a.styleVerdict == Verdict::Critical)
+            return fail("Clean intentional extreme was mislabeled CRITICAL style");
+        if (a.overallVerdict == Verdict::Critical)
+            return fail("Clean intentional extreme was mislabeled CRITICAL overall");
+    }
+
+    // Conversely, real integrity defects must stay technical faults even when
+    // the loudness/dynamics happen to fit an aggressive genre profile.
+    {
+        auto m = base();
+        m.integratedLufs = -8.0;
+        m.plrDb = 7.0;
+        m.lraLu = 4.0;
+        m.clippedSamples = 10000;
+        m.truePeakDbtp = 1.5;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (a.technicalVerdict == Verdict::Excellent || a.technicalVerdict == Verdict::Good)
+            return fail("Real clipping was excused by aggressive Metal style");
+        if (a.overallVerdict == Verdict::Excellent || a.overallVerdict == Verdict::Good)
+            return fail("Real clipping was hidden by a plausible aggressive style score");
+    }
+
+    // Tonal eccentricity is stylistic evidence, not an electrical defect.
+    {
+        auto m = base();
+        m.tonalPercent = {{5.0, 5.0, 10.0, 80.0}};
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (!safeTechnical(a))
+            return fail("Extreme tonal balance contaminated technical safety");
+        if (a.styleScore >= 90.0)
+            return fail("Extreme tonal balance was not reflected in style assessment");
+    }
+
+    // A short local phase excursion should be noticed but not automatically
+    // condemn an otherwise healthy master; prevalence and severity both matter.
+    {
+        auto m = base();
+        m.worstLocalCorrelation = -0.20;
+        m.worstLocalMonoCompatibilityDb = -3.5;
+        m.negativeCorrelationPercent = 1.2;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Pop, Era::Modern);
+        if (a.technicalVerdict == Verdict::Critical || a.overallVerdict == Verdict::Critical)
+            return fail("Brief mild local stereo excursion was over-penalized");
+    }
+
     {
         auto m = base();
         m.integratedLufs = -20.0;
