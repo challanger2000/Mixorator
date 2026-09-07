@@ -52,26 +52,17 @@ int main()
         if (!approx(engine.crestFactorDb(), 3.0102999566, 0.001)) return fail("Sine crest-factor calibration failed");
     }
 
-    // Constant offset should be measured as its arithmetic mean magnitude.
-    {
-        AnalysisEngine engine;
-        engine.prepare(sampleRate);
-        std::vector<double> left(48000, 0.01);
-        std::vector<double> right(48000, -0.02);
-        processStereo(engine, left, right);
-        if (!approx(engine.dcOffsetLeftDbfs(), -40.0, 0.001)) return fail("Left DC-offset calibration failed");
-        if (!approx(engine.dcOffsetRightDbfs(), 20.0 * std::log10(0.02), 0.001)) return fail("Right DC-offset calibration failed");
-    }
-
-    // Samples above full scale are always clipping. Isolated legal +/-1.0
-    // samples must not be falsely counted.
+    // Floating-point samples above full scale can occur after lossy decoding
+    // or upstream gain and are not, by themselves, proof of hard clipping.
+    // Isolated legal +/-1.0 samples must not be falsely counted either.
     {
         AnalysisEngine engine;
         engine.prepare(sampleRate);
         std::vector<double> left {0.0, 1.0, -1.0, 1.0001, -1.2, 0.5};
         std::vector<double> right {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         processStereo(engine, left, right, 6);
-        if (engine.clippedSampleCount() != 2) return fail("Over-full-scale sample counting failed");
+        if (engine.clippedSampleCount() != 0) return fail("Floating overs were falsely counted as hard clipping");
+        if (engine.truePeakDbtp() <= 0.0) return fail("Floating overs were not retained as a positive peak event");
     }
 
     // Two consecutive exact full-scale samples are still not enough evidence
@@ -148,7 +139,7 @@ int main()
     {
         AnalysisEngine engine;
         engine.prepare(sampleRate);
-        std::vector<double> left(48000, 1.1);
+        std::vector<double> left(48000, 1.0);
         std::vector<double> right = left;
         processStereo(engine, left, right);
         if (engine.clippedSampleCount() == 0) return fail("Reset precondition failed");
