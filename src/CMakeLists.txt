@@ -14,6 +14,8 @@ set(ANALYSATOR_SOURCES
     plugin/MixoratorController.cpp
     plugin/MixoratorController.h
     plugin/ControllerState.cpp
+    plugin/ControllerStateCodec.cpp
+    plugin/ControllerStateCodec.h
 )
 
 smtg_add_vst3plugin(Analysator ${ANALYSATOR_SOURCES})
