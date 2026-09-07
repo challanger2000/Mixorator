@@ -17,9 +17,11 @@ namespace
 {
 const VSTGUI::CPoint kCompactSize {650., 440.};
 const VSTGUI::CPoint kDetailsSize {1000., 700.};
-const VSTGUI::CColor kVerdictGood {120,210,170,255};
-const VSTGUI::CColor kVerdictAttention {217,182,111,255};
-const VSTGUI::CColor kVerdictCritical {224,103,103,255};
+// Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
+const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
+const VSTGUI::CColor kVerdictGood {174,205,89,255};
+const VSTGUI::CColor kVerdictAttention {225,158,73,255};
+const VSTGUI::CColor kVerdictCritical {224,91,72,255};
 const VSTGUI::CColor kVerdictUnusual {105,215,192,255};
 const VSTGUI::CColor kVerdictUnavailable {126,138,147,255};
 const VSTGUI::CColor kStateLive {105,215,192,255};
@@ -60,7 +62,7 @@ const VSTGUI::CColor& verdictColor(Analysis::Verdict v) noexcept
 {
     switch (v)
     {
-        case Analysis::Verdict::Excellent:
+        case Analysis::Verdict::Excellent: return kVerdictExcellent;
         case Analysis::Verdict::Good: return kVerdictGood;
         case Analysis::Verdict::Attention: return kVerdictAttention;
         case Analysis::Verdict::Critical: return kVerdictCritical;
@@ -430,18 +432,6 @@ void Controller::refreshUi() noexcept
     updateSelectionControls();
     const auto text = [this](Localization::Text id) { return Localization::get(id, uiLanguage_); };
 
-    const bool ledOn = uiAnalysisActive_ || (uiFinalSelected_ && !hasDefinitiveFinalSnapshot());
-    if (analysisLedGlow_)
-    {
-        analysisLedGlow_->setVisible(ledOn);
-        analysisLedGlow_->invalid();
-    }
-    if (analysisLedCore_)
-    {
-        analysisLedCore_->setFontColor(ledOn ? kLedOn : kLedOff);
-        analysisLedCore_->invalid();
-    }
-
     setLabel(languageLabel_, uiLanguage_ == Localization::Language::German ? "DE" : "EN");
     setButtonTitle(helpButton_, text(Localization::Text::Help));
     setButtonTitle(helpCloseButton_, text(Localization::Text::Close));
@@ -452,6 +442,18 @@ void Controller::refreshUi() noexcept
     setLabel(helpMetricsBody_, text(Localization::Text::HelpMetricsBody));
     setLabel(helpSafetyTitle_, text(Localization::Text::HelpSafetyTitle));
     setLabel(helpSafetyBody_, text(Localization::Text::HelpSafetyBody));
+
+    const auto ledOn = uiAnalysisActive_ || (uiFinalSelected_ && !hasDefinitiveFinalSnapshot());
+    if (analysisLedCore_)
+    {
+        analysisLedCore_->setFontColor(ledOn ? kLedOn : kLedOff);
+        analysisLedCore_->invalid();
+    }
+    if (analysisLedGlow_)
+    {
+        analysisLedGlow_->setVisible(ledOn);
+        analysisLedGlow_->invalid();
+    }
 
     const auto a = evaluateLatest(uiMode_, uiGenre_, uiEra_);
     setVerdictLabel(technicalVerdict_, a.technicalVerdict, uiLanguage_);
@@ -629,7 +631,7 @@ void Controller::requestFinalSnapshot(std::uint64_t g) noexcept
     m->setMessageID(kRequestFinalSnapshotMessage);
     if (auto* a = m->getAttributes())
     {
-        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64>(g));
+        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64_t>(g));
         if (sendMessage(m) == Steinberg::kResultTrue) requestedFinalGeneration_ = g;
     }
     m->release();
