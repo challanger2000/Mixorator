@@ -36,6 +36,7 @@ struct AnalysisSnapshot
     std::uint64_t nonFiniteSampleCount {0};
 
     std::array<double, 4> tonalPercent {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, 8> detailedTonalPercent {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 
     static AnalysisSnapshot capture(const AnalysisEngine& engine) noexcept
     {
@@ -67,6 +68,16 @@ struct AnalysisSnapshot
             engine.lowMidBandPercent(),
             engine.highMidBandPercent(),
             engine.highBandPercent()
+        }};
+        s.detailedTonalPercent = {{
+            engine.subBandPercent(),
+            engine.bassBandPercent(),
+            engine.lowMidBodyBandPercent(),
+            engine.midBandPercent(),
+            engine.presenceBandPercent(),
+            engine.upperPresenceBandPercent(),
+            engine.brillianceBandPercent(),
+            engine.airBandPercent()
         }};
         return s;
     }
