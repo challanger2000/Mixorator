@@ -1,5 +1,6 @@
 #include "analysis/AssessmentModel.h"
 
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -8,6 +9,11 @@ int fail(const char* message)
 {
     std::cerr << "FAIL: " << message << '\n';
     return 1;
+}
+
+bool approx(double a, double b, double tolerance = 1e-9)
+{
+    return std::abs(a-b) <= tolerance;
 }
 
 Mixorator::Analysis::Metrics cleanReference()
@@ -33,7 +39,8 @@ int main()
 
     // Reference A: "Menschlichkeit". Loud and controlled, but not an
     // extreme loudness/PLR combination. Density logic must leave technical
-    // quality untouched.
+    // quality untouched. Its -0.5 dBTP leaves limited codec headroom, so the
+    // service-independent streaming assessment should be GOOD, not ATTENTION.
     {
         Metrics m = cleanReference();
         m.integratedLufs = -11.4;
@@ -45,12 +52,14 @@ int main()
         const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
         if (a.technicalScore < 99.0)
             return fail("Menschlichkeit-like reference was penalized for healthy master density");
+        if (a.streamingDeliveryVerdict != Verdict::Good)
+            return fail("Menschlichkeit-like reference was over-penalized for streaming delivery");
     }
 
     // Reference B: "Aloha Oe". The master is technically clean at the peak,
     // but -5.9 LUFS together with 5.5 dB PLR is an extreme density trade-off.
     // It may remain an excellent style match, but technical quality must not
-    // claim EXCELLENT.
+    // claim EXCELLENT. Loudness itself must not create a streaming warning.
     {
         Metrics m = cleanReference();
         m.integratedLufs = -5.9;
@@ -65,7 +74,9 @@ int main()
         if (a.styleVerdict != Verdict::Excellent)
             return fail("Aloha-Oe-like intentional density incorrectly damaged Metal style match");
         if (a.pcmDeliveryVerdict != Verdict::Excellent)
-            return fail("Aloha-Oe-like density incorrectly contaminated PCM delivery safety");
+            return fail("Aloha-Oe-like density incorrectly contaminated master delivery safety");
+        if (a.streamingDeliveryVerdict != Verdict::Good)
+            return fail("Aloha-Oe-like loudness was incorrectly treated as a universal streaming fault");
     }
 
     // The density trade-off belongs to finished-master assessment only.
@@ -81,8 +92,8 @@ int main()
     }
 
     // Reference C: "Lost In Shadow". Dynamics are healthy, but +1.7 dBTP is
-    // the actual technical fault. The new density rule must not be the reason
-    // for the warning.
+    // the actual technical fault. It must remain a clear streaming/transcoding
+    // risk independent of programme loudness.
     {
         Metrics m = cleanReference();
         m.integratedLufs = -9.2;
@@ -95,7 +106,26 @@ int main()
         if (a.technicalVerdict != Verdict::Attention)
             return fail("Lost-In-Shadow-like true-peak fault was not kept distinct from density scoring");
         if (a.pcmDeliveryVerdict != Verdict::Attention)
-            return fail("Lost-In-Shadow-like +1.7 dBTP did not lower PCM delivery assessment");
+            return fail("Lost-In-Shadow-like +1.7 dBTP did not lower master delivery assessment");
+        if (a.streamingDeliveryVerdict != Verdict::Attention)
+            return fail("Lost-In-Shadow-like +1.7 dBTP did not remain a streaming/transcoding warning");
+    }
+
+    // Streaming robustness must not silently become a Spotify -14 LUFS
+    // compliance score. Equal peak headroom must produce equal streaming
+    // quality regardless of artistic loudness.
+    {
+        Metrics loud = cleanReference();
+        loud.integratedLufs = -6.0;
+        loud.truePeakDbtp = -0.8;
+        loud.plrDb = 9.0;
+        loud.lraLu = 4.0;
+        Metrics quiet = loud;
+        quiet.integratedLufs = -16.0;
+        const auto loudA = AssessmentModel::evaluate(loud, AnalysisMode::Master, Genre::General, Era::Modern);
+        const auto quietA = AssessmentModel::evaluate(quiet, AnalysisMode::Master, Genre::General, Era::Modern);
+        if (!approx(loudA.streamingDeliveryScore, quietA.streamingDeliveryScore))
+            return fail("Streaming robustness still depends on a universal loudness target");
     }
 
     std::cout << "Real-world reference assessment tests passed.\n";
