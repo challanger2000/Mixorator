@@ -180,7 +180,15 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     double style = usedWeight>0.0 ? weightedStyle/usedWeight : 0.0;
 
     if (tonalDataAvailable(m))
-        style = 0.85*style + 0.15*tonalPlausibilityScore(m,genre);
+    {
+        const double tonal=tonalPlausibilityScore(m,genre);
+        // Tonal balance is intentionally secondary for ordinary creative
+        // variation, but an extreme spectral outlier must not be completely
+        // hidden by otherwise ideal loudness/dynamics scores.
+        style = 0.85*style + 0.15*tonal;
+        if (tonal < 35.0)
+            style = std::min(style, 89.0);
+    }
     style=std::clamp(style,0.0,100.0);
 
     double pcm=0.0;
