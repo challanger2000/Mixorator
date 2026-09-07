@@ -147,8 +147,13 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
         setLabel(line2, de ? "True-Peak-Limiter/Output-Ceiling absenken und erneut prüfen." : "Lower the true-peak limiter/output ceiling and check again.");
         return;
     }
-    if (m.correlation < 0.0 || m.monoCompatibilityDb < -3.0 ||
-        m.worstLocalCorrelation < -0.2 || m.worstLocalMonoCompatibilityDb < -6.0)
+
+    // Local stereo excursions are useful diagnostics only when they are strong
+    // enough to lower the technical verdict. This keeps short, harmless local
+    // events from contradicting an otherwise EXCELLENT technical assessment.
+    if (a.technicalVerdict != Analysis::Verdict::Excellent &&
+        (m.correlation < 0.0 || m.monoCompatibilityDb < -3.0 ||
+         m.worstLocalCorrelation < -0.2 || m.worstLocalMonoCompatibilityDb < -6.0))
     {
         setLabel(line1, de ? "Stereo-/Monokompatibilität ist auffällig." : "Stereo/mono compatibility is problematic.");
         setLabel(line2, de ? "Phase, Breite und Seitensignal gezielt kontrollieren." : "Check phase, width and side content.");
