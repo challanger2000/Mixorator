@@ -19,6 +19,12 @@ std::vector<double> sine(double sampleRate, double frequency, double seconds, do
     return result;
 }
 
+void appendDbfsTone(std::vector<double>& destination, double sampleRate, double seconds, double peakDbfs)
+{
+    const auto tone = sine(sampleRate, 1000.0, seconds, std::pow(10.0, peakDbfs / 20.0));
+    destination.insert(destination.end(), tone.begin(), tone.end());
+}
+
 void processStereo(Mixorator::DSP::AnalysisEngine& engine,
                    std::vector<double>& left,
                    std::vector<double>& right,
@@ -37,9 +43,47 @@ int main()
 {
     using Mixorator::DSP::AnalysisEngine;
 
-    // Determinism across common music sample rates. These are not claimed as
-    // external BS.1770 certification fixtures; they catch sample-rate and
-    // block-boundary regressions in our own K-weighted loudness engine.
+    // EBU Tech 3341 minimum-requirements tests 1 and 2. A stereo 1 kHz sine
+    // at -23/-33 dBFS peak must read the same numerical value in LUFS for
+    // Momentary, Short-Term and Integrated loudness (accepted tolerance 0.1 LU).
+    for (double level : {-23.0, -33.0})
+    {
+        constexpr double sr = 48000.0;
+        AnalysisEngine engine;
+        engine.prepare(sr);
+        auto left = sine(sr, 1000.0, 20.0, std::pow(10.0, level / 20.0));
+        auto right = left;
+        processStereo(engine, left, right);
+        if (!approx(engine.momentaryLufs(), level, 0.1)) return fail("EBU Tech 3341 Momentary reference failed");
+        if (!approx(engine.shortTermLufs(), level, 0.1)) return fail("EBU Tech 3341 Short-Term reference failed");
+        if (!approx(engine.calculateIntegratedLufs(), level, 0.1)) return fail("EBU Tech 3341 Integrated steady-tone reference failed");
+    }
+
+    // EBU Tech 3341 minimum-requirements tests 3-5 exercise the absolute and
+    // relative gates. All three prescribed programmes must integrate to -23 LUFS.
+    {
+        constexpr double sr = 48000.0;
+        const std::vector<std::vector<std::pair<double, double>>> programmes {
+            {{10.0, -36.0}, {60.0, -23.0}, {10.0, -36.0}},
+            {{10.0, -72.0}, {10.0, -36.0}, {60.0, -23.0}, {10.0, -36.0}, {10.0, -72.0}},
+            {{20.0, -26.0}, {20.1, -20.0}, {20.0, -26.0}}
+        };
+        for (const auto& programme : programmes)
+        {
+            AnalysisEngine engine;
+            engine.prepare(sr);
+            std::vector<double> left;
+            for (const auto& segment : programme)
+                appendDbfsTone(left, sr, segment.first, segment.second);
+            auto right = left;
+            processStereo(engine, left, right);
+            if (!approx(engine.calculateIntegratedLufs(), -23.0, 0.1))
+                return fail("EBU Tech 3341 gated Integrated reference failed");
+        }
+    }
+
+    // Determinism across common music sample rates. These complement the
+    // external EBU fixtures above by catching block-boundary regressions.
     for (double sampleRate : {44100.0, 48000.0, 96000.0})
     {
         AnalysisEngine a;
