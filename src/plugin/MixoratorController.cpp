@@ -27,6 +27,8 @@ const VSTGUI::CColor kStateFinal {120,210,170,255};
 const VSTGUI::CColor kStatePending {217,182,111,255};
 const VSTGUI::CColor kMetricAvailable {242,244,246,255};
 const VSTGUI::CColor kMetricUnavailable {126,138,147,255};
+const VSTGUI::CColor kLedOff {58,20,18,255};
+const VSTGUI::CColor kLedOn {255,92,76,255};
 
 const char* verdictText(Analysis::Verdict v, Localization::Language language) noexcept
 {
@@ -387,6 +389,8 @@ void Controller::bindNamedView(VSTGUI::CView* view, const VSTGUI::UIAttributes& 
     else if (*id == "helpMetricsBody") helpMetricsBody_ = l;
     else if (*id == "helpSafetyTitle") helpSafetyTitle_ = l;
     else if (*id == "helpSafetyBody") helpSafetyBody_ = l;
+    else if (*id == "analysisLedGlow") analysisLedGlow_ = l;
+    else if (*id == "analysisLedCore") analysisLedCore_ = l;
     else if (*id == "technicalVerdict") technicalVerdict_ = l;
     else if (*id == "styleVerdict") styleVerdict_ = l;
     else if (*id == "pcmVerdict") pcmVerdict_ = l;
@@ -425,6 +429,18 @@ void Controller::refreshUi() noexcept
 {
     updateSelectionControls();
     const auto text = [this](Localization::Text id) { return Localization::get(id, uiLanguage_); };
+
+    const bool ledOn = uiAnalysisActive_ || (uiFinalSelected_ && !hasDefinitiveFinalSnapshot());
+    if (analysisLedGlow_)
+    {
+        analysisLedGlow_->setVisible(ledOn);
+        analysisLedGlow_->invalid();
+    }
+    if (analysisLedCore_)
+    {
+        analysisLedCore_->setFontColor(ledOn ? kLedOn : kLedOff);
+        analysisLedCore_->invalid();
+    }
 
     setLabel(languageLabel_, uiLanguage_ == Localization::Language::German ? "DE" : "EN");
     setButtonTitle(helpButton_, text(Localization::Text::Help));
@@ -527,6 +543,8 @@ void Controller::clearUiPointers() noexcept
     helpMetricsBody_ = nullptr;
     helpSafetyTitle_ = nullptr;
     helpSafetyBody_ = nullptr;
+    analysisLedGlow_ = nullptr;
+    analysisLedCore_ = nullptr;
     technicalVerdict_ = nullptr;
     styleVerdict_ = nullptr;
     pcmVerdict_ = nullptr;
