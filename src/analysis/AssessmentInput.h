@@ -39,6 +39,12 @@ struct AssessmentInput
         m.clippedSamples = engine.clippedSampleCount();
         m.nonFiniteSamples = engine.nonFiniteSampleCount();
         m.tonalPercent = {{engine.lowBandPercent(),engine.lowMidBandPercent(),engine.highMidBandPercent(),engine.highBandPercent()}};
+        m.detailedTonalPercent = {{
+            engine.subBandPercent(), engine.bassBandPercent(),
+            engine.lowMidBodyBandPercent(), engine.midBandPercent(),
+            engine.presenceBandPercent(), engine.upperPresenceBandPercent(),
+            engine.brillianceBandPercent(), engine.airBandPercent()
+        }};
         m.loudnessAvailable = minimumProgrammeContext
             && std::isfinite(integrated)
             && integrated > -999.0;
@@ -69,6 +75,7 @@ struct AssessmentInput
         m.clippedSamples = snapshot.clippedSampleCount;
         m.nonFiniteSamples = snapshot.nonFiniteSampleCount;
         m.tonalPercent = snapshot.tonalPercent;
+        m.detailedTonalPercent = snapshot.detailedTonalPercent;
 
         // FINAL must use historical programme sufficiency, not the current
         // Short-Term window. Otherwise several seconds of silence before the
