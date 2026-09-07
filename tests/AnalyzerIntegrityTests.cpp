@@ -63,8 +63,8 @@ int main()
         if (!approx(engine.dcOffsetRightDbfs(), 20.0 * std::log10(0.02), 0.001)) return fail("Right DC-offset calibration failed");
     }
 
-    // Raw over-full-scale counting is deliberately strict abs(sample) > 1.0;
-    // exactly +/-1.0 must not count.
+    // Samples above full scale are always clipping. Isolated legal +/-1.0
+    // samples must not be falsely counted.
     {
         AnalysisEngine engine;
         engine.prepare(sampleRate);
@@ -72,6 +72,61 @@ int main()
         std::vector<double> right {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         processStereo(engine, left, right, 6);
         if (engine.clippedSampleCount() != 2) return fail("Over-full-scale sample counting failed");
+    }
+
+    // Two consecutive exact full-scale samples are still not enough evidence
+    // for clipping; this avoids declaring an ordinary legal peak as damaged.
+    {
+        AnalysisEngine engine;
+        engine.prepare(sampleRate);
+        std::vector<double> left {0.2, 1.0, 1.0, 0.2, -1.0, -1.0, 0.2};
+        std::vector<double> right(left.size(), 0.0);
+        processStereo(engine, left, right, 2);
+        if (engine.clippedSampleCount() != 0) return fail("Short legal full-scale peak was falsely counted as clipping");
+    }
+
+    // Three or more consecutive same-polarity samples exactly at full scale
+    // are a conservative digital flat-top signature. The run must be detected
+    // even when it crosses host process-block boundaries.
+    {
+        AnalysisEngine engine;
+        engine.prepare(sampleRate);
+        std::vector<double> left {0.25, 1.0, 1.0, 1.0, 1.0, 0.25,
+                                  -1.0, -1.0, -1.0, 0.25};
+        std::vector<double> right(left.size(), 0.0);
+        processStereo(engine, left, right, 2);
+        if (engine.clippedSampleCount() != 7) return fail("Full-scale flat-top clipping detection failed");
+    }
+
+    // Alternating full-scale polarity is not a flat top. A legitimate digital
+    // square-like signal at +/-1.0 must therefore not trigger this detector.
+    {
+        AnalysisEngine engine;
+        engine.prepare(sampleRate);
+        std::vector<double> left {1.0, -1.0, 1.0, -1.0, 1.0, -1.0};
+        std::vector<double> right(left.size(), 0.0);
+        processStereo(engine, left, right, 1);
+        if (engine.clippedSampleCount() != 0) return fail("Alternating full-scale signal was falsely counted as clipping");
+    }
+
+    // A deliberately hard-clipped sine should produce obvious exact full-scale
+    // plateaus while an unclipped 0 dBFS sine should remain legal.
+    {
+        AnalysisEngine legal;
+        legal.prepare(sampleRate);
+        auto legalLeft = sine(sampleRate, 1000.0, 0.1, 1.0);
+        auto legalRight = legalLeft;
+        processStereo(legal, legalLeft, legalRight, 127);
+        if (legal.clippedSampleCount() != 0) return fail("Legal 0 dBFS sine was falsely counted as clipping");
+
+        AnalysisEngine clipped;
+        clipped.prepare(sampleRate);
+        auto clippedLeft = sine(sampleRate, 1000.0, 0.1, 1.2);
+        for (auto& sample : clippedLeft)
+            sample = std::max(-1.0, std::min(1.0, sample));
+        auto clippedRight = clippedLeft;
+        processStereo(clipped, clippedLeft, clippedRight, 127);
+        if (clipped.clippedSampleCount() == 0) return fail("Hard-clipped 0 dBFS sine was not detected");
     }
 
     // Non-finite input must be counted but must not poison all subsequent
@@ -89,7 +144,7 @@ int main()
     }
 
     // Reset must clear programme state rather than leaking measurements into
-    // the next analysis pass.
+    // the next analysis pass, including a partially accumulated flat-top run.
     {
         AnalysisEngine engine;
         engine.prepare(sampleRate);
@@ -102,6 +157,15 @@ int main()
             return fail("Reset did not clear integrity counters");
         if (engine.samplePeakDbfs() > -999.0 || engine.rmsDbfs() > -999.0)
             return fail("Reset did not clear level state");
+
+        std::vector<double> pendingLeft {1.0, 1.0};
+        std::vector<double> pendingRight(pendingLeft.size(), 0.0);
+        processStereo(engine, pendingLeft, pendingRight, 2);
+        engine.reset();
+        std::vector<double> afterResetLeft {1.0, 0.0};
+        std::vector<double> afterResetRight(afterResetLeft.size(), 0.0);
+        processStereo(engine, afterResetLeft, afterResetRight, 2);
+        if (engine.clippedSampleCount() != 0) return fail("Reset leaked a pending full-scale clipping run");
     }
 
     // The realtime reset intentionally leaves large ring/FFT payloads in memory.
