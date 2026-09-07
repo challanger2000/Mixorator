@@ -11,58 +11,58 @@ namespace
 constexpr Steinberg::uint32 kStateMagic = 0x414E4C59u; // "ANLY"
 constexpr Steinberg::uint32 kStateVersion = 1u;
 
-bool writeMetrics(Steinberg::IBStreamer& s, const Analysis::Metrics& m) noexcept
+bool writeMetrics(Steinberg::IBStreamer& streamer, const Analysis::Metrics& m) noexcept
 {
-    return s.writeDouble(m.integratedLufs) &&
-           s.writeDouble(m.truePeakDbtp) &&
-           s.writeDouble(m.plrDb) &&
-           s.writeDouble(m.lraLu) &&
-           s.writeDouble(m.crestFactorDb) &&
-           s.writeDouble(m.correlation) &&
-           s.writeDouble(m.monoCompatibilityDb) &&
-           s.writeDouble(m.worstLocalCorrelation) &&
-           s.writeDouble(m.worstLocalMonoCompatibilityDb) &&
-           s.writeDouble(m.negativeCorrelationPercent) &&
-           s.writeDouble(m.lrBalanceDb) &&
-           s.writeDouble(m.dcOffsetLeftDbfs) &&
-           s.writeDouble(m.dcOffsetRightDbfs) &&
-           s.writeInt64u(m.clippedSamples) &&
-           s.writeInt64u(m.nonFiniteSamples) &&
-           s.writeDouble(m.tonalPercent[0]) &&
-           s.writeDouble(m.tonalPercent[1]) &&
-           s.writeDouble(m.tonalPercent[2]) &&
-           s.writeDouble(m.tonalPercent[3]) &&
-           s.writeBool(m.loudnessAvailable) &&
-           s.writeBool(m.plrAvailable) &&
-           s.writeBool(m.lraAvailable) &&
-           s.writeBool(m.provisional);
+    return streamer.writeDouble(m.integratedLufs) &&
+           streamer.writeDouble(m.truePeakDbtp) &&
+           streamer.writeDouble(m.plrDb) &&
+           streamer.writeDouble(m.lraLu) &&
+           streamer.writeDouble(m.crestFactorDb) &&
+           streamer.writeDouble(m.correlation) &&
+           streamer.writeDouble(m.monoCompatibilityDb) &&
+           streamer.writeDouble(m.worstLocalCorrelation) &&
+           streamer.writeDouble(m.worstLocalMonoCompatibilityDb) &&
+           streamer.writeDouble(m.negativeCorrelationPercent) &&
+           streamer.writeDouble(m.lrBalanceDb) &&
+           streamer.writeDouble(m.dcOffsetLeftDbfs) &&
+           streamer.writeDouble(m.dcOffsetRightDbfs) &&
+           streamer.writeInt64u(m.clippedSamples) &&
+           streamer.writeInt64u(m.nonFiniteSamples) &&
+           streamer.writeDouble(m.tonalPercent[0]) &&
+           streamer.writeDouble(m.tonalPercent[1]) &&
+           streamer.writeDouble(m.tonalPercent[2]) &&
+           streamer.writeDouble(m.tonalPercent[3]) &&
+           streamer.writeBool(m.loudnessAvailable) &&
+           streamer.writeBool(m.plrAvailable) &&
+           streamer.writeBool(m.lraAvailable) &&
+           streamer.writeBool(m.provisional);
 }
 
-bool readMetrics(Steinberg::IBStreamer& s, Analysis::Metrics& m) noexcept
+bool readMetrics(Steinberg::IBStreamer& streamer, Analysis::Metrics& m) noexcept
 {
-    return s.readDouble(m.integratedLufs) &&
-           s.readDouble(m.truePeakDbtp) &&
-           s.readDouble(m.plrDb) &&
-           s.readDouble(m.lraLu) &&
-           s.readDouble(m.crestFactorDb) &&
-           s.readDouble(m.correlation) &&
-           s.readDouble(m.monoCompatibilityDb) &&
-           s.readDouble(m.worstLocalCorrelation) &&
-           s.readDouble(m.worstLocalMonoCompatibilityDb) &&
-           s.readDouble(m.negativeCorrelationPercent) &&
-           s.readDouble(m.lrBalanceDb) &&
-           s.readDouble(m.dcOffsetLeftDbfs) &&
-           s.readDouble(m.dcOffsetRightDbfs) &&
-           s.readInt64u(m.clippedSamples) &&
-           s.readInt64u(m.nonFiniteSamples) &&
-           s.readDouble(m.tonalPercent[0]) &&
-           s.readDouble(m.tonalPercent[1]) &&
-           s.readDouble(m.tonalPercent[2]) &&
-           s.readDouble(m.tonalPercent[3]) &&
-           s.readBool(m.loudnessAvailable) &&
-           s.readBool(m.plrAvailable) &&
-           s.readBool(m.lraAvailable) &&
-           s.readBool(m.provisional);
+    return streamer.readDouble(m.integratedLufs) &&
+           streamer.readDouble(m.truePeakDbtp) &&
+           streamer.readDouble(m.plrDb) &&
+           streamer.readDouble(m.lraLu) &&
+           streamer.readDouble(m.crestFactorDb) &&
+           streamer.readDouble(m.correlation) &&
+           streamer.readDouble(m.monoCompatibilityDb) &&
+           streamer.readDouble(m.worstLocalCorrelation) &&
+           streamer.readDouble(m.worstLocalMonoCompatibilityDb) &&
+           streamer.readDouble(m.negativeCorrelationPercent) &&
+           streamer.readDouble(m.lrBalanceDb) &&
+           streamer.readDouble(m.dcOffsetLeftDbfs) &&
+           streamer.readDouble(m.dcOffsetRightDbfs) &&
+           streamer.readInt64u(m.clippedSamples) &&
+           streamer.readInt64u(m.nonFiniteSamples) &&
+           streamer.readDouble(m.tonalPercent[0]) &&
+           streamer.readDouble(m.tonalPercent[1]) &&
+           streamer.readDouble(m.tonalPercent[2]) &&
+           streamer.readDouble(m.tonalPercent[3]) &&
+           streamer.readBool(m.loudnessAvailable) &&
+           streamer.readBool(m.plrAvailable) &&
+           streamer.readBool(m.lraAvailable) &&
+           streamer.readBool(m.provisional);
 }
 }
 
@@ -71,20 +71,20 @@ Steinberg::tresult PLUGIN_API Controller::getState(Steinberg::IBStream* state)
     if (!state)
         return Steinberg::kInvalidArgument;
 
-    Steinberg::IBStreamer s(state, Steinberg::kLittleEndian);
+    Steinberg::IBStreamer streamer(state, Steinberg::kLittleEndian);
     const bool saveFinal = hasDefinitiveFinalSnapshot();
 
-    if (!s.writeInt32u(kStateMagic) ||
-        !s.writeInt32u(kStateVersion) ||
-        !s.writeInt32(static_cast<Steinberg::int32>(uiMode_)) ||
-        !s.writeInt32(static_cast<Steinberg::int32>(uiGenre_)) ||
-        !s.writeInt32(static_cast<Steinberg::int32>(uiEra_)) ||
-        !s.writeInt32(static_cast<Steinberg::int32>(uiLanguage_)) ||
-        !s.writeBool(uiDetailsVisible_) ||
-        !s.writeBool(saveFinal))
+    if (!streamer.writeInt32u(kStateMagic) ||
+        !streamer.writeInt32u(kStateVersion) ||
+        !streamer.writeInt32(static_cast<Steinberg::int32>(uiMode_)) ||
+        !streamer.writeInt32(static_cast<Steinberg::int32>(uiGenre_)) ||
+        !streamer.writeInt32(static_cast<Steinberg::int32>(uiEra_)) ||
+        !streamer.writeInt32(static_cast<Steinberg::int32>(uiLanguage_)) ||
+        !streamer.writeBool(uiDetailsVisible_) ||
+        !streamer.writeBool(saveFinal))
         return Steinberg::kResultFalse;
 
-    if (saveFinal && !writeMetrics(s, latestPacket_.metrics))
+    if (saveFinal && !writeMetrics(streamer, latestPacket_.metrics))
         return Steinberg::kResultFalse;
 
     return Steinberg::kResultOk;
@@ -95,7 +95,7 @@ Steinberg::tresult PLUGIN_API Controller::setState(Steinberg::IBStream* state)
     if (!state)
         return Steinberg::kInvalidArgument;
 
-    Steinberg::IBStreamer s(state, Steinberg::kLittleEndian);
+    Steinberg::IBStreamer streamer(state, Steinberg::kLittleEndian);
     Steinberg::uint32 magic = 0;
     Steinberg::uint32 version = 0;
     Steinberg::int32 mode = 0;
@@ -106,11 +106,11 @@ Steinberg::tresult PLUGIN_API Controller::setState(Steinberg::IBStream* state)
     bool hasFinal = false;
     Analysis::Metrics restoredMetrics {};
 
-    if (!s.readInt32u(magic) || !s.readInt32u(version) ||
+    if (!streamer.readInt32u(magic) || !streamer.readInt32u(version) ||
         magic != kStateMagic || version != kStateVersion ||
-        !s.readInt32(mode) || !s.readInt32(genre) ||
-        !s.readInt32(era) || !s.readInt32(language) ||
-        !s.readBool(detailsVisible) || !s.readBool(hasFinal))
+        !streamer.readInt32(mode) || !streamer.readInt32(genre) ||
+        !streamer.readInt32(era) || !streamer.readInt32(language) ||
+        !streamer.readBool(detailsVisible) || !streamer.readBool(hasFinal))
         return Steinberg::kResultFalse;
 
     if (mode < 0 || mode > static_cast<Steinberg::int32>(Analysis::AnalysisMode::Master) ||
@@ -119,7 +119,7 @@ Steinberg::tresult PLUGIN_API Controller::setState(Steinberg::IBStream* state)
         language < 0 || language > static_cast<Steinberg::int32>(Localization::Language::English))
         return Steinberg::kResultFalse;
 
-    if (hasFinal && !readMetrics(s, restoredMetrics))
+    if (hasFinal && !readMetrics(streamer, restoredMetrics))
         return Steinberg::kResultFalse;
 
     // Apply only after the complete stream has been validated. A truncated or
