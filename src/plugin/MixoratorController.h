@@ -41,6 +41,8 @@ public:
     }
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
+    Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
+    Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
     Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
     Steinberg::IPlugView* PLUGIN_API createView(Steinberg::FIDString name) override;
 
