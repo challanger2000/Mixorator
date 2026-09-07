@@ -44,7 +44,11 @@ void AnalysisEngine::processTruePeakSample(int ch,double s) noexcept { auto& h=t
 void AnalysisEngine::trackClippingSample(int ch,double s) noexcept
 {
     const double a=std::abs(s);
-    if(a>1.0){++clippedSampleCountRaw_;fullScaleRun_[ch]=0;fullScalePolarity_[ch]=0;return;}
+    // A floating-point VST signal may legitimately exceed +/-1.0, for example
+    // after lossy decoding or upstream gain. That is a level/true-peak event,
+    // not proof that the waveform itself has been hard-clipped. Only a stable
+    // full-scale flat-top signature is counted as hard clipping here.
+    if(a>1.0){fullScaleRun_[ch]=0;fullScalePolarity_[ch]=0;return;}
     if(a!=1.0){fullScaleRun_[ch]=0;fullScalePolarity_[ch]=0;return;}
     const int polarity=s<0.0?-1:1;
     if(fullScalePolarity_[ch]!=polarity){fullScalePolarity_[ch]=polarity;fullScaleRun_[ch]=1;return;}
