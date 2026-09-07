@@ -211,6 +211,44 @@ int main()
             return fail("Quiet programme incorrectly hid a positive true-peak fault");
     }
 
+    // Real-world decoded MP3 case (Ricky-Nelson-like): a modest positive
+    // true peak together with a limited number of decoded sample overs is one
+    // ceiling-risk family. Streaming must warn, but must not double-count both
+    // manifestations into CRITICAL.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -10.6;
+        m.truePeakDbtp = 0.5;
+        m.plrDb = 10.9;
+        m.lraLu = 4.9;
+        m.correlation = 0.97;
+        m.monoCompatibilityDb = -0.1;
+        m.clippedSamples = 247;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Pop, Era::Vintage);
+        if (a.streamingDeliveryVerdict != Verdict::Attention)
+            return fail("Ricky-like decoded overs were double-counted into the wrong streaming verdict");
+    }
+
+    // Real-world hard-ceiling EDM case (Glow-like): thousands of samples can
+    // sit at full scale while reconstructed true peak is positive. Technical
+    // and master-quality assessment may remain severe, but streaming should
+    // describe the single ceiling/transcoding risk once, not twice.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -8.7;
+        m.truePeakDbtp = 0.6;
+        m.plrDb = 9.2;
+        m.lraLu = 8.6;
+        m.correlation = 0.85;
+        m.monoCompatibilityDb = -0.3;
+        m.clippedSamples = 2000;
+        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::HouseEdm, Era::Modern);
+        if (a.technicalVerdict != Verdict::Critical)
+            return fail("Glow-like hard ceiling was not kept severe in technical quality");
+        if (a.streamingDeliveryVerdict != Verdict::Attention)
+            return fail("Glow-like ceiling risk was double-counted in streaming assessment");
+    }
+
     std::cout << "Real-world reference assessment tests passed.\n";
     return 0;
 }
