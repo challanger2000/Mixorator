@@ -42,7 +42,7 @@ const char* verdictText(Analysis::Verdict v, Localization::Language language) no
             case Analysis::Verdict::Good: return "GUT";
             case Analysis::Verdict::Attention: return "ACHTUNG";
             case Analysis::Verdict::Critical: return "KRITISCH";
-            case Analysis::Verdict::Unusual: return "UNGEWOEHNLICH";
+            case Analysis::Verdict::Unusual: return "UNGEWÖHNLICH";
             case Analysis::Verdict::InsufficientData: return "N/A";
         }
     }
@@ -131,26 +131,26 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
 
     if (m.nonFiniteSamples > 0)
     {
-        setLabel(line1, de ? "Ungueltige Audio-Samples erkannt." : "Invalid audio samples detected.");
-        setLabel(line2, de ? "Signalweg/Export pruefen und erneut analysieren." : "Check the signal path/export and analyze again.");
+        setLabel(line1, de ? "Ungültige Audio-Samples erkannt." : "Invalid audio samples detected.");
+        setLabel(line2, de ? "Signalweg/Export prüfen und erneut analysieren." : "Check the signal path/export and analyze again.");
         return;
     }
     if (m.clippedSamples > 0)
     {
-        setLabel(line1, de ? "Clipping erkannt: Samples erreichen/ueberschreiten die Grenze." : "Clipping detected: samples reach/exceed the ceiling.");
-        setLabel(line2, de ? "Pegel bzw. Limiter reduzieren und erneut pruefen." : "Reduce level or limiting and check again.");
+        setLabel(line1, de ? "Clipping erkannt: Samples erreichen/überschreiten die Grenze." : "Clipping detected: samples reach/exceed the ceiling.");
+        setLabel(line2, de ? "Pegel bzw. Limiter reduzieren und erneut prüfen." : "Reduce level or limiting and check again.");
         return;
     }
     if (m.truePeakDbtp > 0.0)
     {
-        setLabel(line1, de ? "True-Peak-Overs erkannt: Inter-Sample-Spitzen ueber 0 dBTP." : "True-peak overs detected: inter-sample peaks above 0 dBTP.");
-        setLabel(line2, de ? "True-Peak-Limiter/Output-Ceiling absenken und erneut pruefen." : "Lower the true-peak limiter/output ceiling and check again.");
+        setLabel(line1, de ? "True-Peak-Overs erkannt: Inter-Sample-Spitzen über 0 dBTP." : "True-peak overs detected: inter-sample peaks above 0 dBTP.");
+        setLabel(line2, de ? "True-Peak-Limiter/Output-Ceiling absenken und erneut prüfen." : "Lower the true-peak limiter/output ceiling and check again.");
         return;
     }
     if (m.correlation < 0.0 || m.monoCompatibilityDb < -3.0 ||
         m.worstLocalCorrelation < -0.2 || m.worstLocalMonoCompatibilityDb < -6.0)
     {
-        setLabel(line1, de ? "Stereo-/Monokompatibilitaet ist auffaellig." : "Stereo/mono compatibility is problematic.");
+        setLabel(line1, de ? "Stereo-/Monokompatibilität ist auffällig." : "Stereo/mono compatibility is problematic.");
         setLabel(line2, de ? "Phase, Breite und Seitensignal gezielt kontrollieren." : "Check phase, width and side content.");
         return;
     }
@@ -158,7 +158,7 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
         m.integratedLufs > -8.0 && m.plrDb < 8.0)
     {
         setLabel(line1, de ? "Hohe Lautheit + niedriger PLR: stark verdichtetes Master." : "High loudness + low PLR: strongly dense master.");
-        setLabel(line2, de ? "Stilistisch moeglich; falls unbeabsichtigt Limiting/Kompression reduzieren." : "May be intentional; otherwise ease limiting/compression.");
+        setLabel(line2, de ? "Stilistisch möglich; falls unbeabsichtigt Limiting/Kompression reduzieren." : "May be intentional; otherwise ease limiting/compression.");
         return;
     }
     if (mode == Analysis::AnalysisMode::Master &&
@@ -166,26 +166,26 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
          a.streamingDeliveryVerdict == Analysis::Verdict::Critical))
     {
         setLabel(line1, de ? "Streaming-Reserve ist zu knapp." : "Streaming headroom is too small.");
-        setLabel(line2, de ? "Mehr True-Peak-Reserve fuer Codec/Transcoding einplanen." : "Leave more true-peak headroom for codec/transcoding.");
+        setLabel(line2, de ? "Mehr True-Peak-Reserve für Codec/Transcoding einplanen." : "Leave more true-peak headroom for codec/transcoding.");
         return;
     }
     if (a.styleVerdict == Analysis::Verdict::Attention ||
         a.styleVerdict == Analysis::Verdict::Critical ||
         a.styleVerdict == Analysis::Verdict::Unusual)
     {
-        setLabel(line1, de ? "Der gewaehlte Stil-/Era-Kontext wird nur schwach getroffen." : "The selected style/era profile is only weakly matched.");
-        setLabel(line2, de ? "Genre/Era pruefen oder Dynamik/Tonalitaet gezielt vergleichen." : "Check genre/era or compare dynamics/tonality.");
+        setLabel(line1, de ? "Der gewählte Stil-/Era-Kontext wird nur schwach getroffen." : "The selected style/era profile is only weakly matched.");
+        setLabel(line2, de ? "Genre/Era prüfen oder Dynamik/Tonalität gezielt vergleichen." : "Check genre/era or compare dynamics/tonality.");
         return;
     }
     if (a.technicalVerdict == Analysis::Verdict::Good)
     {
         setLabel(line1, de ? "Kleine technische Kompromisse erkannt, kein kritischer Fehler." : "Minor technical trade-offs detected; no critical fault.");
-        setLabel(line2, de ? "Nur bei Bedarf optimieren - das Signal ist grundsaetzlich brauchbar." : "Optimize only if needed; the signal is fundamentally usable.");
+        setLabel(line2, de ? "Nur bei Bedarf optimieren - das Signal ist grundsätzlich brauchbar." : "Optimize only if needed; the signal is fundamentally usable.");
         return;
     }
     if (a.styleVerdict == Analysis::Verdict::Good)
     {
-        setLabel(line1, de ? "Stil-Treffer ist gut, aber nicht exakt im gewaehlten Profil." : "Style match is good, but not exact for the selected profile.");
+        setLabel(line1, de ? "Stil-Treffer ist gut, aber nicht exakt im gewählten Profil." : "Style match is good, but not exact for the selected profile.");
         setLabel(line2, de ? "Keine technische Korrektur allein deshalb erforderlich." : "No technical correction is required for that alone.");
         return;
     }
@@ -193,7 +193,7 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
     setLabel(line1, de ? "Keine kritischen technischen Probleme erkannt." : "No critical technical issues detected.");
     setLabel(line2, mode == Analysis::AnalysisMode::Master
         ? (de ? "Das Master ist in diesem Zustand technisch verwendbar." : "The master is technically usable as delivered.")
-        : (de ? "Der Mix ist in diesem Zustand technisch unauffaellig." : "The mix is technically clean in its current state."));
+        : (de ? "Der Mix ist in diesem Zustand technisch unauffällig." : "The mix is technically clean in its current state."));
 }
 
 void expandSelectionHitArea(VSTGUI::CControl* c) noexcept
