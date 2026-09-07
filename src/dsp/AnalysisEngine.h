@@ -64,7 +64,8 @@ private:
         void clear() noexcept;
     };
 
-    static constexpr std::size_t kFftSize = 1024;
+    static constexpr std::size_t kBaseFftSize = 1024;
+    static constexpr std::size_t kMaxFftSize = 4096;
     static constexpr std::size_t kDetailedTonalBands = 8;
 
     template <typename Sample>
@@ -141,9 +142,10 @@ private:
     std::uint32_t fullScaleRun_[2] {0, 0};
     int fullScalePolarity_[2] {0, 0};
 
-    double tonalInput_[kFftSize] {};
-    double fftReal_[kFftSize] {};
-    double fftImag_[kFftSize] {};
+    std::size_t tonalFftSize_ {kBaseFftSize};
+    double tonalInput_[kMaxFftSize] {};
+    double fftReal_[kMaxFftSize] {};
+    double fftImag_[kMaxFftSize] {};
     std::size_t tonalWrite_ {0};
     int tonalFrameChannel_ {0};
     long double detailedTonalBandEnergy_[kDetailedTonalBands] {};
