@@ -20,6 +20,20 @@ std::vector<double> sine(double sampleRate, double frequency, double seconds,
     return result;
 }
 
+std::vector<double> taperedSine(double sampleRate, double frequency, double seconds,
+                                double amplitude, double phase)
+{
+    auto result = sine(sampleRate, frequency, seconds, amplitude, phase);
+    const std::size_t fade = static_cast<std::size_t>(std::llround(sampleRate * 0.010));
+    for (std::size_t i = 0; i < std::min(fade, result.size() / 2); ++i)
+    {
+        const double gain = static_cast<double>(i) / static_cast<double>(fade);
+        result[i] *= gain;
+        result[result.size() - 1 - i] *= gain;
+    }
+    return result;
+}
+
 void processStereo(Mixorator::DSP::AnalysisEngine& engine,
                    std::vector<double>& left,
                    std::vector<double>& right,
@@ -37,6 +51,31 @@ void processStereo(Mixorator::DSP::AnalysisEngine& engine,
 int main()
 {
     using Mixorator::DSP::AnalysisEngine;
+
+    // EBU Tech 3341 minimum-requirements true-peak tests 15-19. The prescribed
+    // tones verify the ITU-R BS.1770 4x interpolating meter at difficult phases
+    // and normalized frequencies. EBU tolerance is +0.2/-0.4 dBTP.
+    struct EbuTruePeakCase { double frequencyRatio; double amplitude; double phaseDegrees; double expectedDbtp; };
+    const EbuTruePeakCase ebuCases[] {
+        {1.0 / 4.0, 0.50,  0.0, -6.0},
+        {1.0 / 4.0, 0.50, 45.0, -6.0},
+        {1.0 / 6.0, 0.50, 60.0, -6.0},
+        {1.0 / 8.0, 0.50, 67.5, -6.0},
+        {1.0 / 4.0, 1.41, 45.0,  3.0}
+    };
+    for (const auto& test : ebuCases)
+    {
+        constexpr double sampleRate = 48000.0;
+        AnalysisEngine engine;
+        engine.prepare(sampleRate);
+        auto left = taperedSine(sampleRate, sampleRate * test.frequencyRatio, 2.0,
+                                test.amplitude, test.phaseDegrees * kPi / 180.0);
+        auto right = left;
+        processStereo(engine, left, right, 257);
+        const double measured = engine.truePeakDbtp();
+        if (measured < test.expectedDbtp - 0.4 || measured > test.expectedDbtp + 0.2)
+            return fail("EBU Tech 3341 True Peak reference failed");
+    }
 
     // Fundamental invariant: true peak must never be lower than sample peak.
     for (double sampleRate : {44100.0, 48000.0, 96000.0})
