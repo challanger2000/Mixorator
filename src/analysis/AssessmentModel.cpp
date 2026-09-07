@@ -114,6 +114,21 @@ double tonalPlausibilityScore(const Metrics& m, Genre genre) noexcept
     return std::clamp(score,0.0,100.0);
 }
 
+bool tonalExtremeOutlier(const Metrics& m, Genre genre) noexcept
+{
+    const auto p=tonalProfileFor(genre);
+    for (std::size_t i=0;i<4;++i)
+    {
+        const double v=m.tonalPercent[i];
+        const double margin=std::max(p.margin[i],0.001);
+        if (!std::isfinite(v))
+            return false;
+        if (v < p.min[i]-2.0*margin || v > p.max[i]+2.0*margin)
+            return true;
+    }
+    return false;
+}
+
 double localStereoPenalty(const Metrics& m) noexcept
 {
     double severity=0.0;
@@ -182,12 +197,12 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     if (tonalDataAvailable(m))
     {
         const double tonal=tonalPlausibilityScore(m,genre);
-        // Tonal balance is intentionally secondary for ordinary creative
-        // variation, but an extreme spectral outlier must not be completely
-        // hidden by otherwise ideal loudness/dynamics scores.
+        // Tonal balance remains secondary for ordinary creative variation.
+        // A truly extreme single-band excursion, however, must prevent an
+        // EXCELLENT style verdict even if loudness and dynamics are ideal.
         style = 0.85*style + 0.15*tonal;
-        if (tonal < 35.0)
-            style = std::min(style, 89.0);
+        if (tonal < 35.0 || tonalExtremeOutlier(m,genre))
+            style = std::min(style,89.0);
     }
     style=std::clamp(style,0.0,100.0);
 
