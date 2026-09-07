@@ -35,8 +35,6 @@ struct Metrics
     std::uint64_t clippedSamples {0};
     std::uint64_t nonFiniteSamples {0};
     std::array<double, 4> tonalPercent {{0.0, 0.0, 0.0, 0.0}};
-    // Fine-grained measurement-only spectrum. Kept separate from tonalPercent
-    // so existing scoring remains unchanged until genre calibration is complete.
     std::array<double, 8> detailedTonalPercent {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 
     bool loudnessAvailable {true};
@@ -61,14 +59,26 @@ struct Assessment
     bool provisional {false};
 };
 
+// Relative spectral shape for calibration/diagnosis. Values are dB-like energy
+// ratios (10*log10), not absolute band percentages. A small floor keeps silent
+// upper bands finite without materially changing normal musical measurements.
+struct TonalRatioFeatures
+{
+    double subVsBassDb {0.0};
+    double lowMidVsMidDb {0.0};
+    double presenceVsMidDb {0.0};
+    double upperPresenceVsPresenceDb {0.0};
+    double brillianceVsUpperPresenceDb {0.0};
+    double airVsBrillianceDb {0.0};
+    double lowVsMidDb {0.0};
+    double highVsMidDb {0.0};
+};
+
 class AssessmentModel
 {
 public:
     static Assessment evaluate(const Metrics& metrics, AnalysisMode mode, Genre genre, Era era) noexcept;
 
-    // Experimental/calibration surface for the eight detailed spectral bands.
-    // It is intentionally separate from evaluate(): until musical references
-    // validate the profiles, this score cannot alter any production verdict.
     static bool detailedTonalDataAvailable(const Metrics& metrics) noexcept
     {
         double total = 0.0;
@@ -81,6 +91,35 @@ public:
         return total > 99.0 && total < 101.0;
     }
 
+    static TonalRatioFeatures tonalRatioFeatures(const Metrics& metrics) noexcept
+    {
+        if (!detailedTonalDataAvailable(metrics))
+            return {};
+
+        constexpr double floor = 1.0e-6;
+        const auto ratioDb = [](double numerator, double denominator) noexcept
+        {
+            constexpr double localFloor = 1.0e-6;
+            return 10.0 * std::log10(std::max(numerator, localFloor) /
+                                     std::max(denominator, localFloor));
+        };
+
+        const auto& b = metrics.detailedTonalPercent;
+        TonalRatioFeatures f;
+        f.subVsBassDb = ratioDb(b[0], b[1]);
+        f.lowMidVsMidDb = ratioDb(b[2], b[3]);
+        f.presenceVsMidDb = ratioDb(b[4], b[3]);
+        f.upperPresenceVsPresenceDb = ratioDb(b[5], b[4]);
+        f.brillianceVsUpperPresenceDb = ratioDb(b[6], b[5]);
+        f.airVsBrillianceDb = ratioDb(b[7], b[6]);
+        f.lowVsMidDb = ratioDb(b[0] + b[1], b[2] + b[3]);
+        f.highVsMidDb = ratioDb(b[4] + b[5] + b[6] + b[7], b[2] + b[3]);
+        (void) floor;
+        return f;
+    }
+
+    // Legacy experimental raw-band calibration score. Kept isolated from
+    // evaluate() while ratio-based calibration is validated against references.
     static double detailedTonalScore(const Metrics& metrics, Genre genre) noexcept
     {
         if (!detailedTonalDataAvailable(metrics))
@@ -93,9 +132,6 @@ public:
             std::array<double, 8> margin;
         };
 
-        // These are intentionally broad seed envelopes, not release thresholds.
-        // They encode only defensible large-scale tendencies so calibration can
-        // start without teaching the production evaluator a rigid target curve.
         const auto profileFor = [](Genre g) noexcept -> DetailedProfile
         {
             switch (g)
@@ -120,10 +156,6 @@ public:
                 case Genre::Ambient:
                     return {{{1,6,6,16,4,2,.5,.1}}, {{24,30,28,50,24,18,14,10}}, {{10,11,10,14,10,8,7,6}}};
                 case Genre::AcousticFolk:
-                    // Real acoustic references can be dominated by instrument/body
-                    // energy around 250-500 Hz (for example voice + ukulele) while
-                    // remaining spectrally healthy. Keep this envelope deliberately
-                    // broad instead of forcing acoustic material toward a pop curve.
                     return {{{.01,4,8,5,.4,.1,.03,.005}}, {{10,28,75,58,28,17,11,8}}, {{6,10,18,18,10,8,6,5}}};
                 case Genre::Jazz:
                     return {{{.2,5,10,25,7,3,.5,.1}}, {{11,25,32,55,28,17,11,8}}, {{6,9,10,15,10,7,5,4}}};
