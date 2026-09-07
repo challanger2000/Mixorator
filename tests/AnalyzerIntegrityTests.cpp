@@ -62,8 +62,10 @@ int main()
     }
 
     // Each detailed tonal band must respond predominantly to a tone placed well
-    // inside that band. Frequencies are deliberately kept away from boundaries
-    // so Hann-window leakage and FFT-bin spacing cannot make the test brittle.
+    // inside that band. The 20-80 Hz sub band is narrower than two FFT bins at
+    // 48 kHz / 1024 samples, so Hann-window leakage into the adjacent bass bin
+    // is physically unavoidable. It therefore only needs to remain the dominant
+    // band; the other seven bands retain the strict 90-percent concentration test.
     {
         constexpr std::array<double, 8> frequencies {46.875, 140.625, 375.0, 984.375,
                                                       3000.0, 6000.0, 10000.0, 15000.0};
@@ -77,7 +79,8 @@ int main()
             const auto bands = detailedTonal(engine);
             const auto dominant = static_cast<std::size_t>(std::distance(
                 bands.begin(), std::max_element(bands.begin(), bands.end())));
-            if (dominant != expected || bands[expected] < 90.0)
+            const double minimumConcentration = expected == 0 ? 50.0 : 90.0;
+            if (dominant != expected || bands[expected] < minimumConcentration)
                 return fail("Detailed tonal band frequency classification failed");
         }
     }
