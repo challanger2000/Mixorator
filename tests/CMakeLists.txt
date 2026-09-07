@@ -106,6 +106,17 @@ target_include_directories(MixoratorRealWorldReferenceTests PRIVATE
 
 add_test(NAME MixoratorRealWorldReferenceTests COMMAND MixoratorRealWorldReferenceTests)
 
+add_executable(MixoratorDetailedTonalCalibrationTests
+    DetailedTonalCalibrationTests.cpp
+    ../src/analysis/AssessmentModel.cpp
+)
+
+target_include_directories(MixoratorDetailedTonalCalibrationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorDetailedTonalCalibrationTests COMMAND MixoratorDetailedTonalCalibrationTests)
+
 add_executable(MixoratorControllerStateCodecTests
     ControllerStateCodecTests.cpp
     ../src/plugin/ControllerStateCodec.cpp
