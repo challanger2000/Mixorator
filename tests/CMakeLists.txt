@@ -95,6 +95,17 @@ target_include_directories(MixoratorMasterScenarioTests PRIVATE
 
 add_test(NAME MixoratorMasterScenarioTests COMMAND MixoratorMasterScenarioTests)
 
+add_executable(MixoratorRealWorldReferenceTests
+    RealWorldReferenceTests.cpp
+    ../src/analysis/AssessmentModel.cpp
+)
+
+target_include_directories(MixoratorRealWorldReferenceTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorRealWorldReferenceTests COMMAND MixoratorRealWorldReferenceTests)
+
 add_executable(MixoratorControllerStateCodecTests
     ControllerStateCodecTests.cpp
     ../src/plugin/ControllerStateCodec.cpp
