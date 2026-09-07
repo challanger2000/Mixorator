@@ -33,6 +33,9 @@ struct Metrics
     std::uint64_t clippedSamples {0};
     std::uint64_t nonFiniteSamples {0};
     std::array<double, 4> tonalPercent {{0.0, 0.0, 0.0, 0.0}};
+    // Fine-grained measurement-only spectrum. Kept separate from tonalPercent
+    // so existing scoring remains unchanged until genre calibration is complete.
+    std::array<double, 8> detailedTonalPercent {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 
     bool loudnessAvailable {true};
     bool plrAvailable {true};
