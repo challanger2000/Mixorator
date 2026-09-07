@@ -159,6 +159,56 @@ int main()
             return fail("Highly dynamic programme did not distinguish classical from modern techno style context");
     }
 
+    // Era is a stylistic context only. A vintage-like cinematic master should
+    // fit the vintage profile better than the modern one, while all objective
+    // technical and delivery scores remain exactly unchanged.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -18.5;
+        m.truePeakDbtp = -1.5;
+        m.plrDb = 27.0;
+        m.lraLu = 20.0;
+        const auto vintage = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Cinematic, Era::Vintage);
+        const auto modern = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Cinematic, Era::Modern);
+        if (vintage.styleScore <= modern.styleScore)
+            return fail("Vintage cinematic context did not prefer vintage-like dynamics");
+        if (!approx(vintage.technicalScore, modern.technicalScore) ||
+            !approx(vintage.pcmDeliveryScore, modern.pcmDeliveryScore) ||
+            !approx(vintage.streamingDeliveryScore, modern.streamingDeliveryScore))
+            return fail("Era selection changed objective technical or delivery quality");
+    }
+
+    // The inverse must also hold: a loud, compact modern pop master should fit
+    // Modern better than Vintage without changing technical integrity.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -7.0;
+        m.truePeakDbtp = -1.2;
+        m.plrDb = 7.0;
+        m.lraLu = 3.0;
+        const auto modern = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Pop, Era::Modern);
+        const auto vintage = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Pop, Era::Vintage);
+        if (modern.styleScore <= vintage.styleScore)
+            return fail("Modern pop context did not prefer modern-like density");
+        if (!approx(modern.technicalScore, vintage.technicalScore))
+            return fail("Era selection changed technical integrity for modern pop");
+    }
+
+    // MIX has intentionally era-neutral profiles at present. Era selection
+    // must therefore not alter either technical or style scoring in MIX mode.
+    {
+        Metrics m = cleanReference();
+        m.integratedLufs = -18.0;
+        m.truePeakDbtp = -3.0;
+        m.plrDb = 15.0;
+        m.lraLu = 8.0;
+        const auto modern = AssessmentModel::evaluate(m, AnalysisMode::Mix, Genre::Rock, Era::Modern);
+        const auto vintage = AssessmentModel::evaluate(m, AnalysisMode::Mix, Genre::Rock, Era::Vintage);
+        if (!approx(modern.technicalScore, vintage.technicalScore) ||
+            !approx(modern.styleScore, vintage.styleScore))
+            return fail("Era unexpectedly changed MIX assessment");
+    }
+
     // Jazz and acoustic material should tolerate healthy headroom and broad
     // macro-dynamics without being labelled technically weak.
     {
