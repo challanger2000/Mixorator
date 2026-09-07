@@ -63,5 +63,11 @@ class AssessmentModel
 {
 public:
     static Assessment evaluate(const Metrics& metrics, AnalysisMode mode, Genre genre, Era era) noexcept;
+
+    // Experimental/calibration surface for the eight detailed spectral bands.
+    // It is intentionally separate from evaluate(): until musical references
+    // validate the profiles, this score cannot alter any production verdict.
+    static bool detailedTonalDataAvailable(const Metrics& metrics) noexcept;
+    static double detailedTonalScore(const Metrics& metrics, Genre genre) noexcept;
 };
 }
