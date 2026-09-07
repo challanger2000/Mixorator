@@ -173,6 +173,13 @@ double streamingHeadroomPenalty(double truePeakDbtp) noexcept
     return std::min(50.0,25.0 + 15.0*truePeakDbtp);
 }
 
+double clippingPenalty(std::uint64_t clippedSamples, double cap) noexcept
+{
+    if (clippedSamples == 0)
+        return 0.0;
+    return std::min(cap, 15.0 + 5.0*std::log10(1.0 + static_cast<double>(clippedSamples)));
+}
+
 Verdict verdictFor(double s) noexcept
 {
     if (s>=90) return Verdict::Excellent;
@@ -196,7 +203,7 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
 
     double technical=100.0;
     if (m.nonFiniteSamples>0) technical=0.0;
-    if (m.clippedSamples>0) technical-=std::min(30.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
+    technical-=clippingPenalty(m.clippedSamples,30.0);
     if (m.truePeakDbtp>0.0) technical-=std::min(40.0,20.0+m.truePeakDbtp*10.0);
     if (m.correlation<0.0) technical-=std::min(30.0,-m.correlation*30.0);
     if (m.monoCompatibilityDb<-3.0) technical-=std::min(30.0,(-3.0-m.monoCompatibilityDb)*5.0);
@@ -244,14 +251,26 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
     {
         pcm=100.0;
         if (m.nonFiniteSamples>0) pcm=0.0;
-        if (m.clippedSamples>0) pcm-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
+        pcm-=clippingPenalty(m.clippedSamples,35.0);
         if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
         pcm=std::clamp(pcm,0.0,100.0);
 
         streaming=100.0;
-        if (m.nonFiniteSamples>0) streaming=0.0;
-        if (m.clippedSamples>0) streaming-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
-        streaming-=streamingHeadroomPenalty(m.truePeakDbtp);
+        if (m.nonFiniteSamples>0)
+        {
+            streaming=0.0;
+        }
+        else
+        {
+            // Sample/full-scale clipping and positive true peak describe the
+            // same ceiling-risk family. For streaming/transcoding robustness,
+            // use the stronger of the two penalties instead of double-counting
+            // the same event and turning small decoded overs into CRITICAL.
+            const double ceilingPenalty=std::max(
+                clippingPenalty(m.clippedSamples,35.0),
+                streamingHeadroomPenalty(m.truePeakDbtp));
+            streaming-=ceilingPenalty;
+        }
         streaming=std::clamp(streaming,0.0,100.0);
 
         // Retained as an informational normalization preview only. It is not
