@@ -105,6 +105,6 @@ target_include_directories(MixoratorControllerStateCodecTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(MixoratorControllerStateCodecTests PRIVATE base)
+target_link_libraries(MixoratorControllerStateCodecTests PRIVATE base pluginterfaces)
 
 add_test(NAME MixoratorControllerStateCodecTests COMMAND MixoratorControllerStateCodecTests)
