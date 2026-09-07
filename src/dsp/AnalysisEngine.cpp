@@ -36,8 +36,8 @@ void AnalysisEngine::reset()
     samplePeakLinear_=truePeakLinear_=0.0; rmsSumSquares_=0.0L; rmsSampleCount_=0; leftSumSquares_=rightSumSquares_=lrCrossSum_=midSumSquares_=sideSumSquares_=0.0L; stereoSampleCount_=0;
     localLeftSumSquares_=localRightSumSquares_=localCrossSum_=localMidSumSquares_=0.0L; localStereoSamples_=0; localStereoWindowCount_=negativeCorrelationWindowCount_=0; worstLocalCorrelationRaw_=1.0; worstLocalMonoCompatibilityDbRaw_=0.0;
     dcSum_[0]=dcSum_[1]=0.0L; dcSampleCount_[0]=dcSampleCount_[1]=0; clippedSampleCountRaw_=nonFiniteSampleCountRaw_=0; fullScaleRun_[0]=fullScaleRun_[1]=0; fullScalePolarity_[0]=fullScalePolarity_[1]=0;
-    tonalWrite_=0; tonalFrameChannel_=0; for(auto& e:tonalBandEnergy_) e=0.0L; for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
-    samplePeakDbfs_.store(-1000.0); truePeakDbtp_.store(-1000.0); rmsDbfs_.store(-1000.0); crestFactorDb_.store(0.0); momentaryLufs_.store(-1000.0); shortTermLufs_.store(-1000.0); hasProgrammeContext_.store(false); lrBalanceDb_.store(0.0); correlation_.store(1.0); stereoWidthDb_.store(-1000.0); monoCompatibilityDb_.store(0.0); worstLocalCorrelation_.store(1.0); worstLocalMonoCompatibilityDb_.store(0.0); negativeCorrelationPercent_.store(0.0); dcOffsetLeftDbfs_.store(-1000.0); dcOffsetRightDbfs_.store(-1000.0); clippedSampleCount_.store(0); nonFiniteSampleCount_.store(0); lowBandPercent_.store(0.0); lowMidBandPercent_.store(0.0); highMidBandPercent_.store(0.0); highBandPercent_.store(0.0);
+    tonalWrite_=0; tonalFrameChannel_=0; for(auto& e:detailedTonalBandEnergy_) e=0.0L; for(auto& f:shelf_) f.clear(); for(auto& f:highPass_) f.clear(); for(auto& h:truePeakHistory_) std::fill(h,h+12,0.0);
+    samplePeakDbfs_.store(-1000.0); truePeakDbtp_.store(-1000.0); rmsDbfs_.store(-1000.0); crestFactorDb_.store(0.0); momentaryLufs_.store(-1000.0); shortTermLufs_.store(-1000.0); hasProgrammeContext_.store(false); lrBalanceDb_.store(0.0); correlation_.store(1.0); stereoWidthDb_.store(-1000.0); monoCompatibilityDb_.store(0.0); worstLocalCorrelation_.store(1.0); worstLocalMonoCompatibilityDb_.store(0.0); negativeCorrelationPercent_.store(0.0); dcOffsetLeftDbfs_.store(-1000.0); dcOffsetRightDbfs_.store(-1000.0); clippedSampleCount_.store(0); nonFiniteSampleCount_.store(0); lowBandPercent_.store(0.0); lowMidBandPercent_.store(0.0); highMidBandPercent_.store(0.0); highBandPercent_.store(0.0); for(auto& v:detailedTonalPercent_) v.store(0.0);
 }
 void AnalysisEngine::pushWindowSample(std::vector<double>& r,std::size_t& w,std::size_t& valid,double& sum,double v) noexcept { if(r.empty()) return; if(valid==r.size()) sum-=r[w]; else ++valid; r[w]=v; sum+=v; w=(w+1)%r.size(); }
 void AnalysisEngine::processTruePeakSample(int ch,double s) noexcept { auto& h=truePeakHistory_[ch]; for(int i=11;i>0;--i) h[i]=h[i-1]; h[0]=s; truePeakLinear_=std::max(truePeakLinear_,std::abs(s)); for(int p=0;p<4;++p){double y=0;for(int t=0;t<12;++t)y+=h[t]*kTruePeakFir[t][p];truePeakLinear_=std::max(truePeakLinear_,std::abs(y));} }
@@ -76,8 +76,48 @@ void AnalysisEngine::finishLocalStereoWindow() noexcept
 }
 void AnalysisEngine::updateTechnicalMetrics() noexcept { for(int ch=0;ch<2;++ch){double d=-1000;if(dcSampleCount_[ch])d=linearToDbfs(std::abs(double(dcSum_[ch]/(long double)dcSampleCount_[ch])));(ch?dcOffsetRightDbfs_:dcOffsetLeftDbfs_).store(d);}clippedSampleCount_.store(clippedSampleCountRaw_);nonFiniteSampleCount_.store(nonFiniteSampleCountRaw_); }
 void AnalysisEngine::pushTonalSample(double s,int n) noexcept { tonalInput_[tonalWrite_++]=std::isfinite(s)?s:0;if(tonalWrite_==kFftSize){analyseTonalFrame();tonalWrite_=0;tonalFrameChannel_=n>1?1-tonalFrameChannel_:0;} }
-void AnalysisEngine::analyseTonalFrame() noexcept { for(std::size_t i=0;i<kFftSize;++i){double w=.5-.5*std::cos(2*kPi*i/double(kFftSize-1));fftReal_[i]=tonalInput_[i]*w;fftImag_[i]=0;}for(std::size_t i=1,j=0;i<kFftSize;++i){std::size_t bit=kFftSize>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){std::swap(fftReal_[i],fftReal_[j]);std::swap(fftImag_[i],fftImag_[j]);}}for(std::size_t len=2;len<=kFftSize;len<<=1){double a=-2*kPi/len,wr0=std::cos(a),wi0=std::sin(a);for(std::size_t i=0;i<kFftSize;i+=len){double wr=1,wi=0;for(std::size_t j=0;j<len/2;++j){auto x=i+j,y=x+len/2;double vr=fftReal_[y]*wr-fftImag_[y]*wi,vi=fftReal_[y]*wi+fftImag_[y]*wr,ur=fftReal_[x],ui=fftImag_[x];fftReal_[x]=ur+vr;fftImag_[x]=ui+vi;fftReal_[y]=ur-vr;fftImag_[y]=ui-vi;double nw=wr*wr0-wi*wi0;wi=wr*wi0+wi*wr0;wr=nw;}}}double upper=std::min(20000.0,sampleRate_*.5);for(std::size_t k=1;k<=kFftSize/2;++k){double f=k*sampleRate_/kFftSize;if(f<20||f>upper)continue;long double e=(long double)fftReal_[k]*fftReal_[k]+(long double)fftImag_[k]*fftImag_[k];int b=f<250?0:(f<2000?1:(f<8000?2:3));tonalBandEnergy_[b]+=e;}updateTonalMetrics(); }
-void AnalysisEngine::updateTonalMetrics() noexcept { long double t=tonalBandEnergy_[0]+tonalBandEnergy_[1]+tonalBandEnergy_[2]+tonalBandEnergy_[3];if(t<=1e-30L)return;lowBandPercent_.store(100*double(tonalBandEnergy_[0]/t));lowMidBandPercent_.store(100*double(tonalBandEnergy_[1]/t));highMidBandPercent_.store(100*double(tonalBandEnergy_[2]/t));highBandPercent_.store(100*double(tonalBandEnergy_[3]/t)); }
+void AnalysisEngine::analyseTonalFrame() noexcept
+{
+    for(std::size_t i=0;i<kFftSize;++i){double w=.5-.5*std::cos(2*kPi*i/double(kFftSize-1));fftReal_[i]=tonalInput_[i]*w;fftImag_[i]=0;}
+    for(std::size_t i=1,j=0;i<kFftSize;++i){std::size_t bit=kFftSize>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){std::swap(fftReal_[i],fftReal_[j]);std::swap(fftImag_[i],fftImag_[j]);}}
+    for(std::size_t len=2;len<=kFftSize;len<<=1){double a=-2*kPi/len,wr0=std::cos(a),wi0=std::sin(a);for(std::size_t i=0;i<kFftSize;i+=len){double wr=1,wi=0;for(std::size_t j=0;j<len/2;++j){auto x=i+j,y=x+len/2;double vr=fftReal_[y]*wr-fftImag_[y]*wi,vi=fftReal_[y]*wi+fftImag_[y]*wr,ur=fftReal_[x],ui=fftImag_[x];fftReal_[x]=ur+vr;fftImag_[x]=ui+vi;fftReal_[y]=ur-vr;fftImag_[y]=ui-vi;double nw=wr*wr0-wi*wi0;wi=wr*wi0+wi*wr0;wr=nw;}}}
+    double upper=std::min(20000.0,sampleRate_*.5);
+    for(std::size_t k=1;k<=kFftSize/2;++k)
+    {
+        double f=k*sampleRate_/kFftSize;
+        if(f<20||f>upper)continue;
+        long double e=(long double)fftReal_[k]*fftReal_[k]+(long double)fftImag_[k]*fftImag_[k];
+        std::size_t b=0;
+        if(f<80.0)b=0;
+        else if(f<250.0)b=1;
+        else if(f<500.0)b=2;
+        else if(f<2000.0)b=3;
+        else if(f<5000.0)b=4;
+        else if(f<8000.0)b=5;
+        else if(f<12000.0)b=6;
+        else b=7;
+        detailedTonalBandEnergy_[b]+=e;
+    }
+    updateTonalMetrics();
+}
+void AnalysisEngine::updateTonalMetrics() noexcept
+{
+    long double t=0.0L;
+    for(const auto e:detailedTonalBandEnergy_)t+=e;
+    if(t<=1e-30L)return;
+
+    for(std::size_t i=0;i<kDetailedTonalBands;++i)
+        detailedTonalPercent_[i].store(100.0*double(detailedTonalBandEnergy_[i]/t));
+
+    const long double low=detailedTonalBandEnergy_[0]+detailedTonalBandEnergy_[1];
+    const long double lowMid=detailedTonalBandEnergy_[2]+detailedTonalBandEnergy_[3];
+    const long double highMid=detailedTonalBandEnergy_[4]+detailedTonalBandEnergy_[5];
+    const long double high=detailedTonalBandEnergy_[6]+detailedTonalBandEnergy_[7];
+    lowBandPercent_.store(100.0*double(low/t));
+    lowMidBandPercent_.store(100.0*double(lowMid/t));
+    highMidBandPercent_.store(100.0*double(highMid/t));
+    highBandPercent_.store(100.0*double(high/t));
+}
 
 template<typename Sample> void AnalysisEngine::processBlock(Sample* const* c,int nc,int ns) noexcept
 {
