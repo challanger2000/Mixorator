@@ -158,6 +158,21 @@ double masterDensityPenalty(const Metrics& m, AnalysisMode mode) noexcept
     return std::min(15.0,6.0*jointStress);
 }
 
+// Streaming delivery is a service-independent robustness estimate. It does
+// not treat a specific loudness-normalization target as a quality criterion.
+// Instead, it assesses how much true-peak headroom remains for lossy codec
+// reconstruction and transcoding. Clean masters below -1 dBTP receive no
+// penalty; masters close to 0 dBTP are conservatively rated GOOD, while
+// positive true peaks can enter ATTENTION.
+double streamingHeadroomPenalty(double truePeakDbtp) noexcept
+{
+    if (!std::isfinite(truePeakDbtp) || truePeakDbtp < -1.0)
+        return 0.0;
+    if (truePeakDbtp <= 0.0)
+        return 11.0 + 14.0*(truePeakDbtp + 1.0);
+    return std::min(50.0,25.0 + 15.0*truePeakDbtp);
+}
+
 Verdict verdictFor(double s) noexcept
 {
     if (s>=90) return Verdict::Excellent;
@@ -233,14 +248,14 @@ Assessment AssessmentModel::evaluate(const Metrics& m, AnalysisMode mode, Genre 
         if (m.truePeakDbtp>0.0) pcm-=std::min(50.0,20.0+m.truePeakDbtp*15.0);
         pcm=std::clamp(pcm,0.0,100.0);
 
-        const bool loud=m.integratedLufs>-14.0;
-        const double recommendedTp=loud ? -2.0 : -1.0;
         streaming=100.0;
         if (m.nonFiniteSamples>0) streaming=0.0;
         if (m.clippedSamples>0) streaming-=std::min(35.0,15.0+5.0*std::log10(1.0+static_cast<double>(m.clippedSamples)));
-        if (m.truePeakDbtp>recommendedTp)
-            streaming-=std::min(50.0,10.0+(m.truePeakDbtp-recommendedTp)*20.0);
+        streaming-=streamingHeadroomPenalty(m.truePeakDbtp);
         streaming=std::clamp(streaming,0.0,100.0);
+
+        // Retained as an informational normalization preview only. It is not
+        // used by the streaming-quality verdict.
         a.streamingGainDb=-14.0-m.integratedLufs;
     }
 
