@@ -4,7 +4,7 @@
 #include "vstgui/lib/ccolor.h"
 #include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/lib/controls/coptionmenu.h"
-#include "vstgui/lib/controls/ctextbutton.h"
+#include "vstgui/lib/controls/cbuttons.h"
 #include "vstgui/lib/controls/ctextlabel.h"
 #include "vstgui/lib/events.h"
 
