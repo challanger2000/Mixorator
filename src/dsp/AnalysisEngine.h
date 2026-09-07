@@ -34,10 +34,22 @@ public:
     double dcOffsetRightDbfs() const noexcept { return dcOffsetRightDbfs_.load(std::memory_order_relaxed); }
     std::uint64_t clippedSampleCount() const noexcept { return clippedSampleCount_.load(std::memory_order_relaxed); }
     std::uint64_t nonFiniteSampleCount() const noexcept { return nonFiniteSampleCount_.load(std::memory_order_relaxed); }
+
+    // Compatibility tonal outputs used by the current assessment model.
     double lowBandPercent() const noexcept { return lowBandPercent_.load(std::memory_order_relaxed); }
     double lowMidBandPercent() const noexcept { return lowMidBandPercent_.load(std::memory_order_relaxed); }
     double highMidBandPercent() const noexcept { return highMidBandPercent_.load(std::memory_order_relaxed); }
     double highBandPercent() const noexcept { return highBandPercent_.load(std::memory_order_relaxed); }
+
+    // Detailed measurement-only tonal outputs. These do not affect verdicts yet.
+    double subBandPercent() const noexcept { return detailedTonalPercent_[0].load(std::memory_order_relaxed); }
+    double bassBandPercent() const noexcept { return detailedTonalPercent_[1].load(std::memory_order_relaxed); }
+    double lowMidBodyBandPercent() const noexcept { return detailedTonalPercent_[2].load(std::memory_order_relaxed); }
+    double midBandPercent() const noexcept { return detailedTonalPercent_[3].load(std::memory_order_relaxed); }
+    double presenceBandPercent() const noexcept { return detailedTonalPercent_[4].load(std::memory_order_relaxed); }
+    double upperPresenceBandPercent() const noexcept { return detailedTonalPercent_[5].load(std::memory_order_relaxed); }
+    double brillianceBandPercent() const noexcept { return detailedTonalPercent_[6].load(std::memory_order_relaxed); }
+    double airBandPercent() const noexcept { return detailedTonalPercent_[7].load(std::memory_order_relaxed); }
 
     double calculateIntegratedLufs() const noexcept;
     double calculatePlrDb() const noexcept;
@@ -53,6 +65,7 @@ private:
     };
 
     static constexpr std::size_t kFftSize = 1024;
+    static constexpr std::size_t kDetailedTonalBands = 8;
 
     template <typename Sample>
     void processBlock(Sample* const* channels, int numChannels, int numSamples) noexcept;
@@ -133,7 +146,7 @@ private:
     double fftImag_[kFftSize] {};
     std::size_t tonalWrite_ {0};
     int tonalFrameChannel_ {0};
-    long double tonalBandEnergy_[4] {0.0L, 0.0L, 0.0L, 0.0L};
+    long double detailedTonalBandEnergy_[kDetailedTonalBands] {};
 
     double samplePeakLinear_ {0.0};
     std::atomic<double> samplePeakDbfs_ {-1000.0};
@@ -158,5 +171,6 @@ private:
     std::atomic<double> lowMidBandPercent_ {0.0};
     std::atomic<double> highMidBandPercent_ {0.0};
     std::atomic<double> highBandPercent_ {0.0};
+    std::atomic<double> detailedTonalPercent_[kDetailedTonalBands] {};
 };
 }
