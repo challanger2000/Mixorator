@@ -37,6 +37,13 @@ std::string csv(const std::string& value)
     return '"'+s+'"';
 }
 
+bool digitallySilent(const std::vector<float>& interleaved, ma_uint64 frames)
+{
+    const std::size_t samples=static_cast<std::size_t>(frames)*2;
+    for(std::size_t i=0;i<samples;++i) if(interleaved[i]!=0.0f) return false;
+    return true;
+}
+
 Metrics metricsFrom(const AnalysisSnapshot& s)
 {
     Metrics m;
@@ -53,6 +60,8 @@ Metrics metricsFrom(const AnalysisSnapshot& s)
 
 bool analyze(const fs::path& path, std::ofstream& out)
 {
+    // The plug-in accepts a stereo bus. Decode to stereo float PCM so the exact
+    // same AnalysisEngine entry point and channel layout are used offline.
     ma_decoder_config config=ma_decoder_config_init(ma_format_f32,2,0);
     ma_decoder decoder{};
 #ifdef _WIN32
@@ -63,11 +72,13 @@ bool analyze(const fs::path& path, std::ofstream& out)
     if(initResult!=MA_SUCCESS){std::cerr<<"SKIP decode failed: "<<path.string()<<'\n';return false;}
 
     const double sampleRate=static_cast<double>(decoder.outputSampleRate);
+    if(sampleRate<=1.0){ma_decoder_uninit(&decoder);std::cerr<<"SKIP invalid sample rate: "<<path.string()<<'\n';return false;}
+
     AnalysisEngine engine; engine.prepare(sampleRate); engine.reset();
     constexpr ma_uint64 framesPerBlock=4096;
     std::vector<float> interleaved(static_cast<std::size_t>(framesPerBlock)*2);
     std::vector<float> left(framesPerBlock),right(framesPerBlock);
-    ma_uint64 totalFrames=0;
+    ma_uint64 totalFrames=0, analyzedFrames=0;
 
     for(;;)
     {
@@ -75,9 +86,15 @@ bool analyze(const fs::path& path, std::ofstream& out)
         const ma_result r=ma_decoder_read_pcm_frames(&decoder,interleaved.data(),framesPerBlock,&got);
         if(got>0)
         {
-            for(ma_uint64 i=0;i<got;++i){left[static_cast<std::size_t>(i)]=interleaved[2*i];right[static_cast<std::size_t>(i)]=interleaved[2*i+1];}
-            float* channels[2]={left.data(),right.data()};
-            engine.process(channels,2,static_cast<int>(got)); totalFrames+=got;
+            totalFrames+=got;
+            // Match MixoratorProcessor: completely digital-silent input blocks are
+            // not fed to AnalysisEngine. Non-silent blocks are passed unchanged.
+            if(!digitallySilent(interleaved,got))
+            {
+                for(ma_uint64 i=0;i<got;++i){left[static_cast<std::size_t>(i)]=interleaved[2*i];right[static_cast<std::size_t>(i)]=interleaved[2*i+1];}
+                float* channels[2]={left.data(),right.data()};
+                engine.process(channels,2,static_cast<int>(got)); analyzedFrames+=got;
+            }
         }
         if(r!=MA_SUCCESS || got==0) break;
     }
@@ -86,9 +103,9 @@ bool analyze(const fs::path& path, std::ofstream& out)
     const AnalysisSnapshot s=AnalysisSnapshot::capture(engine);
     const Metrics m=metricsFrom(s);
     const auto ratios=AssessmentModel::tonalRatioFeatures(m);
-    const double seconds=sampleRate>0.0?static_cast<double>(totalFrames)/sampleRate:0.0;
+    const double seconds=static_cast<double>(totalFrames)/sampleRate;
 
-    out<<csv(path.string())<<','<<std::fixed<<std::setprecision(0)<<sampleRate<<','<<totalFrames<<','<<std::setprecision(3)<<seconds
+    out<<csv(path.string())<<','<<std::fixed<<std::setprecision(0)<<sampleRate<<','<<totalFrames<<','<<analyzedFrames<<','<<std::setprecision(3)<<seconds
        <<','<<s.samplePeakDbfs<<','<<s.truePeakDbtp<<','<<s.rmsDbfs<<','<<s.crestFactorDb<<','<<s.integratedLufs<<','<<s.loudnessRangeLu<<','<<s.plrDb
        <<','<<s.lrBalanceDb<<','<<s.correlation<<','<<s.stereoWidthDb<<','<<s.monoCompatibilityDb<<','<<s.worstLocalCorrelation<<','<<s.worstLocalMonoCompatibilityDb<<','<<s.negativeCorrelationPercent
        <<','<<s.dcOffsetLeftDbfs<<','<<s.dcOffsetRightDbfs<<','<<s.clippedSampleCount<<','<<s.nonFiniteSampleCount;
@@ -114,7 +131,7 @@ int main(int argc,char** argv)
 
     std::ofstream out(output,std::ios::binary);
     if(!out){std::cerr<<"Cannot create CSV.\n";return 4;}
-    out<<"file,sample_rate,frames,duration_s,sample_peak_dbfs,true_peak_dbtp,rms_dbfs,crest_db,integrated_lufs,lra_lu,plr_db,lr_balance_db,correlation,stereo_width_db,mono_compat_db,worst_local_correlation,worst_local_mono_db,negative_corr_percent,dc_left_dbfs,dc_right_dbfs,clipped_samples,nonfinite_samples,sub_percent,bass_percent,lowmid_percent,mid_percent,presence_percent,upper_presence_percent,brilliance_percent,air_percent,sub_vs_bass_db,lowmid_vs_mid_db,presence_vs_mid_db,upper_presence_vs_presence_db,brilliance_vs_upper_presence_db,air_vs_brilliance_db,low_vs_mid_db,high_vs_mid_db\n";
+    out<<"file,sample_rate,frames,analyzed_frames,duration_s,sample_peak_dbfs,true_peak_dbtp,rms_dbfs,crest_db,integrated_lufs,lra_lu,plr_db,lr_balance_db,correlation,stereo_width_db,mono_compat_db,worst_local_correlation,worst_local_mono_db,negative_corr_percent,dc_left_dbfs,dc_right_dbfs,clipped_samples,nonfinite_samples,sub_percent,bass_percent,lowmid_percent,mid_percent,presence_percent,upper_presence_percent,brilliance_percent,air_percent,sub_vs_bass_db,lowmid_vs_mid_db,presence_vs_mid_db,upper_presence_vs_presence_db,brilliance_vs_upper_presence_db,air_vs_brilliance_db,low_vs_mid_db,high_vs_mid_db\n";
 
     std::size_t ok=0;
     for(std::size_t i=0;i<files.size();++i){std::cout<<'['<<(i+1)<<'/'<<files.size()<<"] "<<files[i].filename().string()<<'\n';if(analyze(files[i],out))++ok;}
