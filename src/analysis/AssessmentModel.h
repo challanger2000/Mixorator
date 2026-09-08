@@ -78,6 +78,10 @@ public:
         {
             switch(g)
             {
+                // Based on two deliberately different real Metal anchors:
+                // Aloha Oe (very dense/loud) and Rammstein - Sonne (more dynamic).
+                // The shared spectral shape is used; loudness/dynamics remain separate.
+                case Genre::Metal: return {{{-8,-7,-6,-11,-7,-14,-3,-7}},{{-2,-1,0,-5,1,-3,5,0}},{{5,4,4,4,5,6,5,5}}};
                 case Genre::HouseEdm:
                 case Genre::Techno: return {{{-8,-7,-14,-10,-8,-12,0,-14}},{{8,5,-3,2,4,2,12,-3}},{{8,6,5,6,5,5,6,6}}};
                 case Genre::Pop: return {{{-24,-8,-13,-18,-11,-14,-10,-14}},{{-5,4,-2,-3,2,1,3,-2}},{{8,6,5,7,5,5,6,6}}};
