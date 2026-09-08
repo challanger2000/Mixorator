@@ -23,7 +23,10 @@ jobs:
       - name: Build plugin
         run: cmake --build build --config Release --target Analysator --parallel
 
-      - name: Stage VST3 bundle
+      - name: Build offline analyzer
+        run: cmake --build build --config Release --target MixoratorOfflineAnalyzer --parallel
+
+      - name: Stage artifacts
         shell: pwsh
         run: |
           $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter Analysator.vst3 | Select-Object -First 1
@@ -32,8 +35,19 @@ jobs:
           Copy-Item -Path $plugin.FullName -Destination artifact -Recurse -Force
           if (-not (Test-Path "artifact\Analysator.vst3\Contents")) { throw "Staged VST3 bundle is incomplete" }
 
+          $offline = Get-ChildItem -Path build -Recurse -File -Filter MixoratorOfflineAnalyzer.exe | Select-Object -First 1
+          if (-not $offline) { throw "MixoratorOfflineAnalyzer.exe not found" }
+          New-Item -ItemType Directory -Force -Path offline-artifact | Out-Null
+          Copy-Item -Path $offline.FullName -Destination offline-artifact -Force
+
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
           name: Analysator-Windows-VST3
           path: artifact
+
+      - name: Upload offline analyzer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mixorator-Offline-Analyzer-Windows
+          path: offline-artifact
