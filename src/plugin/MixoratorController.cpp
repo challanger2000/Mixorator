@@ -33,6 +33,17 @@ const VSTGUI::CColor kMetricUnavailable {126,138,147,255};
 const VSTGUI::CColor kLedOff {58,20,18,255};
 const VSTGUI::CColor kLedOn {255,92,76,255};
 
+VSTGUI::CColor blendLedColor(const VSTGUI::CColor& a, const VSTGUI::CColor& b, double amount) noexcept
+{
+    if (amount < 0.0) amount = 0.0;
+    if (amount > 1.0) amount = 1.0;
+    const auto mix = [amount](std::uint8_t x, std::uint8_t y) {
+        return static_cast<std::uint8_t>(static_cast<double>(x) +
+                                         (static_cast<double>(y) - static_cast<double>(x)) * amount + 0.5);
+    };
+    return {mix(a.red, b.red), mix(a.green, b.green), mix(a.blue, b.blue), mix(a.alpha, b.alpha)};
+}
+
 const char* verdictText(Analysis::Verdict v, Localization::Language language) noexcept
 {
     if (language == Localization::Language::German)
@@ -155,9 +166,6 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
         return;
     }
 
-    // Local stereo excursions are useful diagnostics only when they are strong
-    // enough to lower the technical verdict. This keeps short, harmless local
-    // events from contradicting an otherwise EXCELLENT technical assessment.
     if (a.technicalVerdict != Analysis::Verdict::Excellent &&
         (m.correlation < 0.0 || m.monoCompatibilityDb < -3.0 ||
          m.worstLocalCorrelation < -0.2 || m.worstLocalMonoCompatibilityDb < -6.0))
@@ -543,15 +551,27 @@ void Controller::refreshUi() noexcept
     setLabel(helpSafetyTitle_, text(Localization::Text::HelpSafetyTitle));
     setLabel(helpSafetyBody_, text(Localization::Text::HelpSafetyBody));
 
-    const auto ledOn = uiAnalysisActive_ || (uiFinalSelected_ && !hasDefinitiveFinalSnapshot());
+    const bool finalPending = uiFinalSelected_ && !hasDefinitiveFinalSnapshot();
+    const bool ledActive = uiAnalysisActive_ || finalPending;
+    double ledLevel = ledActive ? 1.0 : 0.0;
+    if (uiAnalysisActive_ && hasPacket_)
+    {
+        // Data exchange arrives at ~20 Hz. Ten phases therefore form a gentle
+        // ~500 ms breathing cycle without a GUI timer or any audio-thread UI work.
+        const auto phase = static_cast<unsigned>(latestPacket_.sequence % 10u);
+        const auto triangle = phase <= 5u ? phase : 10u - phase;
+        ledLevel = 0.30 + 0.70 * (static_cast<double>(triangle) / 5.0);
+    }
+    const auto ledColor = blendLedColor(kLedOff, kLedOn, ledLevel);
     if (analysisLedCore_)
     {
-        analysisLedCore_->setFontColor(ledOn ? kLedOn : kLedOff);
+        analysisLedCore_->setFontColor(ledColor);
         analysisLedCore_->invalid();
     }
     if (analysisLedGlow_)
     {
-        analysisLedGlow_->setVisible(ledOn);
+        analysisLedGlow_->setVisible(ledActive);
+        analysisLedGlow_->setAlphaValue(static_cast<float>(0.20 + 0.80 * ledLevel));
         analysisLedGlow_->invalid();
     }
 
