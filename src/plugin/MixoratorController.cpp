@@ -1,5 +1,6 @@
 #include "MixoratorController.h"
 #include "../analysis/AssessmentInput.h"
+#include "../analysis/AssessmentDiagnosisText.h"
 #include "../dsp/AnalysisSnapshot.h"
 #include "vstgui/lib/ccolor.h"
 #include "vstgui/lib/controls/ccontrol.h"
@@ -180,6 +181,18 @@ void setFinalDiagnosis(VSTGUI::CTextLabel* line1,
         setLabel(line2, de ? "Mehr True-Peak-Reserve für Codec/Transcoding einplanen." : "Leave more true-peak headroom for codec/transcoding.");
         return;
     }
+
+    const auto evidence = Analysis::primaryScoreNeutralDiagnosticEvidence(m, a);
+    if (evidence != Analysis::DiagnosticEvidence::None)
+    {
+        const auto diagnosis = Analysis::diagnosticText(
+            evidence,
+            de ? Analysis::DiagnosticLanguage::German : Analysis::DiagnosticLanguage::English);
+        setLabel(line1, diagnosis.line1);
+        setLabel(line2, diagnosis.line2);
+        return;
+    }
+
     if (a.styleVerdict == Analysis::Verdict::Attention ||
         a.styleVerdict == Analysis::Verdict::Critical ||
         a.styleVerdict == Analysis::Verdict::Unusual)
