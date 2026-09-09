@@ -89,8 +89,10 @@ int main()
         m.tonalPercent = {{62.0, 18.0, 15.0, 5.0}};
         const auto acoustic = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::AcousticFolk, Era::Modern);
         const auto techno = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Techno, Era::Modern);
-        if (acoustic.styleScore >= techno.styleScore)
-            return fail("Bass-heavy tonal scenario did not distinguish Acoustic/Folk from Techno");
+        // Broad tonal buckets are descriptive rather than genre-target scoring.
+        // Tonal anomalies are surfaced separately as score-neutral evidence.
+        if (std::abs(acoustic.technicalScore - techno.technicalScore) > 1e-12)
+            return fail("Broad tonal balance contaminated technical safety");
     }
 
     {
