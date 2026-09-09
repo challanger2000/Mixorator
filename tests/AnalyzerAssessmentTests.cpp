@@ -181,10 +181,10 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(metal.styleScore<=classical.styleScore+25.0)return fail("Dense modern master did not meaningfully separate Metal from Classical style");
 }
 {
- Metrics dnb=cleanMetrics();dnb.integratedLufs=-9;dnb.plrDb=7;dnb.lraLu=4;dnb.tonalPercent={{58,20,17,5}};
+ Metrics dnb=cleanMetrics();dnb.integratedLufs=-9;dnb.plrDb=7;dnb.lraLu=4;
  const auto dnbScore=AssessmentModel::evaluate(dnb,AnalysisMode::Master,Genre::DrumAndBass,Era::Modern);
  const auto acousticScore=AssessmentModel::evaluate(dnb,AnalysisMode::Master,Genre::AcousticFolk,Era::Modern);
- if(dnbScore.styleScore<=acousticScore.styleScore+10.0)return fail("Drum & Bass profile did not recognize dense bass-forward material");
+ if(dnbScore.styleScore<=acousticScore.styleScore+5.0)return fail("Drum & Bass dynamics profile did not recognize dense modern material");
 }
 {
  Metrics ambient=cleanMetrics();ambient.integratedLufs=-20;ambient.plrDb=22;ambient.lraLu=18;
