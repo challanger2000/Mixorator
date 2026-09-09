@@ -62,6 +62,21 @@ Use `10 * log10((A + epsilon) / (B + epsilon))` for energy ratios. This compress
 - Production verdicts remain unchanged until ratio features are regression-tested against both synthetic signals and a wider reference set.
 - Existing four-band production tonal scoring should be reviewed separately because it is derived from the same raw-energy representation; do not silently replace it during the experimental detailed-band work.
 
+## Follow-up — 2026-09-09
+
+The separate four-band review is now complete. Sixteen controlled commercial reference albums (226 tracks total) were replayed against the legacy four-band genre corridors. The old four-band score produced implausibly low album medians for several accepted references and marked 25 of 226 tracks as extreme outliers. The largest concentrations occurred in Billie Eilish, Chris Stapleton, Interstellar and Tchaikovsky material.
+
+That result is strong evidence that broad raw-energy percentages are too coarse and genre-prescriptive to contribute directly to production scoring. Therefore:
+
+- `tonalPercent[4]` remains objective measurement/display data.
+- The legacy four-band tonal contribution is removed from `styleScore`.
+- The legacy four-band extreme-outlier cap is removed from production scoring.
+- LUFS, PLR and LRA remain the style plausibility inputs for now.
+- The validated eight-band ratio anomaly path remains score-neutral evidence only.
+- Extreme detailed tonal balance can still surface a neutral diagnosis, but cannot silently alter style, overall, technical, PCM-delivery or streaming-delivery scores.
+
+A regression now explicitly checks that two radically different valid four-band distributions with identical non-tonal metrics produce identical style and overall scoring in both MIX and MASTER modes.
+
 ## Next implementation step
 
-Add an experimental detailed-tonal feature extractor that converts the eight measured percentages into stable log-ratio features. Expose it only to calibration tests first. Anchor those tests with the five measured references above, then add deliberately altered synthetic/reference-like spectra to verify that the features react in the expected direction. Only after that should scoring envelopes be designed.
+Continue using the eight-band ratio layer as conservative diagnostic evidence while collecting more release-weighted data. Do not reintroduce tonal score influence until a future model is demonstrably robust across controlled references, hybrid productions and genre boundaries.
