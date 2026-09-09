@@ -15,25 +15,27 @@ int main(){using namespace Mixorator::Analysis;
  const Metrics aloha=tonal({{13.0168,39.8646,10.4844,24.3949,9.8597,1.7162,.6208,.0425}}),sonne=tonal({{10.5987,29.6622,10.3696,28.5985,16.1262,2.6175,1.6269,.4005}});
  for(const Metrics* r:{&glow,&ricky,&winnetou,&tchaikovsky,&israel,&aloha,&sonne})if(!AssessmentModel::detailedTonalDataAvailable(*r)||!finiteRatios(AssessmentModel::tonalRatioFeatures(*r)))return fail("Measured reference produced invalid ratio data");
  auto gr=AssessmentModel::tonalRatioFeatures(glow),ir=AssessmentModel::tonalRatioFeatures(israel);if(gr.lowVsMidDb<=4)return fail("EDM low tilt not exposed");if(ir.lowMidVsMidDb<=8)return fail("Acoustic low-mid body not exposed");
- // Each measured anchor must be comfortably plausible in its intended genre.
  if(AssessmentModel::tonalRatioScore(glow,Genre::HouseEdm)<85)return fail("EDM ratio anchor scored too low");
  if(AssessmentModel::tonalRatioScore(ricky,Genre::Pop)<85)return fail("Pop ratio anchor scored too low");
  if(AssessmentModel::tonalRatioScore(winnetou,Genre::Cinematic)<85)return fail("Cinematic ratio anchor scored too low");
  if(AssessmentModel::tonalRatioScore(tchaikovsky,Genre::Classical)<85)return fail("Classical ratio anchor scored too low");
  if(AssessmentModel::tonalRatioScore(israel,Genre::AcousticFolk)<85)return fail("Acoustic ratio anchor scored too low");
- // Metal now has two real anchors with radically different master density.
- // Their common tonal structure must remain plausible independent of LUFS/LRA.
  if(AssessmentModel::tonalRatioScore(aloha,Genre::Metal)<85)return fail("Dense Metal ratio anchor scored too low");
  if(AssessmentModel::tonalRatioScore(sonne,Genre::Metal)<85)return fail("Dynamic Metal ratio anchor scored too low");
  const auto ar=AssessmentModel::tonalRatioFeatures(aloha),sr=AssessmentModel::tonalRatioFeatures(sonne);
  if(ar.subVsBassDb>-2.0||sr.subVsBassDb>-2.0)return fail("Metal anchors did not retain bass-over-sub structure");
  if(ar.presenceVsMidDb>0.0||sr.presenceVsMidDb>0.0)return fail("Metal anchors did not retain controlled presence-to-mid structure");
- // Strongly characteristic references should prefer their matching family.
  if(AssessmentModel::tonalRatioScore(glow,Genre::HouseEdm)<=AssessmentModel::tonalRatioScore(glow,Genre::AcousticFolk))return fail("EDM ratio anchor did not prefer EDM");
  if(AssessmentModel::tonalRatioScore(israel,Genre::AcousticFolk)<=AssessmentModel::tonalRatioScore(israel,Genre::HouseEdm))return fail("Acoustic ratio anchor did not prefer Acoustic/Folk");
- // Rock is still uncalibrated and deliberately inherits General rather than fake precision.
  if(!approx(AssessmentModel::tonalRatioScore(ricky,Genre::Rock),AssessmentModel::tonalRatioScore(ricky,Genre::General)))return fail("Uncalibrated Rock did not fall back to General");
- // Production isolation remains absolute.
+ // Evidence gate: current ratio profiles are calibration/anomaly evidence only.
+ // Normal cross-genre/hybrid references must not be treated as impossible just because a label differs.
+ for(const Metrics* r:{&glow,&ricky,&winnetou,&tchaikovsky,&israel,&aloha,&sonne})
+   if(AssessmentModel::tonalRatioScore(*r,Genre::General)<35)return fail("Real reference became an extreme global tonal anomaly");
+ // A deliberately pathological spectrum should still be separable from the real-reference cloud.
+ const Metrics pathological=tonal({{98.0,.25,.25,.25,.25,.25,.25,.5}});
+ if(AssessmentModel::tonalRatioScore(pathological,Genre::General)>=35)return fail("Pathological tonal shape escaped global anomaly evidence");
+ // Production isolation remains absolute until the anomaly model is validated against broader independent evidence.
  Metrics plain=baseMetrics();plain.tonalPercent={{35,35,25,5}};Metrics detailed=plain;detailed.detailedTonalPercent={{20,24,8,20,12,7,5,4}};auto before=AssessmentModel::evaluate(plain,AnalysisMode::Master,Genre::HouseEdm,Era::Modern),after=AssessmentModel::evaluate(detailed,AnalysisMode::Master,Genre::HouseEdm,Era::Modern);
  if(!approx(before.technicalScore,after.technicalScore)||!approx(before.styleScore,after.styleScore)||!approx(before.pcmDeliveryScore,after.pcmDeliveryScore)||!approx(before.streamingDeliveryScore,after.streamingDeliveryScore)||!approx(before.overallScore,after.overallScore)||before.technicalVerdict!=after.technicalVerdict||before.styleVerdict!=after.styleVerdict||before.pcmDeliveryVerdict!=after.pcmDeliveryVerdict||before.streamingDeliveryVerdict!=after.streamingDeliveryVerdict||before.overallVerdict!=after.overallVerdict)return fail("Ratio calibration leaked into production verdicts");
  std::cout<<"All detailed tonal calibration tests passed.\n";return 0;}
