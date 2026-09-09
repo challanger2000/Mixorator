@@ -35,7 +35,8 @@ struct Assessment
     double streamingDeliveryScore {100.0}; double overallScore {100.0};
     Verdict technicalVerdict {Verdict::Excellent}; Verdict styleVerdict {Verdict::Excellent};
     Verdict pcmDeliveryVerdict {Verdict::Excellent}; Verdict streamingDeliveryVerdict {Verdict::Excellent};
-    Verdict overallVerdict {Verdict::Excellent}; double streamingGainDb {0.0}; bool provisional {false};
+    Verdict overallVerdict {Verdict::Excellent}; double streamingGainDb {0.0};
+    bool provisional {false}; bool tonalRatioAnomaly {false};
 };
 
 struct TonalRatioFeatures
@@ -98,7 +99,7 @@ public:
     // Genre-neutral anomaly evidence. 85 is intentionally conservative: controlled
     // album references and release-weighted practice clusters remained above it,
     // while deliberately pathological spectral shapes fell below it. This helper
-    // does not affect evaluate(); production verdicts remain isolated until promoted.
+    // does not affect scores or verdicts; Assessment only carries the evidence flag.
     static bool extremeTonalRatioAnomaly(const Metrics& metrics) noexcept
     {
         return detailedTonalDataAvailable(metrics) && tonalRatioScore(metrics, Genre::General) < 85.0;
