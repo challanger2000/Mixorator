@@ -78,9 +78,6 @@ public:
         {
             switch(g)
             {
-                // Based on two deliberately different real Metal anchors:
-                // Aloha Oe (very dense/loud) and Rammstein - Sonne (more dynamic).
-                // The shared spectral shape is used; loudness/dynamics remain separate.
                 case Genre::Metal: return {{{-8,-7,-6,-11,-7,-14,-3,-7}},{{-2,-1,0,-5,1,-3,5,0}},{{5,4,4,4,5,6,5,5}}};
                 case Genre::HouseEdm:
                 case Genre::Techno: return {{{-8,-7,-14,-10,-8,-12,0,-14}},{{8,5,-3,2,4,2,12,-3}},{{8,6,5,6,5,5,6,6}}};
@@ -96,6 +93,15 @@ public:
         const P p=profileFor(genre); constexpr std::array<double,8> weights{{.10,.18,.18,.10,.07,.05,.18,.14}}; double score=0.0;
         for(std::size_t i=0;i<values.size();++i) score+=weights[i]*scoreRange(values[i],p.lo[i],p.hi[i],p.margin[i]);
         return std::clamp(score,0.0,100.0);
+    }
+
+    // Genre-neutral anomaly evidence. 85 is intentionally conservative: controlled
+    // album references and release-weighted practice clusters remained above it,
+    // while deliberately pathological spectral shapes fell below it. This helper
+    // does not affect evaluate(); production verdicts remain isolated until promoted.
+    static bool extremeTonalRatioAnomaly(const Metrics& metrics) noexcept
+    {
+        return detailedTonalDataAvailable(metrics) && tonalRatioScore(metrics, Genre::General) < 85.0;
     }
 
     // Legacy raw-band calibration remains isolated during ratio migration.
