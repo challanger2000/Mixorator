@@ -194,15 +194,18 @@ int main()
             return fail("Real clipping was hidden by a plausible aggressive style score");
     }
 
-    // Tonal eccentricity is stylistic evidence, not an electrical defect.
+    // Broad four-band tonal data is descriptive only and must not alter scores.
     {
-        auto m = base();
-        m.tonalPercent = {{5.0, 5.0, 10.0, 80.0}};
-        const auto a = AssessmentModel::evaluate(m, AnalysisMode::Master, Genre::Metal, Era::Modern);
-        if (!safeTechnical(a))
-            return fail("Extreme tonal balance contaminated technical safety");
-        if (a.styleScore >= 90.0)
-            return fail("Extreme tonal balance was not reflected in style assessment");
+        auto plain = base();
+        const auto before = AssessmentModel::evaluate(plain, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        auto extreme = plain;
+        extreme.tonalPercent = {{5.0, 5.0, 10.0, 80.0}};
+        const auto after = AssessmentModel::evaluate(extreme, AnalysisMode::Master, Genre::Metal, Era::Modern);
+        if (!safeTechnical(after))
+            return fail("Broad tonal balance contaminated technical safety");
+        if (std::abs(before.styleScore - after.styleScore) > 1e-12 ||
+            std::abs(before.overallScore - after.overallScore) > 1e-12)
+            return fail("Broad tonal balance changed production scoring");
     }
 
     // A short local phase excursion should be noticed but not automatically
