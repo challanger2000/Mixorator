@@ -117,6 +117,16 @@ target_include_directories(MixoratorDetailedTonalCalibrationTests PRIVATE
 
 add_test(NAME MixoratorDetailedTonalCalibrationTests COMMAND MixoratorDetailedTonalCalibrationTests)
 
+add_executable(MixoratorAssessmentDiagnosisTests
+    AssessmentDiagnosisTests.cpp
+)
+
+target_include_directories(MixoratorAssessmentDiagnosisTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME MixoratorAssessmentDiagnosisTests COMMAND MixoratorAssessmentDiagnosisTests)
+
 add_executable(MixoratorControllerStateCodecTests
     ControllerStateCodecTests.cpp
     ../src/plugin/ControllerStateCodec.cpp
