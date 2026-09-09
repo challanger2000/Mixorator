@@ -125,8 +125,9 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  Metrics m=cleanMetrics();m.integratedLufs=-10;m.plrDb=9;m.lraLu=5;m.tonalPercent={{60,20,15,5}};
  const auto techno=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::Techno,Era::Modern);
  const auto acoustic=AssessmentModel::evaluate(m,AnalysisMode::Master,Genre::AcousticFolk,Era::Modern);
- if(techno.styleScore<=acoustic.styleScore+5.0)return fail("Genre-aware tonal balance did not distinguish bass-heavy Techno from Acoustic/Folk");
- if(!approx(techno.technicalScore,acoustic.technicalScore,1e-9))return fail("Tonal style scoring contaminated technical safety");
+ // Broad tonal buckets are descriptive only; they must not contaminate universal safety.
+ // Detailed tonal ratios provide separate score-neutral anomaly evidence.
+ if(!approx(techno.technicalScore,acoustic.technicalScore,1e-9))return fail("Broad tonal data contaminated technical safety");
 }
 {
  Metrics clean=cleanMetrics();
