@@ -28,13 +28,18 @@ int main(){using namespace Mixorator::Analysis;
  if(AssessmentModel::tonalRatioScore(glow,Genre::HouseEdm)<=AssessmentModel::tonalRatioScore(glow,Genre::AcousticFolk))return fail("EDM ratio anchor did not prefer EDM");
  if(AssessmentModel::tonalRatioScore(israel,Genre::AcousticFolk)<=AssessmentModel::tonalRatioScore(israel,Genre::HouseEdm))return fail("Acoustic ratio anchor did not prefer Acoustic/Folk");
  if(!approx(AssessmentModel::tonalRatioScore(ricky,Genre::Rock),AssessmentModel::tonalRatioScore(ricky,Genre::General)))return fail("Uncalibrated Rock did not fall back to General");
- // Evidence gate: current ratio profiles are calibration/anomaly evidence only.
- // Normal cross-genre/hybrid references must not be treated as impossible just because a label differs.
+ // Evidence gate: measured real references remain well above the conservative global anomaly threshold.
+ constexpr double anomalyThreshold=85.0;
  for(const Metrics* r:{&glow,&ricky,&winnetou,&tchaikovsky,&israel,&aloha,&sonne})
-   if(AssessmentModel::tonalRatioScore(*r,Genre::General)<35)return fail("Real reference became an extreme global tonal anomaly");
- // A deliberately pathological spectrum should still be separable from the real-reference cloud.
- const Metrics pathological=tonal({{98.0,.25,.25,.25,.25,.25,.25,.5}});
- if(AssessmentModel::tonalRatioScore(pathological,Genre::General)>=35)return fail("Pathological tonal shape escaped global anomaly evidence");
+   if(AssessmentModel::tonalRatioScore(*r,Genre::General)<anomalyThreshold)return fail("Real reference became a global tonal anomaly");
+ // Deliberately pathological single-band dominated spectra must fall below the same threshold.
+ const Metrics pathologicalSub=tonal({{98.0,.25,.25,.25,.25,.25,.25,.5}});
+ const Metrics pathologicalAir=tonal({{.5,.25,.25,.25,.25,.25,.25,98.0}});
+ const Metrics pathologicalPresence=tonal({{.25,.25,.25,.25,98.0,.25,.25,.5}});
+ const Metrics pathologicalLowMid=tonal({{.25,.25,98.0,.25,.25,.25,.25,.5}});
+ const Metrics pathologicalMid=tonal({{.25,.25,.25,98.0,.25,.25,.25,.5}});
+ for(const Metrics* p:{&pathologicalSub,&pathologicalAir,&pathologicalPresence,&pathologicalLowMid,&pathologicalMid})
+   if(AssessmentModel::tonalRatioScore(*p,Genre::General)>=anomalyThreshold)return fail("Pathological tonal shape escaped global anomaly evidence");
  // Production isolation remains absolute until the anomaly model is validated against broader independent evidence.
  Metrics plain=baseMetrics();plain.tonalPercent={{35,35,25,5}};Metrics detailed=plain;detailed.detailedTonalPercent={{20,24,8,20,12,7,5,4}};auto before=AssessmentModel::evaluate(plain,AnalysisMode::Master,Genre::HouseEdm,Era::Modern),after=AssessmentModel::evaluate(detailed,AnalysisMode::Master,Genre::HouseEdm,Era::Modern);
  if(!approx(before.technicalScore,after.technicalScore)||!approx(before.styleScore,after.styleScore)||!approx(before.pcmDeliveryScore,after.pcmDeliveryScore)||!approx(before.streamingDeliveryScore,after.streamingDeliveryScore)||!approx(before.overallScore,after.overallScore)||before.technicalVerdict!=after.technicalVerdict||before.styleVerdict!=after.styleVerdict||before.pcmDeliveryVerdict!=after.pcmDeliveryVerdict||before.streamingDeliveryVerdict!=after.streamingDeliveryVerdict||before.overallVerdict!=after.overallVerdict)return fail("Ratio calibration leaked into production verdicts");
