@@ -5,8 +5,6 @@
 #include "../dsp/AnalysisSnapshot.h"
 
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 
 namespace Mixorator::Analysis
 {
@@ -78,29 +76,6 @@ struct AssessmentInput
         m.nonFiniteSamples = snapshot.nonFiniteSampleCount;
         m.tonalPercent = snapshot.tonalPercent;
         m.detailedTonalPercent = snapshot.detailedTonalPercent;
-
-        // Calibration instrumentation: FINAL writes one compact, copyable line
-        // to the user's temp directory. This does not affect audio, GUI or any
-        // verdict and can be removed after real-reference calibration.
-        if (const char* temp = std::getenv("TEMP"))
-        {
-            char path[1024] {};
-            const int n = std::snprintf(path, sizeof(path), "%s\\Mixorator-tonal.txt", temp);
-            if (n > 0 && static_cast<std::size_t>(n) < sizeof(path))
-            {
-                if (auto* f = std::fopen(path, "a"))
-                {
-                    std::fprintf(f,
-                        "SUB %.4f | BASS %.4f | LOWMID %.4f | MID %.4f | PRES %.4f | UPRES %.4f | BRILL %.4f | AIR %.4f | LUFS %.2f | TP %.2f | PLR %.2f | LRA %.2f\n",
-                        m.detailedTonalPercent[0], m.detailedTonalPercent[1],
-                        m.detailedTonalPercent[2], m.detailedTonalPercent[3],
-                        m.detailedTonalPercent[4], m.detailedTonalPercent[5],
-                        m.detailedTonalPercent[6], m.detailedTonalPercent[7],
-                        m.integratedLufs, m.truePeakDbtp, m.plrDb, m.lraLu);
-                    std::fclose(f);
-                }
-            }
-        }
 
         // FINAL must use historical programme sufficiency, not the current
         // Short-Term window. Otherwise several seconds of silence before the
