@@ -73,14 +73,14 @@ void Controller::positionAnalysisLights() noexcept
 {
     VSTGUI::CTextLabel* lights[] = {analysisLight1_,analysisLight2_,analysisLight3_};
     const VSTGUI::CColor colors[] = {kAnalysisLight1,kAnalysisLight2,kAnalysisLight3};
-    const double hotspot=1.0+std::sin(analysisLightPhase_);
+    // The SMX Cells are fixed UI elements. Only their glow level changes;
+    // no travelling hotspot or positional animation is used.
+    const double pulse = 0.16 + 0.82 * (0.5 + 0.5 * std::sin(analysisLightPhase_));
     for(int i=0;i<3;++i)
     {
         auto* light=lights[i];if(!light)continue;
-        const double distance=hotspot-static_cast<double>(i);
-        const double glow=0.16+0.82*std::exp(-2.35*distance*distance);
         light->setFontColor(colors[i]);
-        light->setAlphaValue(static_cast<float>(glow));
+        light->setAlphaValue(static_cast<float>(pulse));
         light->setVisible(true);
         light->invalid();
     }
