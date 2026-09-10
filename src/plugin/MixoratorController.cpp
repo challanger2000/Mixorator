@@ -18,6 +18,9 @@ namespace
 {
 const VSTGUI::CPoint kCompactSize {650., 440.};
 const VSTGUI::CPoint kDetailsSize {1000., 700.};
+constexpr double kZoom68 = 1.0;
+constexpr double kZoom100 = 100.0 / 68.0;
+constexpr std::int32_t kUiZoomTag = 10013;
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
 const VSTGUI::CColor kVerdictGood {174,205,89,255};
@@ -263,6 +266,8 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
         const char* viewName = uiDetailsVisible_ ? "detailsView" : "compactView";
         auto* e = new VSTGUI::VST3Editor(this, viewName, "mixorator.uidesc");
         e->setDelegate(this);
+        e->setZoomFactor(kZoom68);
+        e->setAllowedZoomFactors({kZoom68, kZoom100});
         return e;
     }
     return nullptr;
@@ -271,7 +276,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
 VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
                                       const VSTGUI::UIAttributes& attributes,
                                       const VSTGUI::IUIDescription*,
-                                      VSTGUI::VST3Editor*)
+                                      VSTGUI::VST3Editor* editor)
 {
     if (!view) return nullptr;
     bindNamedView(view, attributes);
@@ -317,6 +322,11 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
             case kUiHelp:
             case kUiHelpClose:
                 c->setListener(this);
+                break;
+            case kUiZoomTag:
+                c->setListener(this);
+                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                    setButtonTitle(b, editor && editor->getZoomFactor() > 1.2 ? "100%" : "68%");
                 break;
             default:
                 break;
@@ -469,6 +479,15 @@ void Controller::valueChanged(VSTGUI::CControl* c)
                 finalSnapshotGeneration_ = 0;
             }
             break;
+        case kUiZoomTag:
+            if (editor_)
+            {
+                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                editor_->setZoomFactor(enlarge ? kZoom100 : kZoom68);
+                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                    setButtonTitle(b, enlarge ? "100%" : "68%");
+            }
+            return;
         default:
             return;
     }
@@ -750,7 +769,7 @@ void Controller::requestFinalSnapshot(std::uint64_t g) noexcept
     m->setMessageID(kRequestFinalSnapshotMessage);
     if (auto* a = m->getAttributes())
     {
-        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64>(g));
+        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64_t>(g));
         if (sendMessage(m) == Steinberg::kResultTrue) requestedFinalGeneration_ = g;
     }
     m->release();
