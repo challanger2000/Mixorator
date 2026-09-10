@@ -37,6 +37,7 @@ smtg_target_add_plugin_resources(Analysator
         resource/mixorator.uidesc
         resource/analysator_main_bg.png
         resource/analysator_details_bg.png
+        resource/125a_gui.png
 )
 
 target_compile_definitions(Analysator
