@@ -29,6 +29,7 @@ jobs:
 
           $textFiles = Get-ChildItem -Recurse -File | Where-Object {
             $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
             ($_.Extension -in '.cpp','.h','.hpp','.c','.cc','.md','.txt','.cmake','.yml','.yaml','.uidesc','.json' -or $_.Name -eq 'CMakeLists.txt')
           }
 
@@ -41,7 +42,8 @@ jobs:
           }
 
           $renameFiles = Get-ChildItem -Recurse -File | Where-Object {
-            $_.Name.Contains($oldPascal) -or $_.Name.Contains($oldLower)
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
+            ($_.Name.Contains($oldPascal) -or $_.Name.Contains($oldLower))
           } | Sort-Object { $_.FullName.Length } -Descending
 
           foreach ($file in $renameFiles) {
@@ -53,12 +55,13 @@ jobs:
 
           $remaining = Get-ChildItem -Recurse -File | Where-Object {
             $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
             ($_.Extension -in '.cpp','.h','.hpp','.c','.cc','.md','.txt','.cmake','.yml','.yaml','.uidesc','.json' -or $_.Name -eq 'CMakeLists.txt')
           } | Select-String -SimpleMatch $oldPascal,$oldLower
 
           if ($remaining) {
             $remaining | ForEach-Object { Write-Host $_.Path ':' $_.LineNumber ':' $_.Line }
-            throw 'Legacy project name still exists in text files.'
+            throw 'Legacy project name still exists outside workflows.'
           }
 
       - name: Commit naming cleanup
@@ -71,5 +74,5 @@ jobs:
             Write-Host 'No naming changes required.'
             exit 0
           }
-          git commit -m 'Remove legacy project name; standardize on Analysator'
+          git commit -m 'Remove legacy project name outside workflows'
           git push origin HEAD:gui-foundation
