@@ -769,7 +769,7 @@ void Controller::requestFinalSnapshot(std::uint64_t g) noexcept
     m->setMessageID(kRequestFinalSnapshotMessage);
     if (auto* a = m->getAttributes())
     {
-        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64_t>(g));
+        a->setInt(kFinalSnapshotGenerationKey, static_cast<Steinberg::int64>(g));
         if (sendMessage(m) == Steinberg::kResultTrue) requestedFinalGeneration_ = g;
     }
     m->release();
