@@ -31,6 +31,7 @@ const VSTGUI::CColor kAnalysisLight1 {255,193,73,255};
 const VSTGUI::CColor kAnalysisLight2 {255,226,112,255};
 const VSTGUI::CColor kAnalysisLight3 {231,239,105,255};
 constexpr double kAnalysisLightStep = 0.035;
+const VSTGUI::CRect kAnalysisLightRect {286., 51., 328., 75.};
 
 const char* verdictText(Analysis::Verdict v) noexcept { switch(v){case Analysis::Verdict::Excellent:return "EXCELLENT";case Analysis::Verdict::Good:return "GOOD";case Analysis::Verdict::Attention:return "ATTENTION";case Analysis::Verdict::Critical:return "CRITICAL";case Analysis::Verdict::Unusual:return "UNUSUAL";case Analysis::Verdict::InsufficientData:return "N/A";} return "N/A"; }
 const VSTGUI::CColor& verdictColor(Analysis::Verdict v) noexcept { switch(v){case Analysis::Verdict::Excellent:case Analysis::Verdict::Good:return kVerdictGood;case Analysis::Verdict::Attention:return kVerdictAttention;case Analysis::Verdict::Critical:return kVerdictCritical;case Analysis::Verdict::Unusual:return kVerdictUnusual;case Analysis::Verdict::InsufficientData:return kVerdictUnavailable;} return kVerdictUnavailable; }
@@ -39,6 +40,7 @@ void setColoredLabel(VSTGUI::CTextLabel* l,const char* t,const VSTGUI::CColor& c
 void setVerdictLabel(VSTGUI::CTextLabel* l,Analysis::Verdict v) noexcept { setColoredLabel(l,verdictText(v),verdictColor(v)); }
 void formatValue(VSTGUI::CTextLabel* l,double value,const char* suffix,bool available,int precision=1) noexcept { if(!l)return;if(!available){l->setText("--");l->setFontColor(kMetricUnavailable);l->invalid();return;}char b[64]{};const bool s=suffix&&suffix[0]!='\0';if(precision==2)std::snprintf(b,sizeof(b),s?"%.2f %s":"%.2f",value,s?suffix:"");else std::snprintf(b,sizeof(b),s?"%.1f %s":"%.1f",value,s?suffix:"");l->setText(b);l->setFontColor(kMetricAvailable);l->invalid(); }
 void expandSelectionHitArea(VSTGUI::CControl* c) noexcept { if(!c)return;auto r=c->getViewSize();r.left-=2.;r.right+=2.;r.top-=10.;r.bottom+=10.;c->setMouseableArea(r); }
+void lockAnalysisLightGeometry(VSTGUI::CTextLabel* l) noexcept { if(!l)return;l->setViewSize(kAnalysisLightRect);l->setMouseableArea(kAnalysisLightRect); }
 }
 
 Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* context)
@@ -63,7 +65,7 @@ void Controller::valueChanged(VSTGUI::CControl* c){if(!c)return;switch(c->getTag
 
 void Controller::bindNamedView(VSTGUI::CView* view,const VSTGUI::UIAttributes& a) noexcept
 {
-    const auto* id=a.getAttributeValue("mixorator-id");if(!id)return;if(*id=="simplePage"){simplePage_=view;return;}if(*id=="detailsPage"){detailsPage_=view;return;}auto* l=dynamic_cast<VSTGUI::CTextLabel*>(view);if(!l)return;if(*id=="technicalVerdict")technicalVerdict_=l;else if(*id=="styleVerdict")styleVerdict_=l;else if(*id=="pcmVerdict")pcmVerdict_=l;else if(*id=="streamingVerdict")streamingVerdict_=l;else if(*id=="stateLabel")stateLabel_=l;else if(*id=="overallVerdict")overallVerdict_=l;else if(*id=="overallLine1")overallLine1_=l;else if(*id=="overallLine2")overallLine2_=l;else if(*id=="integratedValue")integratedValue_=l;else if(*id=="truePeakValue")truePeakValue_=l;else if(*id=="plrValue")plrValue_=l;else if(*id=="lraValue")lraValue_=l;else if(*id=="correlationValue")correlationValue_=l;else if(*id=="monoValue")monoValue_=l;else if(*id=="analysisLight1")analysisLight1_=l;else if(*id=="analysisLight2")analysisLight2_=l;else if(*id=="analysisLight3")analysisLight3_=l;
+    const auto* id=a.getAttributeValue("mixorator-id");if(!id)return;if(*id=="simplePage"){simplePage_=view;return;}if(*id=="detailsPage"){detailsPage_=view;return;}auto* l=dynamic_cast<VSTGUI::CTextLabel*>(view);if(!l)return;if(*id=="technicalVerdict")technicalVerdict_=l;else if(*id=="styleVerdict")styleVerdict_=l;else if(*id=="pcmVerdict")pcmVerdict_=l;else if(*id=="streamingVerdict")streamingVerdict_=l;else if(*id=="stateLabel")stateLabel_=l;else if(*id=="overallVerdict")overallVerdict_=l;else if(*id=="overallLine1")overallLine1_=l;else if(*id=="overallLine2")overallLine2_=l;else if(*id=="integratedValue")integratedValue_=l;else if(*id=="truePeakValue")truePeakValue_=l;else if(*id=="plrValue")plrValue_=l;else if(*id=="lraValue")lraValue_=l;else if(*id=="correlationValue")correlationValue_=l;else if(*id=="monoValue")monoValue_=l;else if(*id=="analysisLight1"){analysisLight1_=l;lockAnalysisLightGeometry(l);}else if(*id=="analysisLight2"){analysisLight2_=l;lockAnalysisLightGeometry(l);}else if(*id=="analysisLight3"){analysisLight3_=l;lockAnalysisLightGeometry(l);}
 }
 
 void Controller::updatePageVisibility() noexcept {if(simplePage_){simplePage_->setVisible(!uiDetailsVisible_);simplePage_->invalid();}if(detailsPage_){detailsPage_->setVisible(uiDetailsVisible_);detailsPage_->invalid();}}
@@ -73,12 +75,11 @@ void Controller::positionAnalysisLights() noexcept
 {
     VSTGUI::CTextLabel* lights[] = {analysisLight1_,analysisLight2_,analysisLight3_};
     const VSTGUI::CColor colors[] = {kAnalysisLight1,kAnalysisLight2,kAnalysisLight3};
-    // The SMX Cells are fixed UI elements. Only their glow level changes;
-    // no travelling hotspot or positional animation is used.
     const double pulse = 0.16 + 0.82 * (0.5 + 0.5 * std::sin(analysisLightPhase_));
     for(int i=0;i<3;++i)
     {
         auto* light=lights[i];if(!light)continue;
+        lockAnalysisLightGeometry(light);
         light->setFontColor(colors[i]);
         light->setAlphaValue(static_cast<float>(pulse));
         light->setVisible(true);
