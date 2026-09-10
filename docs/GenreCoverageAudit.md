@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This audit compares Mixorator's user-facing genre taxonomy with the 30 `musical_style` labels in the RoEx/AES dataset (218,109 submissions). It is a calibration audit, not a proposal to blindly expose all 30 RoEx labels in the UI.
+This audit compares Analysator's user-facing genre taxonomy with the 30 `musical_style` labels in the RoEx/AES dataset (218,109 submissions). It is a calibration audit, not a proposal to blindly expose all 30 RoEx labels in the UI.
 
-## Current Mixorator genres
+## Current Analysator genres
 
 Rock, Metal, Pop, Techno, House / EDM, Hip-Hop / Trap, Electronic / Ambient, Acoustic / Folk, Jazz, Classical, Cinematic Music, General.
 
@@ -45,7 +45,7 @@ Rock, Metal, Pop, Techno, House / EDM, Hip-Hop / Trap, Electronic / Ambient, Aco
 
 ### Strong direct matches
 
-The following Mixorator choices have a clear RoEx counterpart and enough observations for useful empirical cross-checks:
+The following Analysator choices have a clear RoEx counterpart and enough observations for useful empirical cross-checks:
 
 - Rock <- rock; indie_rock can be treated as a related secondary population.
 - Metal <- metal.
@@ -59,7 +59,7 @@ The following Mixorator choices have a clear RoEx counterpart and enough observa
 ### Valid broad groups, but heterogeneous
 
 - Electronic / Ambient currently spans two very different ideas. `electronic` is the largest RoEx label (34,244), while `ambient` has 3,915 entries. A single profile must therefore be deliberately broad. It should not be presented as if RoEx supplied one unified Electronic/Ambient target.
-- House / EDM is a useful user-facing umbrella, but RoEx separately labels house, techno, trance and drum_n_bass. The Mixorator profile should not assume all EDM subgenres share identical dynamics or tonal balance.
+- House / EDM is a useful user-facing umbrella, but RoEx separately labels house, techno, trance and drum_n_bass. The Analysator profile should not assume all EDM subgenres share identical dynamics or tonal balance.
 - Hip-Hop / Trap is defensible as a broad selection, but its empirical population combines several separately labelled RoEx styles.
 
 ### Weak or indirect source mapping
@@ -70,7 +70,7 @@ The following Mixorator choices have a clear RoEx counterpart and enough observa
 
 ## Important omissions in the current user-facing taxonomy
 
-Not every RoEx label deserves its own Mixorator menu item. However, several sizeable musical families are currently forced into a less suitable choice:
+Not every RoEx label deserves its own Analysator menu item. However, several sizeable musical families are currently forced into a less suitable choice:
 
 1. **R&B / Soul**: rnb (4,902) + soul (1,690), with funk (1,874) as a useful related comparison. This is a coherent and common family that is not well represented by Pop or Hip-Hop / Trap alone.
 2. **Drum & Bass**: 3,822 direct RoEx entries. Its bass distribution and dynamics can differ materially from generic House / EDM and Ambient/Electronic. It is a good candidate for a dedicated electronic subgenre if the menu can tolerate one more item.
@@ -107,7 +107,7 @@ For Cinematic, a real Modern/Vintage distinction is musically plausible, but it 
 
 ## Data-use rules
 
-1. Do not equate a broad Mixorator genre with a union of RoEx labels without checking each component distribution.
+1. Do not equate a broad Analysator genre with a union of RoEx labels without checking each component distribution.
 2. Do not use RoEx frequency of occurrence as a quality target; the dataset contains problematic submissions.
 3. Use RoEx for empirical distributions, prevalence and directional genre trends.
 4. Use metering standards and engineering practice for technical safety.

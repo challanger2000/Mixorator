@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-namespace Mixorator::Localization
+namespace Analysator::Localization
 {
 enum class Language { German = 0, English = 1 };
 

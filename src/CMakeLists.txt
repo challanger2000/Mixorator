@@ -8,11 +8,11 @@ set(ANALYSATOR_SOURCES
     plugin/AnalysisExchange.h
     plugin/Localization.h
     plugin/entry.cpp
-    plugin/MixoratorIDs.h
-    plugin/MixoratorProcessor.cpp
-    plugin/MixoratorProcessor.h
-    plugin/MixoratorController.cpp
-    plugin/MixoratorController.h
+    plugin/AnalysatorIDs.h
+    plugin/AnalysatorProcessor.cpp
+    plugin/AnalysatorProcessor.h
+    plugin/AnalysatorController.cpp
+    plugin/AnalysatorController.h
     plugin/ControllerState.cpp
     plugin/ControllerStateCodec.cpp
     plugin/ControllerStateCodec.h
@@ -34,7 +34,7 @@ endif()
 
 smtg_target_add_plugin_resources(Analysator
     RESOURCES
-        resource/mixorator.uidesc
+        resource/analysator.uidesc
         resource/analysator_main_bg.png
         resource/analysator_details_bg.png
         resource/125a_gui.png

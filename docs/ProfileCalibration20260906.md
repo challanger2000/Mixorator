@@ -17,7 +17,7 @@ No GUI geometry, resize behavior, analysis state machine, technical-safety scori
    - RoEx / AES 157 raw dataset, DOI 10.5281/zenodo.13683186.
    - The dataset describes real user submissions. It is used to validate direction, coverage and genre differences, not to define a single “correct” target.
 
-3. **Derived Mixorator heuristics**
+3. **Derived Analysator heuristics**
    - Exact per-genre PLR/LRA corridors and tonal-energy percentages remain product calibration parameters.
    - RoEx does not expose raw PLR or LRA values, and its tonal fields are categorical rather than exact band-energy percentages.
    - `Modern` / `Vintage` is not present in the RoEx dataset and therefore remains a deliberately soft heuristic.

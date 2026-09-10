@@ -25,7 +25,7 @@ void appendDbfsTone(std::vector<double>& destination, double sampleRate, double 
     destination.insert(destination.end(), tone.begin(), tone.end());
 }
 
-void processStereo(Mixorator::DSP::AnalysisEngine& engine,
+void processStereo(Analysator::DSP::AnalysisEngine& engine,
                    std::vector<double>& left,
                    std::vector<double>& right,
                    int blockSize = 257)
@@ -41,7 +41,7 @@ void processStereo(Mixorator::DSP::AnalysisEngine& engine,
 
 int main()
 {
-    using Mixorator::DSP::AnalysisEngine;
+    using Analysator::DSP::AnalysisEngine;
 
     // EBU Tech 3341 minimum-requirements tests 1 and 2. A stereo 1 kHz sine
     // at -23/-33 dBFS peak must read the same numerical value in LUFS for
@@ -177,6 +177,6 @@ int main()
             return fail("Stepped programme LRA is outside expected broad range");
     }
 
-    std::cout << "All Mixorator loudness metrology tests passed.\n";
+    std::cout << "All Analysator loudness metrology tests passed.\n";
     return 0;
 }

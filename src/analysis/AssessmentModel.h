@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace Mixorator::Analysis
+namespace Analysator::Analysis
 {
 enum class AnalysisMode : std::uint8_t { Mix, Master };
 enum class Era : std::uint8_t { Modern, Vintage };

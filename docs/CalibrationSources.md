@@ -1,8 +1,8 @@
-# Mixorator calibration sources and limits
+# Analysator calibration sources and limits
 
 ## Primary empirical reference
 
-Mixorator's assessment concept is informed in part by the RoEx / Queen Mary University of London study:
+Analysator's assessment concept is informed in part by the RoEx / Queen Mary University of London study:
 
 Angeliki Mourgela, Elio Quinton, Spyridon Bissas, Joshua D. Reiss, David Ronan,
 "Exploring trends in audio mixes and masters: Insights from a dataset analysis",
@@ -23,7 +23,7 @@ The study explicitly analyses:
 - Dynamic-range compression
 - Tonal profile in four bands: 20-250 Hz, 250-2000 Hz, 2000-8000 Hz, 8000-20000 Hz
 
-Important study findings relevant to Mixorator include:
+Important study findings relevant to Analysator include:
 - Mixes are more dispersed in loudness and peak around approximately -23 LUFS; masters cluster more strongly around approximately -14 LUFS.
 - More than half of mixes are reported as louder than -17.5 LUFS; 10.24% are below -23 LUFS.
 - 79% of masters are louder than -14 LUFS and 91.55% are louder than -16 LUFS.
@@ -37,7 +37,7 @@ Important study findings relevant to Mixorator include:
 - The paper ranks the most common MIX issues as: undercompression, stereo-field issues, too loud, clipping, too quiet, overcompression, mono incompatibility, phase issues.
 - The paper ranks the most common MASTER issues as: too loud, clipping, overcompression, stereo-field issues, undercompression, phase issues, mono incompatibility, too quiet.
 
-## What the RoEx study directly supports in Mixorator
+## What the RoEx study directly supports in Analysator
 
 The study strongly supports the overall architecture of separating:
 - MIX versus MASTER assessment
@@ -52,8 +52,8 @@ It also supports treating aesthetic/style metrics as trends rather than hard pas
 
 The exact numeric profile ranges currently used by `AssessmentModel.cpp` are not published in the paper as authoritative per-genre target tables.
 
-In particular, the following Mixorator values are calibration choices / engineering heuristics rather than values directly quoted from the RoEx publication:
-- exact LUFS min/max ranges for each Mixorator genre
+In particular, the following Analysator values are calibration choices / engineering heuristics rather than values directly quoted from the RoEx publication:
+- exact LUFS min/max ranges for each Analysator genre
 - exact PLR min/max ranges for each genre
 - exact LRA min/max ranges for each genre
 - scoring margins and weights
@@ -62,19 +62,19 @@ In particular, the following Mixorator values are calibration choices / engineer
 - the final score thresholds Excellent / Good / Attention / Critical
 - the 60/40 technical-versus-style overall weighting
 
-The RoEx study's compression metric is also not identical to Mixorator's current PLR/LRA model. RoEx describes dynamic range using 20*log10(maximum / mean amplitude), compared with empirical genre-specific averages. Mixorator currently uses PLR and LRA as musically meaningful dynamics descriptors. Therefore the RoEx findings validate the need for genre-aware dynamics assessment, but do not directly validate Mixorator's exact PLR/LRA numeric ranges.
+The RoEx study's compression metric is also not identical to Analysator's current PLR/LRA model. RoEx describes dynamic range using 20*log10(maximum / mean amplitude), compared with empirical genre-specific averages. Analysator currently uses PLR and LRA as musically meaningful dynamics descriptors. Therefore the RoEx findings validate the need for genre-aware dynamics assessment, but do not directly validate Analysator's exact PLR/LRA numeric ranges.
 
-Likewise, the paper describes tonal analysis using the same four broad frequency bands, but its published results are categorical / distributional rather than a table of exact target energy percentages. Mixorator's exact tonal percentage ranges are therefore derived calibration values, not direct RoEx thresholds.
+Likewise, the paper describes tonal analysis using the same four broad frequency bands, but its published results are categorical / distributional rather than a table of exact target energy percentages. Analysator's exact tonal percentage ranges are therefore derived calibration values, not direct RoEx thresholds.
 
 ## Era handling
 
-The RoEx dataset/paper does not define a Modern versus Vintage calibration. Mixorator's `Era::Modern` / `Era::Vintage` distinction is an independent product feature and must be treated as a separate heuristic calibration layer.
+The RoEx dataset/paper does not define a Modern versus Vintage calibration. Analysator's `Era::Modern` / `Era::Vintage` distinction is an independent product feature and must be treated as a separate heuristic calibration layer.
 
 ## Data limitations inherited from the reference study
 
 The study itself notes that genre and MIX/MASTER status were selected by users, so misclassification can affect distributions. It also states that compression, tonal characteristics and stereo-field interpretations reflect empirical practice and current industry trends, not immutable standards.
 
-For Mixorator this means:
+For Analysator this means:
 - technical faults such as non-finite samples, clipping, positive true peak, severe phase/mono problems can be judged relatively strictly;
 - genre/style deviations should remain advisory rather than being presented as objective defects;
 - a clean stylistic outlier should be allowed to produce an `Unusual` style verdict rather than being labelled technically bad.
@@ -106,7 +106,7 @@ No production scoring constant needs to be changed merely to make these qualitat
 
 The RoEx dataset shows that a large majority of masters are louder than -14 LUFS, and the paper ranks `too loud` as the most common master issue. This does **not** mean a genre-style score should automatically reject every master above -14 LUFS. The dataset describes submitted music, not a verified corpus of ideal masters, and loudness normalization itself is not a technical defect.
 
-Mixorator therefore keeps three concepts separate:
+Analysator therefore keeps three concepts separate:
 1. genre/style plausibility,
 2. PCM technical safety,
 3. streaming delivery compatibility.
@@ -115,7 +115,7 @@ This separation is important because a loud modern Metal/EDM master can be styli
 
 ## Streaming reference check
 
-Spotify's current artist guidance remains consistent with Mixorator's streaming headroom rule:
+Spotify's current artist guidance remains consistent with Analysator's streaming headroom rule:
 - normal playback normalization target: approximately -14 LUFS;
 - recommended maximum True Peak: -1 dBTP for masters at or below -14 LUFS;
 - if the master is louder than -14 LUFS, Spotify recommends keeping True Peak below -2 dBTP to reduce encoding distortion risk.
@@ -127,21 +127,21 @@ That matches the current `AssessmentModel.cpp` branch that uses a -2 dBTP recomm
 The current production scoring should remain unchanged for now.
 
 Reason:
-- the RoEx/AES evidence supports the structure and direction of the Mixorator model;
+- the RoEx/AES evidence supports the structure and direction of the Analysator model;
 - the exact per-genre LUFS/PLR/LRA/tonal boundaries are not directly published as authoritative targets;
 - RoEx compression is not the same metric as PLR/LRA;
 - the source dataset contains both good and problematic submissions, so empirical frequency must not be mistaken for a quality target;
 - current streaming True Peak handling agrees with Spotify's published delivery guidance.
 
-The main remaining calibration risk is therefore not an obvious contradiction with the RoEx data, but the precision of Mixorator's own derived per-genre ranges. Those should only be narrowed or shifted when a reproducible reference distribution or additional trusted mastering references justify it.
+The main remaining calibration risk is therefore not an obvious contradiction with the RoEx data, but the precision of Analysator's own derived per-genre ranges. Those should only be narrowed or shifted when a reproducible reference distribution or additional trusted mastering references justify it.
 
 ## Next calibration step
 
-Where practical, process the public Zenodo dataset to calculate genre-specific distributions for fields that map directly to Mixorator (especially integrated loudness, true peak, clipping category and tonal-band category). Treat compression only as a directional cross-check because the source metric differs from PLR/LRA.
+Where practical, process the public Zenodo dataset to calculate genre-specific distributions for fields that map directly to Analysator (especially integrated loudness, true peak, clipping category and tonal-band category). Treat compression only as a directional cross-check because the source metric differs from PLR/LRA.
 
 Any future mapping should explicitly distinguish:
 - directly observed source statistics,
-- derived Mixorator calibration,
+- derived Analysator calibration,
 - independent engineering / delivery safety rules.
 
-No scoring constants should be changed merely to make Mixorator imitate the most common values in the dataset. The dataset contains many problematic mixes/masters and describes what users submitted, not a corpus of verified reference masters. It is best used to establish realistic distributions, prevalence and genre trends, while technical recommendations and delivery safety remain grounded in metering standards and engineering practice.
+No scoring constants should be changed merely to make Analysator imitate the most common values in the dataset. The dataset contains many problematic mixes/masters and describes what users submitted, not a corpus of verified reference masters. It is best used to establish realistic distributions, prevalence and genre trends, while technical recommendations and delivery safety remain grounded in metering standards and engineering practice.

@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace Mixorator
+namespace Analysator
 {
 class Processor : public Steinberg::Vst::AudioEffect
 {

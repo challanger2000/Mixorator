@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace Mixorator::DSP
+namespace Analysator::DSP
 {
 class AnalysisEngine
 {

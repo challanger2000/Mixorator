@@ -2,7 +2,7 @@
 
 #include "AssessmentModel.h"
 
-namespace Mixorator::Analysis
+namespace Analysator::Analysis
 {
 enum class DiagnosticEvidence : std::uint8_t
 {

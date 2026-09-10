@@ -1,11 +1,11 @@
-#include "MixoratorProcessor.h"
-#include "MixoratorIDs.h"
+#include "AnalysatorProcessor.h"
+#include "AnalysatorIDs.h"
 #include "../analysis/AssessmentInput.h"
 
 #include <algorithm>
 #include <cstring>
 
-namespace Mixorator
+namespace Analysator
 {
 namespace
 {

@@ -21,7 +21,7 @@ std::vector<double> sine(double sampleRate, double frequency, double seconds, do
     return result;
 }
 
-void processStereo(Mixorator::DSP::AnalysisEngine& engine,
+void processStereo(Analysator::DSP::AnalysisEngine& engine,
                    std::vector<double>& left,
                    std::vector<double>& right,
                    int blockSize = 257)
@@ -34,7 +34,7 @@ void processStereo(Mixorator::DSP::AnalysisEngine& engine,
     }
 }
 
-std::array<double, 8> detailedTonal(const Mixorator::DSP::AnalysisEngine& engine)
+std::array<double, 8> detailedTonal(const Analysator::DSP::AnalysisEngine& engine)
 {
     return {engine.subBandPercent(), engine.bassBandPercent(),
             engine.lowMidBodyBandPercent(), engine.midBandPercent(),
@@ -45,7 +45,7 @@ std::array<double, 8> detailedTonal(const Mixorator::DSP::AnalysisEngine& engine
 
 int main()
 {
-    using Mixorator::DSP::AnalysisEngine;
+    using Analysator::DSP::AnalysisEngine;
     constexpr double sampleRate = 48000.0;
 
     // A full-cycle sine has RMS = peak/sqrt(2), therefore conventional
@@ -259,6 +259,6 @@ int main()
                 return fail("Reset leaked stale detailed tonal history into the next analysis");
     }
 
-    std::cout << "All Mixorator analyzer integrity tests passed.\n";
+    std::cout << "All Analysator analyzer integrity tests passed.\n";
     return 0;
 }

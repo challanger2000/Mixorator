@@ -20,7 +20,7 @@ class CTextLabel;
 class CView;
 }
 
-namespace Mixorator
+namespace Analysator
 {
 class Controller : public Steinberg::Vst::EditController,
                    public Steinberg::Vst::IDataExchangeReceiver,

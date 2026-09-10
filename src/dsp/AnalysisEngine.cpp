@@ -4,7 +4,7 @@
 #include <cmath>
 #include <limits>
 
-namespace Mixorator::DSP
+namespace Analysator::DSP
 {
 namespace
 {

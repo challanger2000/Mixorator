@@ -2,7 +2,7 @@
 
 #include "base/source/fstreamer.h"
 
-namespace Mixorator
+namespace Analysator
 {
 namespace
 {

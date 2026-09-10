@@ -16,9 +16,9 @@ bool approx(double a, double b, double tolerance = 1e-9)
     return std::abs(a-b) <= tolerance;
 }
 
-Mixorator::Analysis::Metrics cleanReference()
+Analysator::Analysis::Metrics cleanReference()
 {
-    Mixorator::Analysis::Metrics m;
+    Analysator::Analysis::Metrics m;
     m.correlation = 0.75;
     m.monoCompatibilityDb = -0.5;
     m.worstLocalCorrelation = 0.75;
@@ -35,7 +35,7 @@ Mixorator::Analysis::Metrics cleanReference()
 
 int main()
 {
-    using namespace Mixorator::Analysis;
+    using namespace Analysator::Analysis;
 
     // Reference A: "Menschlichkeit". Loud and controlled, but not an
     // extreme loudness/PLR combination. Density logic must leave technical

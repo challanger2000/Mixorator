@@ -1,4 +1,4 @@
-#include "plugin/MixoratorProcessor.h"
+#include "plugin/AnalysatorProcessor.h"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 
@@ -27,7 +27,7 @@ Steinberg::Vst::ProcessSetup makeSetup(double sampleRate, Steinberg::int32 sampl
     return setup;
 }
 
-int processZeroBlock(Mixorator::Processor& processor, Steinberg::int32 sampleSize)
+int processZeroBlock(Analysator::Processor& processor, Steinberg::int32 sampleSize)
 {
     Steinberg::Vst::ProcessData data {};
     data.numSamples = 0;
@@ -36,7 +36,7 @@ int processZeroBlock(Mixorator::Processor& processor, Steinberg::int32 sampleSiz
 }
 
 template <typename Sample>
-int processVariableBlocks(Mixorator::Processor& processor,
+int processVariableBlocks(Analysator::Processor& processor,
                           Steinberg::int32 symbolicSampleSize,
                           double sampleRate)
 {
@@ -102,12 +102,12 @@ int processVariableBlocks(Mixorator::Processor& processor,
 
 int testStateTransitions()
 {
-    Mixorator::Processor processor;
+    Analysator::Processor processor;
     auto setup = makeSetup(48000.0, Steinberg::Vst::kSample32);
     if (processor.setupProcessing(setup) != Steinberg::kResultOk)
         return fail("Processor setup failed for state-transition test");
 
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Idle)
         return fail("Processor did not start in IDLE state");
     if (processor.finalizationGeneration() != 0)
         return fail("Initial FINAL generation was not zero");
@@ -115,25 +115,25 @@ int testStateTransitions()
     processor.requestFinalAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Idle)
         return fail("FINAL request must be ignored while IDLE");
     if (processor.finalizationGeneration() != 0)
         return fail("FINAL generation changed while IDLE");
 
     processor.requestLiveAnalysis();
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Idle)
         return fail("ANALYZE request changed state before a process boundary");
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Live)
         return fail("ANALYZE request was not applied at process boundary");
 
     processor.requestFinalAnalysis();
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Live)
         return fail("FINAL request changed state before a process boundary");
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Final)
         return fail("FINAL request was not applied at process boundary");
     if (processor.finalizationGeneration() != 1)
         return fail("FINAL generation did not increment exactly once");
@@ -146,19 +146,19 @@ int testStateTransitions()
     processor.requestResetAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Idle)
         return fail("RESET did not return processor to IDLE");
 
     processor.requestLiveAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Live)
         return fail("Second ANALYZE request was not applied");
 
     processor.requestFinalAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final ||
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Final ||
         processor.finalizationGeneration() != 2)
         return fail("Second FINAL transition did not produce generation two");
 
@@ -167,7 +167,7 @@ int testStateTransitions()
 
 int testSetupProcessingLifecyclePreservation()
 {
-    Mixorator::Processor processor;
+    Analysator::Processor processor;
     auto setup = makeSetup(48000.0, Steinberg::Vst::kSample32);
     if (processor.setupProcessing(setup) != Steinberg::kResultOk)
         return fail("Initial setup failed for lifecycle-preservation test");
@@ -175,31 +175,31 @@ int testSetupProcessingLifecyclePreservation()
     processor.requestLiveAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Live)
         return fail("Lifecycle test did not enter LIVE state");
 
     if (processor.setupProcessing(setup) != Steinberg::kResultOk)
         return fail("Repeated same-rate setup failed");
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Live)
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Live)
         return fail("Repeated same-rate setup erased LIVE analysis state");
 
     processor.requestFinalAnalysis();
     if (processZeroBlock(processor, Steinberg::Vst::kSample32) != 0)
         return 1;
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final ||
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Final ||
         processor.finalizationGeneration() != 1)
         return fail("Lifecycle test did not enter FINAL state");
 
     if (processor.setupProcessing(setup) != Steinberg::kResultOk)
         return fail("Repeated same-rate setup failed in FINAL state");
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Final ||
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Final ||
         processor.finalizationGeneration() != 1)
         return fail("Repeated same-rate setup erased FINAL analysis state");
 
     auto changedRate = makeSetup(44100.0, Steinberg::Vst::kSample32);
     if (processor.setupProcessing(changedRate) != Steinberg::kResultOk)
         return fail("Changed-rate setup failed");
-    if (processor.analysisState() != Mixorator::Processor::AnalysisState::Idle ||
+    if (processor.analysisState() != Analysator::Processor::AnalysisState::Idle ||
         processor.finalizationGeneration() != 0)
         return fail("Real sample-rate change did not reinitialize analysis safely");
 
@@ -214,7 +214,7 @@ int main()
     for (const auto sampleRate : sampleRates)
     {
         {
-            Mixorator::Processor processor;
+            Analysator::Processor processor;
             auto setup = makeSetup(sampleRate, Steinberg::Vst::kSample32);
             if (processor.setupProcessing(setup) != Steinberg::kResultOk)
                 return fail("32-bit setupProcessing rejected a supported sample rate");
@@ -223,7 +223,7 @@ int main()
         }
 
         {
-            Mixorator::Processor processor;
+            Analysator::Processor processor;
             auto setup = makeSetup(sampleRate, Steinberg::Vst::kSample64);
             if (processor.setupProcessing(setup) != Steinberg::kResultOk)
                 return fail("64-bit setupProcessing rejected a supported sample rate");
@@ -237,6 +237,6 @@ int main()
     if (testSetupProcessingLifecyclePreservation() != 0)
         return 1;
 
-    std::cout << "All Mixorator processor robustness tests passed.\n";
+    std::cout << "All Analysator processor robustness tests passed.\n";
     return 0;
 }

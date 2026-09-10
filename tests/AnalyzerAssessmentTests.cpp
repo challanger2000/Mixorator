@@ -13,24 +13,24 @@ namespace
 constexpr double kPi=3.1415926535897932384626433832795;
 bool approx(double a,double b,double t){return std::abs(a-b)<=t;}
 int fail(const char* m){std::cerr<<"FAIL: "<<m<<'\n';return 1;}
-void processStereo(Mixorator::DSP::AnalysisEngine& e,const std::vector<double>& l,const std::vector<double>& r,int bs=256)
+void processStereo(Analysator::DSP::AnalysisEngine& e,const std::vector<double>& l,const std::vector<double>& r,int bs=256)
 {
     for(int p=0;p<static_cast<int>(l.size());p+=bs){const int n=std::min(bs,static_cast<int>(l.size())-p);double* c[2]={const_cast<double*>(l.data()+p),const_cast<double*>(r.data()+p)};e.process(c,2,n);}
 }
 std::vector<double> sine(double sr,double hz,double sec,double amp,double ph=0){std::vector<double> v(static_cast<std::size_t>(std::llround(sr*sec)));for(std::size_t i=0;i<v.size();++i)v[i]=amp*std::sin(2*kPi*hz*static_cast<double>(i)/sr+ph);return v;}
-Mixorator::Analysis::Metrics cleanMetrics(){Mixorator::Analysis::Metrics m;m.integratedLufs=-12;m.truePeakDbtp=-2.1;m.plrDb=10;m.lraLu=6;m.crestFactorDb=10;m.correlation=.7;m.monoCompatibilityDb=-.5;m.worstLocalCorrelation=.7;m.worstLocalMonoCompatibilityDb=-.5;m.negativeCorrelationPercent=0;m.lrBalanceDb=.2;m.dcOffsetLeftDbfs=-90;m.dcOffsetRightDbfs=-90;return m;}
+Analysator::Analysis::Metrics cleanMetrics(){Analysator::Analysis::Metrics m;m.integratedLufs=-12;m.truePeakDbtp=-2.1;m.plrDb=10;m.lraLu=6;m.crestFactorDb=10;m.correlation=.7;m.monoCompatibilityDb=-.5;m.worstLocalCorrelation=.7;m.worstLocalMonoCompatibilityDb=-.5;m.negativeCorrelationPercent=0;m.lrBalanceDb=.2;m.dcOffsetLeftDbfs=-90;m.dcOffsetRightDbfs=-90;return m;}
 }
 
 int main()
 {
-using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constexpr double sr=48000;
+using Analysator::DSP::AnalysisEngine;using namespace Analysator::Analysis;constexpr double sr=48000;
 {
  AnalysisEngine e;e.prepare(sr);auto l=sine(sr,1000,4,.5);auto r=l;processStereo(e,l,r);
  if(e.truePeakDbtp()+1e-9<e.samplePeakDbfs())return fail("True Peak fell below Sample Peak");
  if(!approx(e.correlation(),1,1e-6)||!approx(e.lrBalanceDb(),0,1e-6)||!approx(e.monoCompatibilityDb(),0,1e-6))return fail("In-phase stereo metrics failed");
  if(std::abs(e.calculateLoudnessRangeLu())>.2)return fail("Constant programme LRA is not approximately 0 LU");
  if(!e.hasProgrammeContext())return fail("Valid programme did not latch programme context");
- const auto s=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ const auto s=Analysator::DSP::AnalysisSnapshot::capture(e);
  if(!s.valid||!s.programmeContext||!approx(s.samplePeakDbfs,e.samplePeakDbfs(),1e-12)||!approx(s.truePeakDbtp,e.truePeakDbtp(),1e-12)||!approx(s.integratedLufs,e.calculateIntegratedLufs(),1e-12))return fail("Final snapshot did not preserve analyzer metrics");
  if(!std::isfinite(s.plrDb))return fail("Final snapshot produced invalid PLR");
  const double directLra=e.calculateLoudnessRangeLu();
@@ -58,7 +58,7 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  const auto liveMetrics=AssessmentInput::fromLive(e);
  const auto a=AssessmentModel::evaluate(liveMetrics,AnalysisMode::Mix,Genre::Pop,Era::Modern);
  if(liveMetrics.loudnessAvailable||a.overallVerdict!=Verdict::InsufficientData)return fail("LIVE assessment did not wait for enough programme context");
- const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ const auto snapshot=Analysator::DSP::AnalysisSnapshot::capture(e);
  if(!snapshot.valid)return fail("Short FINAL capture was not marked as a captured snapshot");
  if(snapshot.programmeContext)return fail("Short FINAL snapshot incorrectly carried programme context");
  const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
@@ -73,7 +73,7 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
  if(!e.hasProgrammeContext())return fail("End silence erased latched programme context");
  const auto liveMetrics=AssessmentInput::fromLive(e);
  if(!liveMetrics.loudnessAvailable)return fail("End silence erased valid LIVE whole-programme result");
- const auto snapshot=Mixorator::DSP::AnalysisSnapshot::capture(e);
+ const auto snapshot=Analysator::DSP::AnalysisSnapshot::capture(e);
  if(!snapshot.programmeContext)return fail("FINAL snapshot lost historical programme context after silence");
  const auto finalMetrics=AssessmentInput::fromFinal(snapshot);
  if(!finalMetrics.loudnessAvailable||!finalMetrics.plrAvailable)return fail("FINAL after end silence discarded a valid full-programme result");
@@ -204,5 +204,5 @@ using Mixorator::DSP::AnalysisEngine;using namespace Mixorator::Analysis;constex
 {
  Metrics m=cleanMetrics();for(int mo=0;mo<2;++mo)for(int er=0;er<2;++er)for(int g=0;g<=static_cast<int>(Genre::General);++g){const auto a=AssessmentModel::evaluate(m,static_cast<AnalysisMode>(mo),static_cast<Genre>(g),static_cast<Era>(er));if(!std::isfinite(a.technicalScore)||!std::isfinite(a.styleScore)||!std::isfinite(a.pcmDeliveryScore)||!std::isfinite(a.streamingDeliveryScore)||!std::isfinite(a.overallScore)||!std::isfinite(a.streamingGainDb))return fail("A profile produced non-finite output");}
 }
-std::cout<<"All Mixorator deterministic tests passed.\n";return 0;
+std::cout<<"All Analysator deterministic tests passed.\n";return 0;
 }

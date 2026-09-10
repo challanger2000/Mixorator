@@ -1,7 +1,7 @@
-#include "MixoratorController.h"
+#include "AnalysatorController.h"
 #include "ControllerStateCodec.h"
 
-namespace Mixorator
+namespace Analysator
 {
 Steinberg::tresult PLUGIN_API Controller::getState(Steinberg::IBStream* state)
 {

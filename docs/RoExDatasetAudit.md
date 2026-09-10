@@ -1,4 +1,4 @@
-# RoEx raw dataset audit for Mixorator
+# RoEx raw dataset audit for Analysator
 
 Source dataset: Zenodo DOI 10.5281/zenodo.13683186 (`dataset.csv`).
 
@@ -18,7 +18,7 @@ The cleaned loudness audit therefore used 217,856 rows.
 
 The dataset is a corpus of submitted MixCheck Studio analyses, not a corpus of verified reference productions. It contains good, mediocre and defective material. Raw medians therefore describe practice, not targets.
 
-RoEx's `OPTIMAL` loudness labels also cluster in a relatively narrow, almost genre-independent region. They must not be interpreted as genre-specific commercial loudness targets for Mixorator.
+RoEx's `OPTIMAL` loudness labels also cluster in a relatively narrow, almost genre-independent region. They must not be interpreted as genre-specific commercial loudness targets for Analysator.
 
 ## Mapping used for exploratory comparison
 
@@ -43,7 +43,7 @@ This mapping is not asserted to be a one-to-one semantic equivalence.
 
 Values below are P10 / median / P90 in LUFS.
 
-| Mixorator group | MIX | MASTER |
+| Analysator group | MIX | MASTER |
 |---|---:|---:|
 | Rock | -23.1 / -17.5 / -10.6 | -15.5 / -11.3 / -7.6 |
 | Metal | -21.5 / -15.7 / -8.4 | -14.9 / -10.0 / -6.8 |
@@ -60,7 +60,7 @@ Values below are P10 / median / P90 in LUFS.
 
 The expected high-level relationship is clearly present: MIX is substantially more dispersed and typically quieter than MASTER, while dense electronic/metal genres trend louder than more open acoustic/ambient material.
 
-## Coverage of current Mixorator LUFS ranges
+## Coverage of current Analysator LUFS ranges
 
 Percentage of cleaned raw observations falling inside the current production LUFS ranges:
 
@@ -101,11 +101,11 @@ Examples of `OPTIMAL` MASTER medians:
 - Jazz: -17.02 LUFS
 - Classical: -17.13 LUFS
 
-This near-uniformity demonstrates why the `OPTIMAL` labels should not be used as Mixorator's genre-style targets. They appear to encode a general loudness recommendation rather than a descriptive per-genre mastering distribution.
+This near-uniformity demonstrates why the `OPTIMAL` labels should not be used as Analysator's genre-style targets. They appear to encode a general loudness recommendation rather than a descriptive per-genre mastering distribution.
 
 ## Dynamics information
 
-The public CSV does not contain the raw numeric compression descriptor needed to derive Mixorator PLR or LRA targets. It contains categorical DRC results (`LESS`, `OPTIMAL`, `MORE`). Therefore this dataset cannot directly validate the numerical PLR/LRA min/max values currently in `AssessmentModel.cpp`.
+The public CSV does not contain the raw numeric compression descriptor needed to derive Analysator PLR or LRA targets. It contains categorical DRC results (`LESS`, `OPTIMAL`, `MORE`). Therefore this dataset cannot directly validate the numerical PLR/LRA min/max values currently in `AssessmentModel.cpp`.
 
 The categorical distributions do, however, confirm strong genre dependence. For example:
 
@@ -118,7 +118,7 @@ This confirms that one universal dynamics profile would be inappropriate, but it
 
 ## Tonal categories
 
-The CSV supplies categorical LOW/MEDIUM/HIGH results for four broad tonal bands, not raw percentages. This can validate direction but cannot produce exact Mixorator percentage limits.
+The CSV supplies categorical LOW/MEDIUM/HIGH results for four broad tonal bands, not raw percentages. This can validate direction but cannot produce exact Analysator percentage limits.
 
 Observed tendencies in the mapped corpus are consistent with the current genre-aware concept:
 
@@ -137,7 +137,7 @@ The raw dataset also confirms that mono compatibility and phase behaviour vary w
 - Acoustic / Folk MASTER mono-compatible: 75.3%; phase issues: 10.4%
 - Orchestral/Classical MASTER mono-compatible: 82.1%; phase issues: 39.2%
 
-These figures describe prevalence only. Mixorator should continue to treat severe phase/mono faults as technical conditions rather than normalize them because they are common in a genre.
+These figures describe prevalence only. Analysator should continue to treat severe phase/mono faults as technical conditions rather than normalize them because they are common in a genre.
 
 ## Calibration decision after raw-data audit
 

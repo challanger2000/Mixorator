@@ -1,142 +1,142 @@
-add_executable(MixoratorTests
+add_executable(AnalysatorTests
     AnalyzerAssessmentTests.cpp
     ../src/dsp/AnalysisEngine.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorTests PRIVATE
+target_include_directories(AnalysatorTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorTests COMMAND MixoratorTests)
+add_test(NAME AnalysatorTests COMMAND AnalysatorTests)
 
-add_executable(MixoratorLocalStereoTests
+add_executable(AnalysatorLocalStereoTests
     LocalStereoFaultTests.cpp
     ../src/dsp/AnalysisEngine.cpp
 )
 
-target_include_directories(MixoratorLocalStereoTests PRIVATE
+target_include_directories(AnalysatorLocalStereoTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorLocalStereoTests COMMAND MixoratorLocalStereoTests)
+add_test(NAME AnalysatorLocalStereoTests COMMAND AnalysatorLocalStereoTests)
 
-add_executable(MixoratorAnalyzerIntegrityTests
+add_executable(AnalysatorAnalyzerIntegrityTests
     AnalyzerIntegrityTests.cpp
     ../src/dsp/AnalysisEngine.cpp
 )
 
-target_include_directories(MixoratorAnalyzerIntegrityTests PRIVATE
+target_include_directories(AnalysatorAnalyzerIntegrityTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorAnalyzerIntegrityTests COMMAND MixoratorAnalyzerIntegrityTests)
+add_test(NAME AnalysatorAnalyzerIntegrityTests COMMAND AnalysatorAnalyzerIntegrityTests)
 
-add_executable(MixoratorLoudnessMetrologyTests
+add_executable(AnalysatorLoudnessMetrologyTests
     LoudnessMetrologyTests.cpp
     ../src/dsp/AnalysisEngine.cpp
 )
 
-target_include_directories(MixoratorLoudnessMetrologyTests PRIVATE
+target_include_directories(AnalysatorLoudnessMetrologyTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorLoudnessMetrologyTests COMMAND MixoratorLoudnessMetrologyTests)
+add_test(NAME AnalysatorLoudnessMetrologyTests COMMAND AnalysatorLoudnessMetrologyTests)
 
-add_executable(MixoratorTruePeakMetrologyTests
+add_executable(AnalysatorTruePeakMetrologyTests
     TruePeakMetrologyTests.cpp
     ../src/dsp/AnalysisEngine.cpp
 )
 
-target_include_directories(MixoratorTruePeakMetrologyTests PRIVATE
+target_include_directories(AnalysatorTruePeakMetrologyTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorTruePeakMetrologyTests COMMAND MixoratorTruePeakMetrologyTests)
+add_test(NAME AnalysatorTruePeakMetrologyTests COMMAND AnalysatorTruePeakMetrologyTests)
 
-add_executable(MixoratorProcessorTransparencyTests
+add_executable(AnalysatorProcessorTransparencyTests
     ProcessorTransparencyTests.cpp
-    ../src/plugin/MixoratorProcessor.cpp
+    ../src/plugin/AnalysatorProcessor.cpp
     ../src/dsp/AnalysisEngine.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorProcessorTransparencyTests PRIVATE
+target_include_directories(AnalysatorProcessorTransparencyTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(MixoratorProcessorTransparencyTests PRIVATE sdk)
+target_link_libraries(AnalysatorProcessorTransparencyTests PRIVATE sdk)
 
-add_test(NAME MixoratorProcessorTransparencyTests COMMAND MixoratorProcessorTransparencyTests)
+add_test(NAME AnalysatorProcessorTransparencyTests COMMAND AnalysatorProcessorTransparencyTests)
 
-add_executable(MixoratorProcessorRobustnessTests
+add_executable(AnalysatorProcessorRobustnessTests
     ProcessorRobustnessTests.cpp
-    ../src/plugin/MixoratorProcessor.cpp
+    ../src/plugin/AnalysatorProcessor.cpp
     ../src/dsp/AnalysisEngine.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorProcessorRobustnessTests PRIVATE
+target_include_directories(AnalysatorProcessorRobustnessTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(MixoratorProcessorRobustnessTests PRIVATE sdk)
+target_link_libraries(AnalysatorProcessorRobustnessTests PRIVATE sdk)
 
-add_test(NAME MixoratorProcessorRobustnessTests COMMAND MixoratorProcessorRobustnessTests)
+add_test(NAME AnalysatorProcessorRobustnessTests COMMAND AnalysatorProcessorRobustnessTests)
 
-add_executable(MixoratorMasterScenarioTests
+add_executable(AnalysatorMasterScenarioTests
     MasterScenarioTests.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorMasterScenarioTests PRIVATE
+target_include_directories(AnalysatorMasterScenarioTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorMasterScenarioTests COMMAND MixoratorMasterScenarioTests)
+add_test(NAME AnalysatorMasterScenarioTests COMMAND AnalysatorMasterScenarioTests)
 
-add_executable(MixoratorRealWorldReferenceTests
+add_executable(AnalysatorRealWorldReferenceTests
     RealWorldReferenceTests.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorRealWorldReferenceTests PRIVATE
+target_include_directories(AnalysatorRealWorldReferenceTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorRealWorldReferenceTests COMMAND MixoratorRealWorldReferenceTests)
+add_test(NAME AnalysatorRealWorldReferenceTests COMMAND AnalysatorRealWorldReferenceTests)
 
-add_executable(MixoratorDetailedTonalCalibrationTests
+add_executable(AnalysatorDetailedTonalCalibrationTests
     DetailedTonalCalibrationTests.cpp
     ../src/analysis/AssessmentModel.cpp
 )
 
-target_include_directories(MixoratorDetailedTonalCalibrationTests PRIVATE
+target_include_directories(AnalysatorDetailedTonalCalibrationTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorDetailedTonalCalibrationTests COMMAND MixoratorDetailedTonalCalibrationTests)
+add_test(NAME AnalysatorDetailedTonalCalibrationTests COMMAND AnalysatorDetailedTonalCalibrationTests)
 
-add_executable(MixoratorAssessmentDiagnosisTests
+add_executable(AnalysatorAssessmentDiagnosisTests
     AssessmentDiagnosisTests.cpp
 )
 
-target_include_directories(MixoratorAssessmentDiagnosisTests PRIVATE
+target_include_directories(AnalysatorAssessmentDiagnosisTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-add_test(NAME MixoratorAssessmentDiagnosisTests COMMAND MixoratorAssessmentDiagnosisTests)
+add_test(NAME AnalysatorAssessmentDiagnosisTests COMMAND AnalysatorAssessmentDiagnosisTests)
 
-add_executable(MixoratorControllerStateCodecTests
+add_executable(AnalysatorControllerStateCodecTests
     ControllerStateCodecTests.cpp
     ../src/plugin/ControllerStateCodec.cpp
     ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
 )
 
-target_include_directories(MixoratorControllerStateCodecTests PRIVATE
+target_include_directories(AnalysatorControllerStateCodecTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(MixoratorControllerStateCodecTests PRIVATE base pluginterfaces)
+target_link_libraries(AnalysatorControllerStateCodecTests PRIVATE base pluginterfaces)
 
-add_test(NAME MixoratorControllerStateCodecTests COMMAND MixoratorControllerStateCodecTests)
+add_test(NAME AnalysatorControllerStateCodecTests COMMAND AnalysatorControllerStateCodecTests)

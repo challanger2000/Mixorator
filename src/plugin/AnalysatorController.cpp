@@ -1,4 +1,4 @@
-#include "MixoratorController.h"
+#include "AnalysatorController.h"
 #include "../analysis/AssessmentInput.h"
 #include "../analysis/AssessmentDiagnosisText.h"
 #include "../dsp/AnalysisSnapshot.h"
@@ -12,7 +12,7 @@
 #include <cstdio>
 #include <cstring>
 
-namespace Mixorator
+namespace Analysator
 {
 namespace
 {
@@ -264,7 +264,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
     if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
     {
         const char* viewName = uiDetailsVisible_ ? "detailsView" : "compactView";
-        auto* e = new VSTGUI::VST3Editor(this, viewName, "mixorator.uidesc");
+        auto* e = new VSTGUI::VST3Editor(this, viewName, "analysator.uidesc");
         e->setDelegate(this);
         e->setZoomFactor(kZoom68);
         e->setAllowedZoomFactors({kZoom68, kZoom100});
@@ -496,7 +496,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
 
 void Controller::bindNamedView(VSTGUI::CView* view, const VSTGUI::UIAttributes& a) noexcept
 {
-    const auto* id = a.getAttributeValue("mixorator-id");
+    const auto* id = a.getAttributeValue("analysator-id");
     if (!id) return;
     if (*id == "simplePage") { simplePage_ = view; return; }
     if (*id == "detailsPage") { detailsPage_ = view; return; }

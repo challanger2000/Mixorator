@@ -9,12 +9,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(miniaudio)
 
-add_executable(MixoratorOfflineAnalyzer
+add_executable(AnalysatorOfflineAnalyzer
     main.cpp
     ../../src/dsp/AnalysisEngine.cpp
 )
 
-target_include_directories(MixoratorOfflineAnalyzer PRIVATE
+target_include_directories(AnalysatorOfflineAnalyzer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src
     ${miniaudio_SOURCE_DIR}
 )

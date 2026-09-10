@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-namespace Mixorator::Analysis
+namespace Analysator::Analysis
 {
 struct AssessmentInput
 {

@@ -1,15 +1,15 @@
 #include "public.sdk/source/main/pluginfactory.h"
-#include "MixoratorController.h"
-#include "MixoratorIDs.h"
-#include "MixoratorProcessor.h"
+#include "AnalysatorController.h"
+#include "AnalysatorIDs.h"
+#include "AnalysatorProcessor.h"
 
 #define stringPluginName "Analysator"
 #define stringPluginVersion "0.1.0"
 
-BEGIN_FACTORY_DEF("challanger2000", "https://github.com/challanger2000/Mixorator", "")
+BEGIN_FACTORY_DEF("challanger2000", "https://github.com/challanger2000/Analysator", "")
 
 DEF_CLASS2(
-    INLINE_UID_FROM_FUID(Mixorator::kProcessorUID),
+    INLINE_UID_FROM_FUID(Analysator::kProcessorUID),
     Steinberg::PClassInfo::kManyInstances,
     kVstAudioEffectClass,
     stringPluginName,
@@ -17,10 +17,10 @@ DEF_CLASS2(
     "Fx|Analyzer",
     stringPluginVersion,
     kVstVersionString,
-    Mixorator::Processor::createInstance)
+    Analysator::Processor::createInstance)
 
 DEF_CLASS2(
-    INLINE_UID_FROM_FUID(Mixorator::kControllerUID),
+    INLINE_UID_FROM_FUID(Analysator::kControllerUID),
     Steinberg::PClassInfo::kManyInstances,
     kVstComponentControllerClass,
     "Analysator Controller",
@@ -28,6 +28,6 @@ DEF_CLASS2(
     "",
     stringPluginVersion,
     kVstVersionString,
-    Mixorator::Controller::createInstance)
+    Analysator::Controller::createInstance)
 
 END_FACTORY

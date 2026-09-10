@@ -13,7 +13,7 @@ int fail(const char* message)
 
 int main()
 {
-    using namespace Mixorator::Analysis;
+    using namespace Analysator::Analysis;
 
     const auto noneDe = diagnosticText(DiagnosticEvidence::None, DiagnosticLanguage::German);
     const auto noneEn = diagnosticText(DiagnosticEvidence::None, DiagnosticLanguage::English);

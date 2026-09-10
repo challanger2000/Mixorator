@@ -4,7 +4,7 @@
 #include "Localization.h"
 #include "pluginterfaces/base/ibstream.h"
 
-namespace Mixorator
+namespace Analysator
 {
 struct ControllerStateData
 {

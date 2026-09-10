@@ -2,7 +2,7 @@
 
 #include "AssessmentDiagnostics.h"
 
-namespace Mixorator::Analysis
+namespace Analysator::Analysis
 {
 enum class DiagnosticLanguage : std::uint8_t
 {

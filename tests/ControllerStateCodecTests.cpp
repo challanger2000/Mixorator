@@ -15,7 +15,7 @@ int fail(const char* message)
     return 1;
 }
 
-bool sameMetrics(const Mixorator::Analysis::Metrics& a, const Mixorator::Analysis::Metrics& b)
+bool sameMetrics(const Analysator::Analysis::Metrics& a, const Analysator::Analysis::Metrics& b)
 {
     return a.integratedLufs == b.integratedLufs &&
            a.truePeakDbtp == b.truePeakDbtp &&
@@ -39,20 +39,20 @@ bool sameMetrics(const Mixorator::Analysis::Metrics& a, const Mixorator::Analysi
            a.provisional == b.provisional;
 }
 
-bool sameState(const Mixorator::ControllerStateData& a, const Mixorator::ControllerStateData& b)
+bool sameState(const Analysator::ControllerStateData& a, const Analysator::ControllerStateData& b)
 {
     return a.mode == b.mode && a.genre == b.genre && a.era == b.era &&
            a.language == b.language && a.detailsVisible == b.detailsVisible &&
            a.hasFinal == b.hasFinal && sameMetrics(a.metrics, b.metrics);
 }
 
-Mixorator::ControllerStateData makeFinalState()
+Analysator::ControllerStateData makeFinalState()
 {
-    Mixorator::ControllerStateData state;
-    state.mode = Mixorator::Analysis::AnalysisMode::Master;
-    state.genre = Mixorator::Analysis::Genre::Cinematic;
-    state.era = Mixorator::Analysis::Era::Vintage;
-    state.language = Mixorator::Localization::Language::English;
+    Analysator::ControllerStateData state;
+    state.mode = Analysator::Analysis::AnalysisMode::Master;
+    state.genre = Analysator::Analysis::Genre::Cinematic;
+    state.era = Analysator::Analysis::Era::Vintage;
+    state.language = Analysator::Localization::Language::English;
     state.detailsVisible = true;
     state.hasFinal = true;
     auto& m = state.metrics;
@@ -79,18 +79,18 @@ Mixorator::ControllerStateData makeFinalState()
     return state;
 }
 
-std::vector<char> encode(const Mixorator::ControllerStateData& state)
+std::vector<char> encode(const Analysator::ControllerStateData& state)
 {
     Steinberg::MemoryStream stream;
-    if (!Mixorator::writeControllerState(&stream, state))
+    if (!Analysator::writeControllerState(&stream, state))
         return {};
     return std::vector<char>(stream.getData(), stream.getData() + stream.getSize());
 }
 
-bool decode(std::vector<char>& bytes, Mixorator::ControllerStateData& state)
+bool decode(std::vector<char>& bytes, Analysator::ControllerStateData& state)
 {
     Steinberg::MemoryStream stream(bytes.data(), static_cast<Steinberg::TSize>(bytes.size()));
-    return Mixorator::readControllerState(&stream, state);
+    return Analysator::readControllerState(&stream, state);
 }
 
 void putInt32Le(std::vector<char>& bytes, std::size_t offset, std::uint32_t value)
@@ -104,7 +104,7 @@ void putInt32Le(std::vector<char>& bytes, std::size_t offset, std::uint32_t valu
 
 int main()
 {
-    using namespace Mixorator;
+    using namespace Analysator;
 
     // Full FINAL state must round-trip bit-for-bit through the versioned codec.
     const auto original = makeFinalState();

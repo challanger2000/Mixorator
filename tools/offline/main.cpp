@@ -23,10 +23,10 @@
 #include <vector>
 
 namespace fs = std::filesystem;
-using Mixorator::DSP::AnalysisEngine;
-using Mixorator::DSP::AnalysisSnapshot;
-using Mixorator::Analysis::AssessmentModel;
-using Mixorator::Analysis::Metrics;
+using Analysator::DSP::AnalysisEngine;
+using Analysator::DSP::AnalysisSnapshot;
+using Analysator::Analysis::AssessmentModel;
+using Analysator::Analysis::Metrics;
 
 namespace
 {
@@ -94,7 +94,7 @@ bool analyze(const fs::path& path, std::ofstream& out)
         if(got>0)
         {
             totalFrames+=got;
-            // Match MixoratorProcessor: completely digital-silent input blocks are
+            // Match AnalysatorProcessor: completely digital-silent input blocks are
             // not fed to AnalysisEngine. Non-silent blocks are passed unchanged.
             if(!digitallySilent(interleaved,got))
             {
@@ -125,9 +125,9 @@ bool analyze(const fs::path& path, std::ofstream& out)
 
 int main(int argc,char** argv)
 {
-    if(argc<2){std::cout<<"Mixorator Offline Analyzer\nUsage: MixoratorOfflineAnalyzer <file-or-folder> [results.csv]\nSupports WAV, FLAC and MP3. Audio stays local.\n";return 0;}
+    if(argc<2){std::cout<<"Analysator Offline Analyzer\nUsage: AnalysatorOfflineAnalyzer <file-or-folder> [results.csv]\nSupports WAV, FLAC and MP3. Audio stays local.\n";return 0;}
     const fs::path input=fs::u8path(argv[1]);
-    const fs::path output=argc>=3?fs::u8path(argv[2]):fs::path("Mixorator-results.csv");
+    const fs::path output=argc>=3?fs::u8path(argv[2]):fs::path("Analysator-results.csv");
     if(!fs::exists(input)){std::cerr<<"Input not found.\n";return 2;}
 
     std::vector<fs::path> files;

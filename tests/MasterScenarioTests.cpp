@@ -5,7 +5,7 @@
 
 namespace
 {
-using namespace Mixorator::Analysis;
+using namespace Analysator::Analysis;
 
 int fail(const char* message)
 {
@@ -40,7 +40,7 @@ bool safeTechnical(const Assessment& a)
 
 int main()
 {
-    using namespace Mixorator::Analysis;
+    using namespace Analysator::Analysis;
 
     {
         auto m = base();

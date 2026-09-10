@@ -1,4 +1,4 @@
-#include "plugin/MixoratorProcessor.h"
+#include "plugin/AnalysatorProcessor.h"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 
@@ -34,7 +34,7 @@ bool buffersBitIdentical(const std::vector<Sample>& a, const std::vector<Sample>
 template <typename Sample>
 int runOutOfPlaceTest(Steinberg::int32 symbolicSampleSize, Steinberg::int32 numSamples)
 {
-    Mixorator::Processor processor;
+    Analysator::Processor processor;
 
     std::vector<Sample> inL(static_cast<std::size_t>(numSamples));
     std::vector<Sample> inR(static_cast<std::size_t>(numSamples));
@@ -103,7 +103,7 @@ int runOutOfPlaceTest(Steinberg::int32 symbolicSampleSize, Steinberg::int32 numS
 template <typename Sample>
 int runInPlaceTest(Steinberg::int32 symbolicSampleSize, Steinberg::int32 numSamples)
 {
-    Mixorator::Processor processor;
+    Analysator::Processor processor;
 
     std::vector<Sample> left(static_cast<std::size_t>(numSamples));
     std::vector<Sample> right(static_cast<std::size_t>(numSamples));
@@ -177,6 +177,6 @@ int main()
             return 1;
     }
 
-    std::cout << "All Mixorator processor transparency tests passed.\n";
+    std::cout << "All Analysator processor transparency tests passed.\n";
     return 0;
 }

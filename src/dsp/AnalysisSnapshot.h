@@ -5,7 +5,7 @@
 #include <array>
 #include <cstdint>
 
-namespace Mixorator::DSP
+namespace Analysator::DSP
 {
 struct AnalysisSnapshot
 {

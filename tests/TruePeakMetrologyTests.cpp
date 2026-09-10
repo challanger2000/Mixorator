@@ -34,7 +34,7 @@ std::vector<double> taperedSine(double sampleRate, double frequency, double seco
     return result;
 }
 
-void processStereo(Mixorator::DSP::AnalysisEngine& engine,
+void processStereo(Analysator::DSP::AnalysisEngine& engine,
                    std::vector<double>& left,
                    std::vector<double>& right,
                    int blockSize)
@@ -50,7 +50,7 @@ void processStereo(Mixorator::DSP::AnalysisEngine& engine,
 
 int main()
 {
-    using Mixorator::DSP::AnalysisEngine;
+    using Analysator::DSP::AnalysisEngine;
 
     // EBU Tech 3341 minimum-requirements true-peak tests 15-19. The prescribed
     // tones verify the ITU-R BS.1770 4x interpolating meter at difficult phases
@@ -152,6 +152,6 @@ int main()
             return fail("Reset leaked previous peak state");
     }
 
-    std::cout << "All Mixorator true-peak metrology tests passed.\n";
+    std::cout << "All Analysator true-peak metrology tests passed.\n";
     return 0;
 }

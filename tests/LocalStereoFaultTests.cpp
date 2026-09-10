@@ -14,7 +14,7 @@ std::vector<double> sine(double sr,double hz,double sec,double amp)
     for(std::size_t i=0;i<v.size();++i)v[i]=amp*std::sin(2.0*kPi*hz*static_cast<double>(i)/sr);
     return v;
 }
-void process(Mixorator::DSP::AnalysisEngine& e,std::vector<double>& l,std::vector<double>& r)
+void process(Analysator::DSP::AnalysisEngine& e,std::vector<double>& l,std::vector<double>& r)
 {
     constexpr int bs=256;
     for(int p=0;p<static_cast<int>(l.size());p+=bs){const int n=std::min(bs,static_cast<int>(l.size())-p);double* c[2]={l.data()+p,r.data()+p};e.process(c,2,n);}
@@ -26,13 +26,13 @@ int main()
 {
     constexpr double sr=48000.0;
     {
-        Mixorator::DSP::AnalysisEngine e;e.prepare(sr);
+        Analysator::DSP::AnalysisEngine e;e.prepare(sr);
         auto l=sine(sr,1000.0,2.0,0.5);auto r=l;process(e,l,r);
         if(e.worstLocalCorrelation()<0.999 || e.worstLocalMonoCompatibilityDb()<-0.01 || e.negativeCorrelationPercent()>0.01)
             return fail("Clean in-phase stereo produced a local phase fault");
     }
     {
-        Mixorator::DSP::AnalysisEngine e;e.prepare(sr);
+        Analysator::DSP::AnalysisEngine e;e.prepare(sr);
         auto l=sine(sr,1000.0,2.0,0.5);auto r=l;
         // Only 100 ms is polarity-inverted. The whole-program average remains
         // strongly positive, so this specifically proves local fault capture.
