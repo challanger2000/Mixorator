@@ -1,1 +1,1 @@
-build-fixed-size-gui-with-compact-logo
+build-fixed-size-gui-logo-render-fixed
