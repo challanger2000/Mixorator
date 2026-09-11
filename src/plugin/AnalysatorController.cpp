@@ -804,8 +804,11 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(Steinberg::Vst::DataExc
             uiFinalSelected_ = true;
             requestFinalSnapshot(p.finalizationGeneration);
         }
-        else
+        else if (!uiFinalSelected_)
         {
+            // A stale live packet may arrive after the user pressed FINAL.
+            // Do not let it switch the UI back to LIVE/VORLAEUFIG while
+            // the definitive final snapshot is being requested.
             uiAnalysisActive_ = true;
             uiFinalSelected_ = false;
             requestedFinalGeneration_ = 0;
