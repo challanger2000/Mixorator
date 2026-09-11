@@ -1,1 +1,1 @@
-trigger-persistent-zoom-state-fix
+build-fixed-size-gui-with-compact-logo
