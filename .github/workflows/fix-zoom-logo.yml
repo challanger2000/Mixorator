@@ -1,0 +1,110 @@
+name: Fix zoom and logo
+
+on:
+  push:
+    branches:
+      - gui-foundation
+    paths:
+      - .github/workflows/fix-zoom-logo.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+
+      - name: Patch zoom resize and logo layout
+        shell: python
+        run: |
+          from pathlib import Path
+
+          cpp = Path('src/plugin/AnalysatorController.cpp')
+          s = cpp.read_text(encoding='utf-8')
+
+          old = '''constexpr double kZoom68 = 1.0;
+constexpr double kZoom100 = 100.0 / 68.0;
+constexpr std::int32_t kUiZoomTag = 10013;'''
+          new = '''constexpr double kZoom68 = 1.0;
+constexpr double kZoom100 = 100.0 / 68.0;
+constexpr std::int32_t kUiZoomTag = 10013;
+
+VSTGUI::CPoint scaledEditorSize(const VSTGUI::CPoint& base, double zoom) noexcept
+{
+    return {base.x * zoom, base.y * zoom};
+}'''
+          if old not in s:
+              raise SystemExit('zoom constants anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''    editor_ = e;
+    if (e) e->requestResize(uiDetailsVisible_ ? kDetailsSize : kCompactSize);'''
+          new = '''    editor_ = e;
+    if (e)
+    {
+        const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+        e->setEditorSizeConstrains(baseSize, baseSize);
+        e->requestResize(scaledEditorSize(baseSize, e->getZoomFactor()));
+    }'''
+          if old not in s:
+              raise SystemExit('didOpen anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''                e->exchangeView("detailsView");
+                e->requestResize(kDetailsSize);'''
+          new = '''                e->exchangeView("detailsView");
+                e->setEditorSizeConstrains(kDetailsSize, kDetailsSize);
+                e->requestResize(scaledEditorSize(kDetailsSize, e->getZoomFactor()));'''
+          if old not in s:
+              raise SystemExit('details resize anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''                e->exchangeView("compactView");
+                e->requestResize(kCompactSize);'''
+          new = '''                e->exchangeView("compactView");
+                e->setEditorSizeConstrains(kCompactSize, kCompactSize);
+                e->requestResize(scaledEditorSize(kCompactSize, e->getZoomFactor()));'''
+          if old not in s:
+              raise SystemExit('compact resize anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                editor_->setZoomFactor(enlarge ? kZoom100 : kZoom68);
+                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          new = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                const double zoom = enlarge ? kZoom100 : kZoom68;
+                const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+                editor_->setZoomFactor(zoom);
+                editor_->setEditorSizeConstrains(baseSize, baseSize);
+                editor_->requestResize(scaledEditorSize(baseSize, zoom));
+                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          if old not in s:
+              raise SystemExit('zoom handler anchor not found')
+          s = s.replace(old, new, 1)
+          cpp.write_text(s, encoding='utf-8')
+
+          ui = Path('src/resource/analysator.uidesc')
+          u = ui.read_text(encoding='utf-8')
+          replacements = {
+              'origin="224, 10" size="64, 28" bitmap="Brand125A"': 'origin="226, 10" size="60, 28" bitmap="Brand125A"',
+              'origin="558, 30" size="42, 28" bitmap="Brand125A"': 'origin="557, 31" size="47, 22" bitmap="Brand125A"',
+          }
+          for old, new in replacements.items():
+              if old not in u:
+                  raise SystemExit(f'logo anchor not found: {old}')
+              u = u.replace(old, new, 1)
+          ui.write_text(u, encoding='utf-8')
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/plugin/AnalysatorController.cpp src/resource/analysator.uidesc
+          git commit -m "Fix Studio One zoom resizing and logo proportions"
+          git push origin HEAD:gui-foundation
