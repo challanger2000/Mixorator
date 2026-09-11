@@ -1,0 +1,40 @@
+name: Fix host-first zoom
+on:
+  push:
+    branches:
+      - gui-foundation
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+      - name: Apply host-first resize zoom
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/plugin/AnalysatorController.cpp')
+          s = p.read_text(encoding='utf-8')
+          old = '''    void setUserZoom(double factor, const VSTGUI::CPoint& baseSize)\n    {\n        setZoomFactor(factor);\n        const double absoluteScale = factor * getContentScaleFactor();\n        requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale});\n    }'''
+          new = '''    bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)\n    {\n        const double absoluteScale = factor * getContentScaleFactor();\n        if (!requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale}))\n            return false;\n        setZoomFactor(factor);\n        return true;\n    }'''
+          if old not in s:
+              raise SystemExit('Editor zoom method pattern not found')
+          s = s.replace(old, new, 1)
+          old2 = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;\n                const double zoom = enlarge ? kZoom100 : kZoom68;\n                editor_->setZoomFactor(zoom);\n                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))\n                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          new2 = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;\n                const double zoom = enlarge ? kZoom100 : kZoom68;\n                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;\n                bool changed = false;\n                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))\n                    changed = e->setUserZoom(zoom, baseSize);\n                if (changed)\n                    if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))\n                        setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          if old2 not in s:
+              raise SystemExit('Zoom handler pattern not found')
+          s = s.replace(old2, new2, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Remove helper and commit
+        run: |
+          rm .github/workflows/fix-host-first-zoom.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Resize host before applying GUI zoom"
+          git push origin gui-foundation
