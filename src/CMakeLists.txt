@@ -30,6 +30,10 @@ if(WIN32)
     target_sources(Analysator PRIVATE
         ${vst3sdk_SOURCE_DIR}/public.sdk/source/main/dllmain.cpp
     )
+elseif(APPLE)
+    target_sources(Analysator PRIVATE
+        ${vst3sdk_SOURCE_DIR}/public.sdk/source/main/macmain.cpp
+    )
 endif()
 
 smtg_target_add_plugin_resources(Analysator
