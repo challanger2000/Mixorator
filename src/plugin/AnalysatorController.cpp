@@ -419,6 +419,19 @@ void Controller::didOpen(VSTGUI::VST3Editor* e)
 {
     editor_ = e;
 
+    // Studio One can keep the previous outer plug-in frame size while the editor
+    // is hidden.  createView() sets constraints before the host frame is attached,
+    // so re-apply the active page's native size here, after didOpen, and force the
+    // editor back to the native 100% state.  This keeps content and host frame in
+    // sync when the plug-in is hidden and shown again.
+    if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
+    {
+        const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
+                                                            : VSTGUI::CPoint{650., 440.};
+        ae->setNativeSize(nativeSize);
+        ae->setUserZoom(kZoom68);
+    }
+
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
     {
         requestedFinalGeneration_ = 0;
