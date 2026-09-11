@@ -498,11 +498,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 const bool enlarge = editor_->getZoomFactor() < 1.2;
                 const double zoom = enlarge ? kZoom100 : kZoom68;
-                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
-                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
-                    e->setUserZoom(zoom, baseSize);
-                else
-                    editor_->setZoomFactor(zoom);
+                editor_->setZoomFactor(zoom);
                 if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
                     setButtonTitle(b, enlarge ? "100%" : "68%");
             }
