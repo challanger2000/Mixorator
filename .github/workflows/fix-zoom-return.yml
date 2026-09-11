@@ -1,4 +1,4 @@
-name: Fix 100 percent zoom return
+name: Finalize fixed size GUI
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  fix:
+  finalize:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -17,5 +17,7 @@ jobs:
         with:
           ref: gui-foundation
           fetch-depth: 0
-      - name: Apply zoom return patch
+      - name: Install Pillow
+        run: python3 -m pip install --quiet pillow
+      - name: Remove zoom and add compact logo
         run: python3 .github/apply_zoom_return.py
