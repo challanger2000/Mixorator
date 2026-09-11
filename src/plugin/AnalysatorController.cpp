@@ -19,85 +19,6 @@ namespace Analysator
 {
 namespace
 {
-constexpr double kZoom68 = 1.0;   // native GUI = 100%
-constexpr double kZoom100 = 1.5;  // enlarged GUI = 150%
-constexpr std::int32_t kUiZoomTag = 10013;
-
-class AnalysatorEditor final : public VSTGUI::VST3Editor
-{
-public:
-    AnalysatorEditor(Steinberg::Vst::EditController* controller,
-                     const char* viewName,
-                     const char* xmlFile,
-                     const VSTGUI::CPoint& nativeSize,
-                     double* persistedZoom)
-    : VSTGUI::VST3Editor(controller, viewName, xmlFile),
-      nativeSize_(nativeSize), persistedZoom_(persistedZoom) {}
-
-    bool setUserZoom(double factor)
-    {
-        if (factor != kZoom68 && factor != kZoom100)
-            return false;
-        setZoomFactor(factor);
-        if (persistedZoom_)
-            *persistedZoom_ = factor;
-        setEditorSizeConstrains(nativeSize_, nativeSize_);
-        return true;
-    }
-
-    void setNativeSize(const VSTGUI::CPoint& nativeSize)
-    {
-        nativeSize_ = nativeSize;
-        setEditorSizeConstrains(nativeSize_, nativeSize_);
-    }
-
-    bool isZoom100() const noexcept { return getZoomFactor() > 1.25; }
-
-    VSTGUI::CView* createView(const VSTGUI::UIAttributes& attributes,
-                              const VSTGUI::IUIDescription* description) override;
-
-private:
-    VSTGUI::CPoint nativeSize_;
-    double* persistedZoom_ {};
-};
-
-class ZoomView final : public VSTGUI::CView
-{
-public:
-    ZoomView(const VSTGUI::CRect& r, AnalysatorEditor* editor)
-    : VSTGUI::CView(r), editor_(editor) { setMouseEnabled(true); }
-
-    void draw(VSTGUI::CDrawContext* ctx) override
-    {
-        if (!ctx || !editor_) { setDirty(false); return; }
-        auto r = getViewSize();
-        ctx->setFont(VSTGUI::kNormalFontSmall);
-        ctx->setFontColor(VSTGUI::CColor(169, 177, 183, 255));
-        ctx->drawString(editor_->getZoomFactor() > 1.25 ? "150%" : "100%", r, VSTGUI::kCenterText);
-        setDirty(false);
-    }
-
-    VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint&, const VSTGUI::CButtonState&) override
-    {
-        if (!editor_) return VSTGUI::kMouseEventNotHandled;
-        editor_->setUserZoom(editor_->getZoomFactor() > 1.25 ? kZoom68 : kZoom100);
-        invalid();
-        return VSTGUI::kMouseEventHandled;
-    }
-private:
-    AnalysatorEditor* editor_ {};
-};
-
-VSTGUI::CView* AnalysatorEditor::createView(const VSTGUI::UIAttributes& attributes,
-                                             const VSTGUI::IUIDescription* description)
-{
-    if (const auto name = attributes.getAttributeValue(VSTGUI::IUIDescription::kCustomViewName))
-    {
-        if (*name == "UiZoomCompact") return new ZoomView({478., 12., 540., 32.}, this);
-        if (*name == "UiZoomDetails") return new ZoomView({914., 6., 980., 24.}, this);
-    }
-    return VSTGUI::VST3Editor::createView(attributes, description);
-}
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
 const VSTGUI::CColor kVerdictGood {174,205,89,255};
@@ -341,13 +262,8 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
     if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
     {
         const char* viewName = uiDetailsVisible_ ? "detailsView" : "compactView";
-        const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
-                                                            : VSTGUI::CPoint{650., 440.};
-        auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc", nativeSize, &uiZoomFactor_);
+        auto* e = new VSTGUI::VST3Editor(this, viewName, "analysator.uidesc");
         e->setDelegate(this);
-        e->setZoomFactor(uiZoomFactor_);
-        e->setAllowedZoomFactors({kZoom68, kZoom100});
-        e->setEditorSizeConstrains(nativeSize, nativeSize);
         return e;
     }
     return nullptr;
@@ -403,14 +319,6 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
             case kUiHelpClose:
                 c->setListener(this);
                 break;
-            case kUiZoomTag:
-                c->setListener(this);
-                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
-                {
-                    const auto* ae = dynamic_cast<AnalysatorEditor*>(editor);
-                    setButtonTitle(b, ae && ae->isZoom100() ? "100%" : "68%");
-                }
-                break;
             default:
                 break;
         }
@@ -423,19 +331,6 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
 void Controller::didOpen(VSTGUI::VST3Editor* e)
 {
     editor_ = e;
-
-    // Studio One can keep the previous outer plug-in frame size while the editor
-    // is hidden.  createView() sets constraints before the host frame is attached,
-    // so re-apply the active page's native size here, after didOpen, and force the
-    // editor back to the native 100% state.  This keeps content and host frame in
-    // sync when the plug-in is hidden and shown again.
-    if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
-    {
-        const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
-                                                            : VSTGUI::CPoint{650., 440.};
-        ae->setNativeSize(nativeSize);
-        ae->setUserZoom(uiZoomFactor_);
-    }
 
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
     {
@@ -537,14 +432,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             clearUiPointers();
             editor_ = e;
             if (e)
-            {
                 e->exchangeView("detailsView");
-                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
-                {
-                    ae->setNativeSize({1000., 700.});
-                    ae->setUserZoom(e->getZoomFactor());
-                }
-            }
             return;
         }
         case kUiBack:
@@ -555,14 +443,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             clearUiPointers();
             editor_ = e;
             if (e)
-            {
                 e->exchangeView("compactView");
-                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
-                {
-                    ae->setNativeSize({650., 440.});
-                    ae->setUserZoom(e->getZoomFactor());
-                }
-            }
             return;
         }
         case kUiHelp:
@@ -583,19 +464,6 @@ void Controller::valueChanged(VSTGUI::CControl* c)
                 finalSnapshotGeneration_ = 0;
             }
             break;
-        case kUiZoomTag:
-            if (editor_)
-            {
-                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
-                {
-                    const bool enlarge = !e->isZoom100();
-                    const double zoom = enlarge ? kZoom100 : kZoom68;
-                    if (e->setUserZoom(zoom))
-                        if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
-                            setButtonTitle(b, enlarge ? "100%" : "68%");
-                }
-            }
-            return;
         default:
             return;
     }

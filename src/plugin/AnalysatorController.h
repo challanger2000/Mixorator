@@ -122,7 +122,6 @@ private:
     bool uiFinalSelected_ {false};
     bool uiDetailsVisible_ {false};
     bool uiHelpVisible_ {false};
-    double uiZoomFactor_ {1.0};
 
     VSTGUI::VST3Editor* editor_ {nullptr};
     VSTGUI::CControl* mixControl_ {nullptr};
