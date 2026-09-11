@@ -16,10 +16,8 @@ namespace Analysator
 {
 namespace
 {
-const VSTGUI::CPoint kCompactSize {650., 440.};
-const VSTGUI::CPoint kDetailsSize {1000., 700.};
-constexpr double kZoom68 = 1.0;
-constexpr double kZoom100 = 100.0 / 68.0;
+constexpr double kZoom68 = 0.68;
+constexpr double kZoom100 = 1.0;
 constexpr std::int32_t kUiZoomTag = 10013;
 
 class AnalysatorEditor final : public VSTGUI::VST3Editor
@@ -27,19 +25,15 @@ class AnalysatorEditor final : public VSTGUI::VST3Editor
 public:
     using VSTGUI::VST3Editor::VST3Editor;
 
-    bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)
+    bool setUserZoom(double factor)
     {
-        if (!requestResize({baseSize.x * factor, baseSize.y * factor}))
+        if (factor != kZoom68 && factor != kZoom100)
             return false;
         setZoomFactor(factor);
-        zoom100_ = factor > 1.2;
         return true;
     }
 
-    bool isZoom100() const noexcept { return zoom100_; }
-
-private:
-    bool zoom100_ = false;
+    bool isZoom100() const noexcept { return getZoomFactor() > 0.84; }
 };
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
@@ -287,6 +281,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
         auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc");
         e->setDelegate(this);
         e->setZoomFactor(kZoom68);
+        e->setAllowedZoomFactors({kZoom68, kZoom100});
         return e;
     }
     return nullptr;
@@ -466,7 +461,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("detailsView");
                 if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
-                    ae->setUserZoom(e->getZoomFactor(), kDetailsSize);
+                    ae->setUserZoom(e->getZoomFactor());
             }
             return;
         }
@@ -481,7 +476,7 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("compactView");
                 if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
-                    ae->setUserZoom(e->getZoomFactor(), kCompactSize);
+                    ae->setUserZoom(e->getZoomFactor());
             }
             return;
         }
@@ -506,12 +501,11 @@ void Controller::valueChanged(VSTGUI::CControl* c)
         case kUiZoomTag:
             if (editor_)
             {
-                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
                 if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
                 {
                     const bool enlarge = !e->isZoom100();
                     const double zoom = enlarge ? kZoom100 : kZoom68;
-                    if (e->setUserZoom(zoom, baseSize))
+                    if (e->setUserZoom(zoom))
                         if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
                             setButtonTitle(b, enlarge ? "100%" : "68%");
                 }
