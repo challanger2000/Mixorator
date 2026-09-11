@@ -1,6 +1,9 @@
 name: Build macOS VST3
 
 on:
+  push:
+    branches:
+      - mac-vst3
   workflow_dispatch:
 
 jobs:
