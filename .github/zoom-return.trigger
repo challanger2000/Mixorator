@@ -1,1 +1,1 @@
-build-final-state-race-fix
+build-fixed-main-detail-resize-fix
