@@ -1,6 +1,7 @@
 name: Fix Analysator direct 100/150 zoom
 
 on:
+  workflow_dispatch:
   push:
     branches: [gui-foundation]
     paths:
@@ -133,17 +134,6 @@ VSTGUI::CView* AnalysatorEditor::createView(const VSTGUI::UIAttributes& attribut
           if old not in cpp:
               raise SystemExit('Expected current zoom editor block not found')
           cpp = cpp.replace(old, new)
-
-          old_create = '''        e->setDelegate(this);
-        e->setZoomFactor(kZoom68);
-        e->setAllowedZoomFactors({kZoom68, kZoom100});'''
-          new_create = '''        e->setDelegate(this);
-        e->setZoomFactor(kZoom68);
-        e->setAllowedZoomFactors({kZoom68, kZoom100});'''
-          if old_create not in cpp:
-              raise SystemExit('Expected createView zoom setup not found')
-          cpp = cpp.replace(old_create, new_create)
-
           cpp_path.write_text(cpp, encoding='utf-8')
 
           ui_path = Path('src/resource/analysator.uidesc')
