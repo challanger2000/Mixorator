@@ -1,0 +1,121 @@
+name: Fix SMX3 zoom
+on:
+  push:
+    branches:
+      - gui-foundation
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+          fetch-depth: 0
+      - name: Apply SMX3 zoom model
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/resource/analysator.uidesc')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace(' minSize="650, 440" maxSize="650, 440"', '')
+          s = s.replace(' minSize="1000, 700" maxSize="1000, 700"', '')
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('src/plugin/AnalysatorController.cpp')
+          s = p.read_text(encoding='utf-8')
+
+          old_class = '''class AnalysatorEditor final : public VSTGUI::VST3Editor
+{
+public:
+    using VSTGUI::VST3Editor::VST3Editor;
+
+    bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)
+    {
+        const double absoluteScale = factor * getContentScaleFactor();
+        if (!requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale}))
+            return false;
+        setZoomFactor(factor);
+        return true;
+    }
+};'''
+          new_class = '''class AnalysatorEditor final : public VSTGUI::VST3Editor
+{
+public:
+    using VSTGUI::VST3Editor::VST3Editor;
+
+    void setUserZoom(double factor)
+    {
+        if (factor == kZoom68 || factor == kZoom100)
+            setZoomFactor(factor);
+    }
+};'''
+          if old_class not in s:
+              raise SystemExit('AnalysatorEditor pattern not found')
+          s = s.replace(old_class, new_class, 1)
+
+          s = s.replace('''        e->setZoomFactor(kZoom68);
+        return e;''', '''        e->setZoomFactor(kZoom68);
+        e->setAllowedZoomFactors({kZoom68, kZoom100});
+        return e;''', 1)
+
+          s = s.replace('''            if (e)
+            {
+                e->exchangeView("detailsView");
+                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
+                    ae->setUserZoom(e->getZoomFactor(), kDetailsSize);
+            }''', '''            if (e)
+                e->exchangeView("detailsView");''', 1)
+
+          s = s.replace('''            if (e)
+            {
+                e->exchangeView("compactView");
+                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
+                    ae->setUserZoom(e->getZoomFactor(), kCompactSize);
+            }''', '''            if (e)
+                e->exchangeView("compactView");''', 1)
+
+          old_zoom = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                const double zoom = enlarge ? kZoom100 : kZoom68;
+                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+                bool changed = false;
+                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
+                    changed = e->setUserZoom(zoom, baseSize);
+                if (changed)
+                    if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                        setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          new_zoom = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                const double zoom = enlarge ? kZoom100 : kZoom68;
+                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
+                    e->setUserZoom(zoom);
+                else
+                    editor_->setZoomFactor(zoom);
+                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          if old_zoom not in s:
+              raise SystemExit('Zoom handler pattern not found')
+          s = s.replace(old_zoom, new_zoom, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify exact SMX3 conditions
+        shell: python
+        run: |
+          from pathlib import Path
+          u = Path('src/resource/analysator.uidesc').read_text(encoding='utf-8')
+          c = Path('src/plugin/AnalysatorController.cpp').read_text(encoding='utf-8')
+          assert 'minSize="650, 440"' not in u
+          assert 'maxSize="650, 440"' not in u
+          assert 'minSize="1000, 700"' not in u
+          assert 'maxSize="1000, 700"' not in u
+          assert 'requestResize(' not in c
+          assert 'setAllowedZoomFactors({kZoom68, kZoom100})' in c
+          assert 'e->setUserZoom(zoom);' in c
+      - name: Commit exact zoom fix
+        run: |
+          rm .github/workflows/fix-smx3-zoom.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Match SMX3 zoom behavior exactly"
+          git push origin HEAD:gui-foundation
