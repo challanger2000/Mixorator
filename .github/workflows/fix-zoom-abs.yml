@@ -1,0 +1,45 @@
+name: Fix Studio One zoom absolute scale
+
+on:
+  push:
+    branches:
+      - gui-foundation
+    paths:
+      - .github/workflows/fix-zoom-abs.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+
+      - name: Patch zoom using absolute VSTGUI scale
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/plugin/AnalysatorController.cpp')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace('''        const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;\n        e->setEditorSizeConstrains(baseSize, baseSize);''', '''        const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;\n        e->setEditorSizeConstrains(baseSize, baseSize);\n        const auto scale = e->getAbsScaleFactor();\n        e->requestResize({baseSize.x * scale, baseSize.y * scale});''', 1)
+
+          s = s.replace('''                e->exchangeView("detailsView");\n                e->setEditorSizeConstrains(kDetailsSize, kDetailsSize);''', '''                e->exchangeView("detailsView");\n                e->setEditorSizeConstrains(kDetailsSize, kDetailsSize);\n                const auto scale = e->getAbsScaleFactor();\n                e->requestResize({kDetailsSize.x * scale, kDetailsSize.y * scale});''', 1)
+
+          s = s.replace('''                e->exchangeView("compactView");\n                e->setEditorSizeConstrains(kCompactSize, kCompactSize);''', '''                e->exchangeView("compactView");\n                e->setEditorSizeConstrains(kCompactSize, kCompactSize);\n                const auto scale = e->getAbsScaleFactor();\n                e->requestResize({kCompactSize.x * scale, kCompactSize.y * scale});''', 1)
+
+          s = s.replace('''                editor_->setZoomFactor(zoom);\n                editor_->setEditorSizeConstrains(baseSize, baseSize);\n                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))''', '''                editor_->setZoomFactor(zoom);\n                editor_->setEditorSizeConstrains(baseSize, baseSize);\n                const auto scale = editor_->getAbsScaleFactor();\n                editor_->requestResize({baseSize.x * scale, baseSize.y * scale});\n                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))''', 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit code fix and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/plugin/AnalysatorController.cpp
+          git rm .github/workflows/fix-zoom-abs.yml
+          git commit -m "Fix Studio One zoom with absolute scale"
+          git push origin HEAD:gui-foundation
