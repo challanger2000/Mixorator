@@ -26,13 +26,18 @@ constexpr std::int32_t kUiZoomTag = 10013;
 class AnalysatorEditor final : public VSTGUI::VST3Editor
 {
 public:
-    using VSTGUI::VST3Editor::VST3Editor;
+    AnalysatorEditor(Steinberg::Vst::EditController* controller,
+                     const char* viewName,
+                     const char* xmlFile,
+                     const VSTGUI::CPoint& nativeSize)
+    : VSTGUI::VST3Editor(controller, viewName, xmlFile), nativeSize_(nativeSize) {}
 
     bool setUserZoom(double factor)
     {
         if (factor != kZoom68 && factor != kZoom100)
             return false;
         setZoomFactor(factor);
+        setEditorSizeConstrains(nativeSize_, nativeSize_);
         return true;
     }
 
@@ -40,6 +45,9 @@ public:
 
     VSTGUI::CView* createView(const VSTGUI::UIAttributes& attributes,
                               const VSTGUI::IUIDescription* description) override;
+
+private:
+    VSTGUI::CPoint nativeSize_;
 };
 
 class ZoomView final : public VSTGUI::CView
@@ -322,10 +330,13 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
     if (name && std::strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0)
     {
         const char* viewName = uiDetailsVisible_ ? "detailsView" : "compactView";
-        auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc");
+        const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
+                                                            : VSTGUI::CPoint{650., 440.};
+        auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc", nativeSize);
         e->setDelegate(this);
         e->setZoomFactor(kZoom68);
         e->setAllowedZoomFactors({kZoom68, kZoom100});
+        e->setEditorSizeConstrains(nativeSize, nativeSize);
         return e;
     }
     return nullptr;
