@@ -1,0 +1,48 @@
+name: Build macOS VST3
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure universal macOS build
+        run: >-
+          cmake -S . -B build -G Xcode
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build plugin
+        run: cmake --build build --config Release --target Analysator --parallel
+
+      - name: Stage VST3 bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugin="$(find build -type d -name 'Analysator.vst3' -print -quit)"
+          if [[ -z "$plugin" ]]; then
+            echo "Analysator.vst3 bundle not found"
+            exit 1
+          fi
+          mkdir -p artifact
+          cp -R "$plugin" artifact/
+          test -d artifact/Analysator.vst3/Contents
+          file artifact/Analysator.vst3/Contents/MacOS/Analysator || true
+          lipo -info artifact/Analysator.vst3/Contents/MacOS/Analysator || true
+
+      - name: Ad-hoc sign VST3 bundle
+        run: codesign --force --deep --sign - artifact/Analysator.vst3
+
+      - name: Verify signature
+        run: codesign --verify --deep --strict --verbose=2 artifact/Analysator.vst3
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Analysator-macOS-Universal-VST3
+          path: artifact/Analysator.vst3
