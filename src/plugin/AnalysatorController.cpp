@@ -29,12 +29,17 @@ public:
 
     bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)
     {
-        const double absoluteScale = factor * getContentScaleFactor();
-        if (!requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale}))
+        if (!requestResize({baseSize.x * factor, baseSize.y * factor}))
             return false;
         setZoomFactor(factor);
+        zoom100_ = factor > 1.2;
         return true;
     }
+
+    bool isZoom100() const noexcept { return zoom100_; }
+
+private:
+    bool zoom100_ = false;
 };
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
@@ -340,7 +345,10 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
             case kUiZoomTag:
                 c->setListener(this);
                 if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
-                    setButtonTitle(b, editor && editor->getZoomFactor() > 1.2 ? "100%" : "68%");
+                {
+                    const auto* ae = dynamic_cast<AnalysatorEditor*>(editor);
+                    setButtonTitle(b, ae && ae->isZoom100() ? "100%" : "68%");
+                }
                 break;
             default:
                 break;
@@ -498,15 +506,15 @@ void Controller::valueChanged(VSTGUI::CControl* c)
         case kUiZoomTag:
             if (editor_)
             {
-                const bool enlarge = editor_->getZoomFactor() < 1.2;
-                const double zoom = enlarge ? kZoom100 : kZoom68;
                 const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
-                bool changed = false;
                 if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
-                    changed = e->setUserZoom(zoom, baseSize);
-                if (changed)
-                    if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
-                        setButtonTitle(b, enlarge ? "100%" : "68%");
+                {
+                    const bool enlarge = !e->isZoom100();
+                    const double zoom = enlarge ? kZoom100 : kZoom68;
+                    if (e->setUserZoom(zoom, baseSize))
+                        if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                            setButtonTitle(b, enlarge ? "100%" : "68%");
+                }
             }
             return;
         default:
