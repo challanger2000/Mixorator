@@ -1,1 +1,1 @@
-trigger-actual-fixed-build
+trigger-details-native-size-build
