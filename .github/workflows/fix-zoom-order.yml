@@ -1,0 +1,43 @@
+name: Fix zoom order
+on:
+  push:
+    branches:
+      - gui-foundation
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+      - name: Use native VSTGUI zoom path for compact zoom
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/plugin/AnalysatorController.cpp')
+          s = p.read_text(encoding='utf-8')
+          old = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                const double zoom = enlarge ? kZoom100 : kZoom68;
+                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
+                    e->setUserZoom(zoom, baseSize);
+                else
+                    editor_->setZoomFactor(zoom);'''
+          new = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
+                const double zoom = enlarge ? kZoom100 : kZoom68;
+                editor_->setZoomFactor(zoom);'''
+          if old not in s:
+              raise SystemExit('Zoom handler pattern not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Remove helper and commit
+        run: |
+          rm .github/workflows/fix-zoom-order.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Use native VSTGUI zoom resize path"
+          git push origin gui-foundation
