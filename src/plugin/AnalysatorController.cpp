@@ -27,11 +27,13 @@ class AnalysatorEditor final : public VSTGUI::VST3Editor
 public:
     using VSTGUI::VST3Editor::VST3Editor;
 
-    void setUserZoom(double factor, const VSTGUI::CPoint& baseSize)
+    bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)
     {
-        setZoomFactor(factor);
         const double absoluteScale = factor * getContentScaleFactor();
-        requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale});
+        if (!requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale}))
+            return false;
+        setZoomFactor(factor);
+        return true;
     }
 };
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
@@ -498,9 +500,13 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 const bool enlarge = editor_->getZoomFactor() < 1.2;
                 const double zoom = enlarge ? kZoom100 : kZoom68;
-                editor_->setZoomFactor(zoom);
-                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
-                    setButtonTitle(b, enlarge ? "100%" : "68%");
+                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+                bool changed = false;
+                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
+                    changed = e->setUserZoom(zoom, baseSize);
+                if (changed)
+                    if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
+                        setButtonTitle(b, enlarge ? "100%" : "68%");
             }
             return;
         default:
