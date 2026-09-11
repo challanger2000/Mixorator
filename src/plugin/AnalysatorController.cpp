@@ -41,6 +41,12 @@ public:
         return true;
     }
 
+    void setNativeSize(const VSTGUI::CPoint& nativeSize)
+    {
+        nativeSize_ = nativeSize;
+        setEditorSizeConstrains(nativeSize_, nativeSize_);
+    }
+
     bool isZoom100() const noexcept { return getZoomFactor() > 1.25; }
 
     VSTGUI::CView* createView(const VSTGUI::UIAttributes& attributes,
@@ -516,7 +522,10 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("detailsView");
                 if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
+                {
+                    ae->setNativeSize({1000., 700.});
                     ae->setUserZoom(e->getZoomFactor());
+                }
             }
             return;
         }
@@ -531,7 +540,10 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("compactView");
                 if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))
+                {
+                    ae->setNativeSize({650., 440.});
                     ae->setUserZoom(e->getZoomFactor());
+                }
             }
             return;
         }
