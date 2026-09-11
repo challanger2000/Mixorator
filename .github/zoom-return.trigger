@@ -1,1 +1,1 @@
-trigger-details-native-size-build
+trigger-editor-reopen-size-build
