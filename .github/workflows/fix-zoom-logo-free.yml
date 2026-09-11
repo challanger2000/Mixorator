@@ -1,5 +1,9 @@
 name: Fix logo-free zoom
 on:
+  push:
+    branches: [gui-foundation]
+    paths:
+      - '.github/workflows/fix-zoom-logo-free.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -10,29 +14,59 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: gui-foundation
-      - name: Remove logo and restore Analysator 68/100 sizing
+      - name: Remove logo and implement explicit host resize zoom
         shell: python
         run: |
           from pathlib import Path
           import re
+
           u = Path('src/resource/analysator.uidesc')
           s = u.read_text(encoding='utf-8')
           s = s.replace('<bitmap name="Brand125A" path="125a_gui.png"/>','')
-          s = re.sub(r'<view class="CViewContainer" origin="224, 10" size="64, 28" bitmap="Brand125A" transparent="true"/>','',s)
-          s = re.sub(r'<view class="CViewContainer" origin="558, 30" size="42, 28" bitmap="Brand125A" transparent="true"/>','',s)
-          u.write_text(s,encoding='utf-8')
+          s = s.replace('<view class="CViewContainer" origin="224, 10" size="64, 28" bitmap="Brand125A" transparent="true"/>','')
+          s = s.replace('<view class="CViewContainer" origin="558, 30" size="42, 28" bitmap="Brand125A" transparent="true"/>','')
+          u.write_text(s, encoding='utf-8')
+
           p = Path('src/plugin/AnalysatorController.cpp')
           s = p.read_text(encoding='utf-8')
-          s = s.replace('constexpr double kZoom68 = 0.68;','constexpr double kZoom68 = 1.0;')
-          s = s.replace('constexpr double kZoom100 = 1.0;','constexpr double kZoom100 = 100.0 / 68.0;')
-          s = s.replace('editor && editor->getZoomFactor() > 1.2 ? "100%" : "68%"','editor && editor->getZoomFactor() > 1.2 ? "100%" : "68%"')
-          s = s.replace('const bool enlarge = editor_->getZoomFactor() < 0.84;','const bool enlarge = editor_->getZoomFactor() < 1.2;')
-          p.write_text(s,encoding='utf-8')
-      - name: Remove helper and commit
+          s = s.replace('constexpr double kZoom68 = 0.68;', 'constexpr double kZoom68 = 1.0;')
+          s = s.replace('constexpr double kZoom100 = 1.0;', 'constexpr double kZoom100 = 100.0 / 68.0;')
+
+          marker = 'constexpr std::int32_t kUiZoomTag = 10013;\n'
+          editor_class = '''constexpr std::int32_t kUiZoomTag = 10013;\n\nclass AnalysatorEditor final : public VSTGUI::VST3Editor\n{\npublic:\n    using VSTGUI::VST3Editor::VST3Editor;\n\n    void setUserZoom(double factor, const VSTGUI::CPoint& baseSize)\n    {\n        setZoomFactor(factor);\n        const double absoluteScale = factor * getContentScaleFactor();\n        requestResize({baseSize.x * absoluteScale, baseSize.y * absoluteScale});\n    }\n};\n'''
+          if 'class AnalysatorEditor final' not in s:
+              if marker not in s:
+                  raise SystemExit('zoom marker not found')
+              s = s.replace(marker, editor_class, 1)
+
+          s = s.replace('auto* e = new VSTGUI::VST3Editor(this, viewName, "analysator.uidesc");',
+                        'auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc");')
+          s = s.replace('        e->setAllowedZoomFactors({kZoom68, kZoom100});\n', '')
+          s = s.replace('const bool enlarge = editor_->getZoomFactor() < 0.84;',
+                        'const bool enlarge = editor_->getZoomFactor() < 1.2;')
+
+          old_zoom = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;\n                editor_->setZoomFactor(enlarge ? kZoom100 : kZoom68);\n                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))\n                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          new_zoom = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;\n                const double zoom = enlarge ? kZoom100 : kZoom68;\n                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;\n                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))\n                    e->setUserZoom(zoom, baseSize);\n                else\n                    editor_->setZoomFactor(zoom);\n                if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))\n                    setButtonTitle(b, enlarge ? "100%" : "68%");'''
+          if old_zoom not in s:
+              raise SystemExit('zoom handler not found')
+          s = s.replace(old_zoom, new_zoom, 1)
+
+          old_details = '''            if (e)\n            {\n                e->exchangeView("detailsView");\n            }'''
+          new_details = '''            if (e)\n            {\n                e->exchangeView("detailsView");\n                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))\n                    ae->setUserZoom(e->getZoomFactor(), kDetailsSize);\n            }'''
+          if old_details in s:
+              s = s.replace(old_details, new_details, 1)
+
+          old_back = '''            if (e)\n            {\n                e->exchangeView("compactView");\n            }'''
+          new_back = '''            if (e)\n            {\n                e->exchangeView("compactView");\n                if (auto* ae = dynamic_cast<AnalysatorEditor*>(e))\n                    ae->setUserZoom(e->getZoomFactor(), kCompactSize);\n            }'''
+          if old_back in s:
+              s = s.replace(old_back, new_back, 1)
+
+          p.write_text(s, encoding='utf-8')
+      - name: Remove helper and commit fix
         run: |
           rm .github/workflows/fix-zoom-logo-free.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Remove logo and restore Analysator zoom scale"
+          git commit -m "Fix Studio One zoom with explicit host resize"
           git push origin gui-foundation
