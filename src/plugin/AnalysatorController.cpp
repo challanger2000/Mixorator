@@ -18,8 +18,8 @@ namespace
 {
 const VSTGUI::CPoint kCompactSize {650., 440.};
 const VSTGUI::CPoint kDetailsSize {1000., 700.};
-constexpr double kZoom68 = 1.0;
-constexpr double kZoom100 = 100.0 / 68.0;
+constexpr double kZoom68 = 0.68;
+constexpr double kZoom100 = 1.0;
 constexpr std::int32_t kUiZoomTag = 10013;
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
@@ -340,13 +340,7 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
 void Controller::didOpen(VSTGUI::VST3Editor* e)
 {
     editor_ = e;
-    if (e)
-    {
-        const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
-        e->setEditorSizeConstrains(baseSize, baseSize);
-        const auto scale = e->getAbsScaleFactor();
-        e->requestResize({baseSize.x * scale, baseSize.y * scale});
-    }
+
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
     {
         requestedFinalGeneration_ = 0;
@@ -449,9 +443,6 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             if (e)
             {
                 e->exchangeView("detailsView");
-                e->setEditorSizeConstrains(kDetailsSize, kDetailsSize);
-                const auto scale = e->getAbsScaleFactor();
-                e->requestResize({kDetailsSize.x * scale, kDetailsSize.y * scale});
             }
             return;
         }
@@ -465,9 +456,6 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             if (e)
             {
                 e->exchangeView("compactView");
-                e->setEditorSizeConstrains(kCompactSize, kCompactSize);
-                const auto scale = e->getAbsScaleFactor();
-                e->requestResize({kCompactSize.x * scale, kCompactSize.y * scale});
             }
             return;
         }
@@ -492,13 +480,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
         case kUiZoomTag:
             if (editor_)
             {
-                const bool enlarge = editor_->getZoomFactor() < 1.2;
-                const auto zoom = enlarge ? kZoom100 : kZoom68;
-                const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
-                editor_->setZoomFactor(zoom);
-                editor_->setEditorSizeConstrains(baseSize, baseSize);
-                const auto scale = editor_->getAbsScaleFactor();
-                editor_->requestResize({baseSize.x * scale, baseSize.y * scale});
+                const bool enlarge = editor_->getZoomFactor() < 0.84;
+                editor_->setZoomFactor(enlarge ? kZoom100 : kZoom68);
                 if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
                     setButtonTitle(b, enlarge ? "100%" : "68%");
             }
