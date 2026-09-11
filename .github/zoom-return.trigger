@@ -1,1 +1,1 @@
-build-fixed-size-gui-logo-render-fixed
+build-proven-text-signet-logo-fix
