@@ -1,0 +1,116 @@
+name: Convert Analysator to native 100 percent zoom
+
+on:
+  push:
+    branches: [gui-foundation]
+    paths:
+      - '.github/workflows/convert-native-zoom.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+          fetch-depth: 0
+
+      - name: Convert GUI geometry and zoom model
+        shell: bash
+        run: |
+          python -m pip install --quiet pillow
+          python <<'PY'
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+          from PIL import Image
+
+          SCALE = 25.0 / 17.0
+          ui_path = Path('src/resource/analysator.uidesc')
+          text = ui_path.read_text(encoding='utf-8')
+
+          if 'Brand125A' in text:
+              raise SystemExit('Logo reference unexpectedly present; aborting zoom-only conversion')
+
+          def fmt(v):
+              return str(int(round(float(v) * SCALE)))
+
+          # Scale every authored coordinate/extent so 68% reproduces the old GUI.
+          pair_attrs = ('origin', 'size', 'minSize', 'maxSize', 'text-inset', 'background-offset')
+          for attr in pair_attrs:
+              pat = rf'({re.escape(attr)}=")(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(")'
+              text = re.sub(pat, lambda m: m.group(1) + fmt(m.group(2)) + ', ' + fmt(m.group(3)) + m.group(4), text)
+
+          # Scale font definitions and single-value visual dimensions as well.
+          text = re.sub(r'(<font\b[^>]*\bsize=")(-?\d+(?:\.\d+)?)(")',
+                        lambda m: m.group(1) + fmt(m.group(2)) + m.group(3), text)
+          for attr in ('frame-width', 'round-rect-radius'):
+              pat = rf'({re.escape(attr)}=")(-?\d+(?:\.\d+)?)(")'
+              text = re.sub(pat, lambda m: m.group(1) + fmt(m.group(2)) + m.group(3), text)
+
+          ui_path.write_text(text, encoding='utf-8')
+          ET.parse(ui_path)  # fail fast if the transformed UIDesc is invalid XML
+
+          # Upscale the two authored backgrounds to the new native 100% geometry.
+          for name in ('analysator_main_bg.png', 'analysator_details_bg.png'):
+              p = Path('src/resource') / name
+              with Image.open(p) as im:
+                  new_size = (int(round(im.width * SCALE)), int(round(im.height * SCALE)))
+                  out = im.resize(new_size, Image.Resampling.LANCZOS)
+                  out.save(p, format='PNG', optimize=True)
+                  print(f'{name}: {im.size} -> {new_size}')
+
+          cpp_path = Path('src/plugin/AnalysatorController.cpp')
+          cpp = cpp_path.read_text(encoding='utf-8')
+
+          cpp = cpp.replace('const VSTGUI::CPoint kCompactSize {650., 440.};\nconst VSTGUI::CPoint kDetailsSize {1000., 700.};\nconstexpr double kZoom68 = 1.0;\nconstexpr double kZoom100 = 100.0 / 68.0;',
+                            'constexpr double kZoom68 = 0.68;\nconstexpr double kZoom100 = 1.0;')
+
+          old = '''    bool setUserZoom(double factor, const VSTGUI::CPoint& baseSize)\n    {\n        if (!requestResize({baseSize.x * factor, baseSize.y * factor}))\n            return false;\n        setZoomFactor(factor);\n        zoom100_ = factor > 1.2;\n        return true;\n    }\n\n    bool isZoom100() const noexcept { return zoom100_; }\n\nprivate:\n    bool zoom100_ = false;'''
+          new = '''    bool setUserZoom(double factor)\n    {\n        if (factor != kZoom68 && factor != kZoom100)\n            return false;\n        setZoomFactor(factor);\n        return true;\n    }\n\n    bool isZoom100() const noexcept { return getZoomFactor() > 0.84; }'''
+          if old not in cpp:
+              raise SystemExit('Expected old AnalysatorEditor zoom block not found')
+          cpp = cpp.replace(old, new)
+
+          cpp = cpp.replace('        e->setDelegate(this);\n        e->setZoomFactor(kZoom68);',
+                            '        e->setDelegate(this);\n        e->setZoomFactor(kZoom68);\n        e->setAllowedZoomFactors({kZoom68, kZoom100});')
+
+          cpp = cpp.replace('ae->setUserZoom(e->getZoomFactor(), kDetailsSize);',
+                            'ae->setUserZoom(e->getZoomFactor());')
+          cpp = cpp.replace('ae->setUserZoom(e->getZoomFactor(), kCompactSize);',
+                            'ae->setUserZoom(e->getZoomFactor());')
+          cpp = cpp.replace('                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;\n', '')
+          cpp = cpp.replace('if (e->setUserZoom(zoom, baseSize))', 'if (e->setUserZoom(zoom))')
+
+          if 'requestResize(' in cpp:
+              raise SystemExit('Old manual requestResize zoom path still present')
+          if 'kCompactSize' in cpp or 'kDetailsSize' in cpp:
+              raise SystemExit('Old base-size zoom constants still present')
+          if 'constexpr double kZoom68 = 0.68;' not in cpp or 'constexpr double kZoom100 = 1.0;' not in cpp:
+              raise SystemExit('New 68/100 factors not installed')
+
+          cpp_path.write_text(cpp, encoding='utf-8')
+          PY
+
+      - name: Verify transformed geometry
+        shell: bash
+        run: |
+          grep -F 'size="956, 647"' src/resource/analysator.uidesc
+          grep -F 'size="1471, 1029"' src/resource/analysator.uidesc
+          grep -F 'constexpr double kZoom68 = 0.68;' src/plugin/AnalysatorController.cpp
+          grep -F 'constexpr double kZoom100 = 1.0;' src/plugin/AnalysatorController.cpp
+          ! grep -q 'requestResize(' src/plugin/AnalysatorController.cpp
+          ! grep -q 'Brand125A' src/resource/analysator.uidesc
+
+      - name: Commit native zoom conversion
+        shell: bash
+        run: |
+          rm -f .github/workflows/convert-native-zoom.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/resource/analysator.uidesc src/resource/analysator_main_bg.png src/resource/analysator_details_bg.png src/plugin/AnalysatorController.cpp .github/workflows/convert-native-zoom.yml
+          git commit -m 'Convert Analysator to native 100 percent zoom'
+          git push origin HEAD:gui-foundation
