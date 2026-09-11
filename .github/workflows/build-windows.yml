@@ -1,56 +1,169 @@
-name: Build Windows VST3
+name: Apply direct 100/150 zoom architecture
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - gui-foundation
 
-jobs:
-  build:
-    runs-on: windows-2022
+permissions:
+  contents: write
 
+jobs:
+  apply:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: gui-foundation
+          fetch-depth: 0
 
-      - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-
-      - name: Build tests
-        run: cmake --build build --config Release --target AnalysatorTests AnalysatorLocalStereoTests AnalysatorAnalyzerIntegrityTests AnalysatorLoudnessMetrologyTests AnalysatorTruePeakMetrologyTests AnalysatorProcessorTransparencyTests AnalysatorProcessorRobustnessTests AnalysatorMasterScenarioTests AnalysatorRealWorldReferenceTests AnalysatorDetailedTonalCalibrationTests AnalysatorAssessmentDiagnosisTests AnalysatorControllerStateCodecTests --parallel
-
-      - name: Run tests
-        run: ctest --test-dir build -C Release --output-on-failure
-
-      - name: Build plugin
-        run: cmake --build build --config Release --target Analysator --parallel
-
-      - name: Build offline analyzer
-        run: cmake --build build --config Release --target AnalysatorOfflineAnalyzer --parallel
-
-      - name: Stage artifacts
-        shell: pwsh
+      - name: Restore native GUI and install proven direct zoom
+        shell: bash
         run: |
-          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter Analysator.vst3 | Select-Object -First 1
-          if (-not $plugin) { throw "Analysator.vst3 bundle not found" }
-          New-Item -ItemType Directory -Force -Path artifact | Out-Null
-          Copy-Item -Path $plugin.FullName -Destination artifact -Recurse -Force
-          if (-not (Test-Path "artifact\Analysator.vst3\Contents")) { throw "Staged VST3 bundle is incomplete" }
+          set -euo pipefail
 
-          $offline = Get-ChildItem -Path build -Recurse -File -Filter AnalysatorOfflineAnalyzer.exe | Select-Object -First 1
-          if (-not $offline) { throw "AnalysatorOfflineAnalyzer.exe not found" }
-          New-Item -ItemType Directory -Force -Path offline-artifact | Out-Null
-          Copy-Item -Path $offline.FullName -Destination offline-artifact -Force
+          # Restore the last untouched 650x440 / 1000x700 GUI and original backgrounds.
+          git checkout fcb25ee21197221c61a086a4c4d6efef7e080cd4 -- \
+            src/resource/analysator.uidesc \
+            src/resource/analysator_main_bg.png \
+            src/resource/analysator_details_bg.png
 
-      - name: Upload VST3
-        uses: actions/upload-artifact@v4
-        with:
-          name: Analysator-Windows-VST3
-          path: artifact
+          python <<'PY'
+          from pathlib import Path
 
-      - name: Upload offline analyzer
-        uses: actions/upload-artifact@v4
-        with:
-          name: Analysator-Offline-Analyzer-Windows
-          path: offline-artifact
+          p = Path('src/plugin/AnalysatorController.cpp')
+          s = p.read_text(encoding='utf-8')
+
+          if '#include "vstgui/lib/cdrawcontext.h"' not in s:
+              s = s.replace('#include "vstgui/lib/ccolor.h"\n',
+                            '#include "vstgui/lib/ccolor.h"\n#include "vstgui/lib/cdrawcontext.h"\n#include "vstgui/lib/cfont.h"\n#include "vstgui/uidescription/uiattributes.h"\n')
+
+          old = '''constexpr double kZoom68 = 0.68;
+constexpr double kZoom100 = 1.0;
+constexpr std::int32_t kUiZoomTag = 10013;
+
+class AnalysatorEditor final : public VSTGUI::VST3Editor
+{
+public:
+    using VSTGUI::VST3Editor::VST3Editor;
+
+    bool setUserZoom(double factor)
+    {
+        if (factor != kZoom68 && factor != kZoom100)
+            return false;
+        setZoomFactor(factor);
+        return true;
+    }
+
+    bool isZoom100() const noexcept { return getZoomFactor() > 0.84; }
+};'''
+
+          new = '''constexpr double kZoom68 = 1.0;   // native GUI = 100%
+constexpr double kZoom100 = 1.5;  // enlarged GUI = 150%
+constexpr std::int32_t kUiZoomTag = 10013;
+
+class AnalysatorEditor final : public VSTGUI::VST3Editor
+{
+public:
+    using VSTGUI::VST3Editor::VST3Editor;
+
+    bool setUserZoom(double factor)
+    {
+        if (factor != kZoom68 && factor != kZoom100)
+            return false;
+        setZoomFactor(factor);
+        return true;
+    }
+
+    bool isZoom100() const noexcept { return getZoomFactor() > 1.25; }
+
+    VSTGUI::CView* createView(const VSTGUI::UIAttributes& attributes,
+                              const VSTGUI::IUIDescription* description) override;
+};
+
+class ZoomView final : public VSTGUI::CView
+{
+public:
+    ZoomView(const VSTGUI::CRect& r, AnalysatorEditor* editor)
+    : VSTGUI::CView(r), editor_(editor)
+    {
+        setMouseEnabled(true);
+    }
+
+    void draw(VSTGUI::CDrawContext* ctx) override
+    {
+        if (!ctx || !editor_)
+        {
+            setDirty(false);
+            return;
+        }
+        auto r = getViewSize();
+        ctx->setFont(VSTGUI::kNormalFontSmall);
+        ctx->setFontColor(VSTGUI::CColor(169, 177, 183, 255));
+        ctx->drawString(editor_->getZoomFactor() > 1.25 ? "150%" : "100%",
+                        r, VSTGUI::kCenterText);
+        setDirty(false);
+    }
+
+    VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint&,
+                                           const VSTGUI::CButtonState&) override
+    {
+        if (!editor_)
+            return VSTGUI::kMouseEventNotHandled;
+        editor_->setUserZoom(editor_->getZoomFactor() > 1.25 ? kZoom68 : kZoom100);
+        invalid();
+        return VSTGUI::kMouseEventHandled;
+    }
+
+private:
+    AnalysatorEditor* editor_ {};
+};
+
+VSTGUI::CView* AnalysatorEditor::createView(const VSTGUI::UIAttributes& attributes,
+                                             const VSTGUI::IUIDescription* description)
+{
+    if (const auto name = attributes.getAttributeValue(VSTGUI::IUIDescription::kCustomViewName))
+    {
+        if (*name == "UiZoomCompact")
+            return new ZoomView({478., 12., 540., 32.}, this);
+        if (*name == "UiZoomDetails")
+            return new ZoomView({914., 6., 980., 24.}, this);
+    }
+    return VSTGUI::VST3Editor::createView(attributes, description);
+}'''
+
+          if old not in s:
+              raise SystemExit('Current AnalysatorEditor zoom block was not found; aborting safely.')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+
+          u = Path('src/resource/analysator.uidesc')
+          t = u.read_text(encoding='utf-8')
+          compact_old = '<view class="CTextButton" control-tag="UI.Zoom" origin="478, 12" size="62, 20" title="68%" text-color="MutedText" text-color-highlighted="Text" font="SmallFont" text-alignment="center" frame-width="0" gradient="HardwareClear" gradient-highlighted="HardwareAction" kick-style="true"/>'
+          details_old = '<view class="CTextButton" control-tag="UI.Zoom" origin="914, 6" size="66, 18" title="68%" text-color="MutedText" text-color-highlighted="Text" font="SmallFont" text-alignment="center" frame-width="0" gradient="HardwareClear" gradient-highlighted="HardwareAction" kick-style="true"/>'
+          if compact_old not in t or details_old not in t:
+              raise SystemExit('Original zoom controls were not found; aborting safely.')
+          t = t.replace(compact_old, '<view class="CView" origin="478, 12" size="62, 20" custom-view-name="UiZoomCompact" transparent="true"/>')
+          t = t.replace(details_old, '<view class="CView" origin="914, 6" size="66, 18" custom-view-name="UiZoomDetails" transparent="true"/>')
+          u.write_text(t, encoding='utf-8')
+          PY
+
+          grep -F 'size="650, 440"' src/resource/analysator.uidesc
+          grep -F 'size="1000, 700"' src/resource/analysator.uidesc
+          grep -F 'custom-view-name="UiZoomCompact"' src/resource/analysator.uidesc
+          grep -F 'custom-view-name="UiZoomDetails"' src/resource/analysator.uidesc
+          grep -F 'constexpr double kZoom68 = 1.0;' src/plugin/AnalysatorController.cpp
+          grep -F 'constexpr double kZoom100 = 1.5;' src/plugin/AnalysatorController.cpp
+          grep -F 'editor_->setUserZoom' src/plugin/AnalysatorController.cpp
+          ! grep -q 'Brand125A' src/resource/analysator.uidesc
+
+          # Put the normal Windows build workflow back and remove the unused helper.
+          git checkout HEAD^ -- .github/workflows/build-windows.yml
+          rm -f .github/workflows/fix-zoom-direct.yml
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Use direct editor zoom at 100 and 150 percent'
+          git push origin HEAD:gui-foundation
