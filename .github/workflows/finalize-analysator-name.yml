@@ -1,19 +1,78 @@
-name: Apply direct Analysator zoom patch
+name: Finalize Analysator naming
 
 on:
   push:
-    branches: [gui-foundation]
+    branches:
+      - gui-foundation
 
 permissions:
   contents: write
 
 jobs:
-  apply:
-    runs-on: ubuntu-latest
+  rename:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           ref: gui-foundation
           fetch-depth: 0
-      - name: Apply patch
-        run: python .github/apply_direct_zoom.py
+
+      - name: Replace legacy project name
+        shell: pwsh
+        run: |
+          $oldPascal = 'Mix' + 'orator'
+          $oldLower  = 'mix' + 'orator'
+          $newPascal = 'Analysator'
+          $newLower  = 'analysator'
+
+          $textFiles = Get-ChildItem -Recurse -File | Where-Object {
+            $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
+            ($_.Extension -in '.cpp','.h','.hpp','.c','.cc','.md','.txt','.cmake','.yml','.yaml','.uidesc','.json' -or $_.Name -eq 'CMakeLists.txt')
+          }
+
+          foreach ($file in $textFiles) {
+            $content = [System.IO.File]::ReadAllText($file.FullName)
+            $updated = $content.Replace($oldPascal, $newPascal).Replace($oldLower, $newLower)
+            if ($updated -ne $content) {
+              [System.IO.File]::WriteAllText($file.FullName, $updated, [System.Text.UTF8Encoding]::new($false))
+            }
+          }
+
+          $renameFiles = Get-ChildItem -Recurse -File | Where-Object {
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
+            ($_.Name.Contains($oldPascal) -or $_.Name.Contains($oldLower))
+          } | Sort-Object { $_.FullName.Length } -Descending
+
+          foreach ($file in $renameFiles) {
+            $newName = $file.Name.Replace($oldPascal, $newPascal).Replace($oldLower, $newLower)
+            if ($newName -ne $file.Name) {
+              Rename-Item -LiteralPath $file.FullName -NewName $newName
+            }
+          }
+
+          $remaining = Get-ChildItem -Recurse -File | Where-Object {
+            $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+            $_.FullName -notmatch '[\\/]\.github[\\/]workflows[\\/]' -and
+            ($_.Extension -in '.cpp','.h','.hpp','.c','.cc','.md','.txt','.cmake','.yml','.yaml','.uidesc','.json' -or $_.Name -eq 'CMakeLists.txt')
+          } | Select-String -SimpleMatch $oldPascal,$oldLower
+
+          if ($remaining) {
+            $remaining | ForEach-Object { Write-Host $_.Path ':' $_.LineNumber ':' $_.Line }
+            throw 'Legacy project name still exists outside workflows.'
+          }
+
+      - name: Commit naming cleanup
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if (git diff --cached --quiet) {
+            Write-Host 'No naming changes required.'
+            exit 0
+          }
+          git commit -m 'Remove legacy project name outside workflows'
+          git push origin HEAD:gui-foundation

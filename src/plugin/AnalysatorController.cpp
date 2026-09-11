@@ -3,6 +3,9 @@
 #include "../analysis/AssessmentDiagnosisText.h"
 #include "../dsp/AnalysisSnapshot.h"
 #include "vstgui/lib/ccolor.h"
+#include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/lib/cfont.h"
+#include "vstgui/uidescription/uiattributes.h"
 #include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/lib/controls/coptionmenu.h"
 #include "vstgui/lib/controls/cbuttons.h"
@@ -16,8 +19,8 @@ namespace Analysator
 {
 namespace
 {
-constexpr double kZoom68 = 0.68;
-constexpr double kZoom100 = 1.0;
+constexpr double kZoom68 = 1.0;   // native GUI = 100%
+constexpr double kZoom100 = 1.5;  // enlarged GUI = 150%
 constexpr std::int32_t kUiZoomTag = 10013;
 
 class AnalysatorEditor final : public VSTGUI::VST3Editor
@@ -33,8 +36,49 @@ public:
         return true;
     }
 
-    bool isZoom100() const noexcept { return getZoomFactor() > 0.84; }
+    bool isZoom100() const noexcept { return getZoomFactor() > 1.25; }
+
+    VSTGUI::CView* createView(const VSTGUI::UIAttributes& attributes,
+                              const VSTGUI::IUIDescription* description) override;
 };
+
+class ZoomView final : public VSTGUI::CView
+{
+public:
+    ZoomView(const VSTGUI::CRect& r, AnalysatorEditor* editor)
+    : VSTGUI::CView(r), editor_(editor) { setMouseEnabled(true); }
+
+    void draw(VSTGUI::CDrawContext* ctx) override
+    {
+        if (!ctx || !editor_) { setDirty(false); return; }
+        auto r = getViewSize();
+        ctx->setFont(VSTGUI::kNormalFontSmall);
+        ctx->setFontColor(VSTGUI::CColor(169, 177, 183, 255));
+        ctx->drawString(editor_->getZoomFactor() > 1.25 ? "150%" : "100%", r, VSTGUI::kCenterText);
+        setDirty(false);
+    }
+
+    VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint&, const VSTGUI::CButtonState&) override
+    {
+        if (!editor_) return VSTGUI::kMouseEventNotHandled;
+        editor_->setUserZoom(editor_->getZoomFactor() > 1.25 ? kZoom68 : kZoom100);
+        invalid();
+        return VSTGUI::kMouseEventHandled;
+    }
+private:
+    AnalysatorEditor* editor_ {};
+};
+
+VSTGUI::CView* AnalysatorEditor::createView(const VSTGUI::UIAttributes& attributes,
+                                             const VSTGUI::IUIDescription* description)
+{
+    if (const auto name = attributes.getAttributeValue(VSTGUI::IUIDescription::kCustomViewName))
+    {
+        if (*name == "UiZoomCompact") return new ZoomView({478., 12., 540., 32.}, this);
+        if (*name == "UiZoomDetails") return new ZoomView({914., 6., 980., 24.}, this);
+    }
+    return VSTGUI::VST3Editor::createView(attributes, description);
+}
 // Verdict palette follows the assessment ring: green -> yellow-green -> amber -> red.
 const VSTGUI::CColor kVerdictExcellent {73,196,112,255};
 const VSTGUI::CColor kVerdictGood {174,205,89,255};
