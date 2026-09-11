@@ -344,6 +344,8 @@ void Controller::didOpen(VSTGUI::VST3Editor* e)
     {
         const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
         e->setEditorSizeConstrains(baseSize, baseSize);
+        const auto scale = e->getAbsScaleFactor();
+        e->requestResize({baseSize.x * scale, baseSize.y * scale});
     }
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
     {
@@ -448,6 +450,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("detailsView");
                 e->setEditorSizeConstrains(kDetailsSize, kDetailsSize);
+                const auto scale = e->getAbsScaleFactor();
+                e->requestResize({kDetailsSize.x * scale, kDetailsSize.y * scale});
             }
             return;
         }
@@ -462,6 +466,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             {
                 e->exchangeView("compactView");
                 e->setEditorSizeConstrains(kCompactSize, kCompactSize);
+                const auto scale = e->getAbsScaleFactor();
+                e->requestResize({kCompactSize.x * scale, kCompactSize.y * scale});
             }
             return;
         }
@@ -491,6 +497,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
                 const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
                 editor_->setZoomFactor(zoom);
                 editor_->setEditorSizeConstrains(baseSize, baseSize);
+                const auto scale = editor_->getAbsScaleFactor();
+                editor_->requestResize({baseSize.x * scale, baseSize.y * scale});
                 if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
                     setButtonTitle(b, enlarge ? "100%" : "68%");
             }
