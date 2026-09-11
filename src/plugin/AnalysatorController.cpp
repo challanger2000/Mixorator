@@ -340,7 +340,12 @@ VSTGUI::CView* Controller::verifyView(VSTGUI::CView* view,
 void Controller::didOpen(VSTGUI::VST3Editor* e)
 {
     editor_ = e;
-    if (e) e->requestResize(uiDetailsVisible_ ? kDetailsSize : kCompactSize);
+    if (e)
+    {
+        const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+        const auto zoom = e->getZoomFactor();
+        e->requestResize({baseSize.x * zoom, baseSize.y * zoom});
+    }
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
     {
         requestedFinalGeneration_ = 0;
@@ -443,7 +448,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             if (e)
             {
                 e->exchangeView("detailsView");
-                e->requestResize(kDetailsSize);
+                const auto zoom = e->getZoomFactor();
+                e->requestResize({kDetailsSize.x * zoom, kDetailsSize.y * zoom});
             }
             return;
         }
@@ -457,7 +463,8 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             if (e)
             {
                 e->exchangeView("compactView");
-                e->requestResize(kCompactSize);
+                const auto zoom = e->getZoomFactor();
+                e->requestResize({kCompactSize.x * zoom, kCompactSize.y * zoom});
             }
             return;
         }
@@ -483,7 +490,10 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             if (editor_)
             {
                 const bool enlarge = editor_->getZoomFactor() < 1.2;
-                editor_->setZoomFactor(enlarge ? kZoom100 : kZoom68);
+                const auto zoom = enlarge ? kZoom100 : kZoom68;
+                editor_->setZoomFactor(zoom);
+                const auto baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
+                editor_->requestResize({baseSize.x * zoom, baseSize.y * zoom});
                 if (auto* b = dynamic_cast<VSTGUI::CTextButton*>(c))
                     setButtonTitle(b, enlarge ? "100%" : "68%");
             }
