@@ -29,14 +29,18 @@ public:
     AnalysatorEditor(Steinberg::Vst::EditController* controller,
                      const char* viewName,
                      const char* xmlFile,
-                     const VSTGUI::CPoint& nativeSize)
-    : VSTGUI::VST3Editor(controller, viewName, xmlFile), nativeSize_(nativeSize) {}
+                     const VSTGUI::CPoint& nativeSize,
+                     double* persistedZoom)
+    : VSTGUI::VST3Editor(controller, viewName, xmlFile),
+      nativeSize_(nativeSize), persistedZoom_(persistedZoom) {}
 
     bool setUserZoom(double factor)
     {
         if (factor != kZoom68 && factor != kZoom100)
             return false;
         setZoomFactor(factor);
+        if (persistedZoom_)
+            *persistedZoom_ = factor;
         setEditorSizeConstrains(nativeSize_, nativeSize_);
         return true;
     }
@@ -54,6 +58,7 @@ public:
 
 private:
     VSTGUI::CPoint nativeSize_;
+    double* persistedZoom_ {};
 };
 
 class ZoomView final : public VSTGUI::CView
@@ -338,9 +343,9 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
         const char* viewName = uiDetailsVisible_ ? "detailsView" : "compactView";
         const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
                                                             : VSTGUI::CPoint{650., 440.};
-        auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc", nativeSize);
+        auto* e = new AnalysatorEditor(this, viewName, "analysator.uidesc", nativeSize, &uiZoomFactor_);
         e->setDelegate(this);
-        e->setZoomFactor(kZoom68);
+        e->setZoomFactor(uiZoomFactor_);
         e->setAllowedZoomFactors({kZoom68, kZoom100});
         e->setEditorSizeConstrains(nativeSize, nativeSize);
         return e;
@@ -429,7 +434,7 @@ void Controller::didOpen(VSTGUI::VST3Editor* e)
         const VSTGUI::CPoint nativeSize = uiDetailsVisible_ ? VSTGUI::CPoint{1000., 700.}
                                                             : VSTGUI::CPoint{650., 440.};
         ae->setNativeSize(nativeSize);
-        ae->setUserZoom(kZoom68);
+        ae->setUserZoom(uiZoomFactor_);
     }
 
     if (hasPacket_ && latestPacket_.finalState != 0 && !hasDefinitiveFinalSnapshot())
