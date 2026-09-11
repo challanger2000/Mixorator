@@ -17,22 +17,14 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
           p = Path('src/plugin/AnalysatorController.cpp')
           s = p.read_text(encoding='utf-8')
-          old = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
-                const double zoom = enlarge ? kZoom100 : kZoom68;
-                const auto& baseSize = uiDetailsVisible_ ? kDetailsSize : kCompactSize;
-                if (auto* e = dynamic_cast<AnalysatorEditor*>(editor_))
-                    e->setUserZoom(zoom, baseSize);
-                else
-                    editor_->setZoomFactor(zoom);'''
-          new = '''                const bool enlarge = editor_->getZoomFactor() < 1.2;
-                const double zoom = enlarge ? kZoom100 : kZoom68;
-                editor_->setZoomFactor(zoom);'''
-          if old not in s:
-              raise SystemExit('Zoom handler pattern not found')
-          s = s.replace(old, new, 1)
-          p.write_text(s, encoding='utf-8')
+          pattern = re.compile(r'(\s*const bool enlarge = editor_->getZoomFactor\(\) < 1\.2;\n\s*const double zoom = enlarge \? kZoom100 : kZoom68;)\n\s*const auto& baseSize = uiDetailsVisible_ \? kDetailsSize : kCompactSize;\n\s*if \(auto\* e = dynamic_cast<AnalysatorEditor\*>\(editor_\)\)\n\s*e->setUserZoom\(zoom, baseSize\);\n\s*else\n\s*editor_->setZoomFactor\(zoom\);')
+          s2, n = pattern.subn(r'\1\n                editor_->setZoomFactor(zoom);', s, count=1)
+          if n != 1:
+              raise SystemExit(f'Zoom handler replacements: {n}')
+          p.write_text(s2, encoding='utf-8')
       - name: Remove helper and commit
         run: |
           rm .github/workflows/fix-zoom-order.yml
