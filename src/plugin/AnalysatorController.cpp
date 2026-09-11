@@ -432,7 +432,10 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             clearUiPointers();
             editor_ = e;
             if (e)
+            {
                 e->exchangeView("detailsView");
+                e->setEditorSizeConstrains({1000., 700.}, {1000., 700.});
+            }
             return;
         }
         case kUiBack:
@@ -443,7 +446,10 @@ void Controller::valueChanged(VSTGUI::CControl* c)
             clearUiPointers();
             editor_ = e;
             if (e)
+            {
                 e->exchangeView("compactView");
+                e->setEditorSizeConstrains({650., 440.}, {650., 440.});
+            }
             return;
         }
         case kUiHelp:
