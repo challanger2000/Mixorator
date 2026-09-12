@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
 
-          mkdir -p package
+          mkdir -p package/Documentation
           cp -R "$plugin" package/
 
           cat > package/README-MAC-BETA.txt <<'EOF'
@@ -86,9 +86,145 @@ jobs:
           Screenshots are very helpful for GUI problems.
           EOF
 
+          cat > package/Documentation/Analysator_Manual_EN.txt <<'EOF'
+          ANALYSATOR
+          Mix Analysis and Quality Assessment
+
+          macOS Beta - Universal VST3
+          125A Systems
+
+          OVERVIEW
+          Analysator is a VST3 audio analysis plug-in designed to evaluate a finished mix or master.
+          It analyzes the incoming stereo signal and presents technical and musical assessment data
+          without intentionally changing the audio signal.
+
+          QUICK START
+          1. Insert Analysator on the master/output bus.
+          2. Start playback from a representative section of the song.
+          3. Let the analysis run long enough to capture the musical behavior of the material.
+          4. Read the main assessment and open the detail view for deeper diagnostics.
+
+          INSTALLATION ON macOS
+          Copy the complete Analysator.vst3 bundle to one of these folders:
+          ~/Library/Audio/Plug-Ins/VST3/
+          /Library/Audio/Plug-Ins/VST3/
+          Restart the DAW and rescan VST3 plug-ins if necessary.
+
+          BETA NOTE
+          This macOS build has not yet been validated on real Mac hardware by 125A Systems.
+          It is supplied for beta testing and should be used at your own risk.
+          EOF
+
+          cat > package/Documentation/Analysator_Beta_Test_Guide_EN.txt <<'EOF'
+          ANALYSATOR macOS BETA TEST GUIDE
+
+          Please test the plug-in in normal production use and report any unexpected behavior.
+
+          SYSTEM INFORMATION
+          - Mac model
+          - Intel or Apple Silicon
+          - macOS version
+          - DAW name and version
+
+          BASIC FUNCTION
+          - VST3 is found by the DAW
+          - Plug-in loads without crash
+          - GUI opens fully and correctly
+          - Text, buttons and detail view are readable
+          - Audio passes through normally
+          - Analysis starts, stops and updates correctly
+          - Results appear plausible and stable
+          - Project save/reload restores the plug-in state
+
+          STRESS / EDGE CASES
+          - Close and reopen the plug-in window several times
+          - Stop and restart playback
+          - Jump to another song position
+          - Save, close and reopen the project
+          - Try a different sample rate if convenient
+
+          BUG REPORTS
+          Please include exact reproduction steps. For GUI issues, screenshots are especially useful.
+          For crashes, include the DAW and macOS versions and what happened immediately before the crash.
+          EOF
+
           test -d package/Analysator.vst3/Contents
           file package/Analysator.vst3/Contents/MacOS/Analysator
           lipo -info package/Analysator.vst3/Contents/MacOS/Analysator
+
+      - name: Create PDF documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet reportlab
+          python3 - <<'PY'
+          from pathlib import Path
+          from reportlab.lib.pagesizes import A4
+          from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+          from reportlab.lib.enums import TA_CENTER
+          from reportlab.lib.units import mm
+          from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+
+          out = Path('package/Documentation')
+          styles = getSampleStyleSheet()
+          title = ParagraphStyle('Title125A', parent=styles['Title'], alignment=TA_CENTER, fontSize=22, leading=26, spaceAfter=10)
+          subtitle = ParagraphStyle('Subtitle125A', parent=styles['Normal'], alignment=TA_CENTER, fontSize=10, leading=14, spaceAfter=16)
+          h1 = ParagraphStyle('H1_125A', parent=styles['Heading1'], fontSize=14, leading=18, spaceBefore=10, spaceAfter=6)
+          body = ParagraphStyle('Body125A', parent=styles['BodyText'], fontSize=10, leading=14, spaceAfter=7)
+
+          def build(path, heading, subheading, sections):
+              doc = SimpleDocTemplate(str(path), pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=18*mm, bottomMargin=18*mm,
+                                      title=heading, author='125A Systems')
+              story = [Paragraph(heading, title), Paragraph(subheading, subtitle)]
+              for sec_title, paras in sections:
+                  story += [Paragraph(sec_title, h1)]
+                  for p in paras:
+                      story.append(Paragraph(p, body))
+              doc.build(story)
+
+          build(out/'Analysator_Manual_EN.pdf', 'ANALYSATOR', 'Mix Analysis and Quality Assessment - macOS Beta - Universal VST3 - 125A Systems', [
+              ('Overview', [
+                  'Analysator is a VST3 audio analysis plug-in designed to evaluate a finished mix or master. It analyzes the incoming stereo signal and presents technical and musical assessment data without intentionally changing the audio signal.',
+                  'This beta package uses the final Analysator codebase and is compiled as a universal macOS binary for Intel x86_64 and Apple Silicon arm64.'
+              ]),
+              ('Quick Start', [
+                  '1. Insert Analysator on the master/output bus.',
+                  '2. Start playback from a representative section of the song.',
+                  '3. Let the analysis run long enough to capture the musical behavior of the material.',
+                  '4. Read the main assessment and open the detail view for deeper diagnostics.'
+              ]),
+              ('Installation on macOS', [
+                  'Copy the complete Analysator.vst3 bundle to ~/Library/Audio/Plug-Ins/VST3/ or /Library/Audio/Plug-Ins/VST3/. Then restart the DAW and rescan VST3 plug-ins if necessary.',
+                  'The beta bundle is ad-hoc signed. Because this is not an Apple-notarized commercial installer, macOS security behavior may differ depending on the system configuration.'
+              ]),
+              ('Beta Status', [
+                  'This macOS build has not yet been validated on real Mac hardware by 125A Systems. It is supplied specifically for beta testing and should be used at your own risk.',
+                  'Please report detection, loading, GUI, audio pass-through, analysis behavior, state recall, crashes, glitches and any platform-specific issues.'
+              ]),
+              ('Build Information', [
+                  'Format: VST3. Architectures: Intel x86_64 and Apple Silicon arm64. Minimum deployment target: macOS 11.0. Signing: ad-hoc.'
+              ])
+          ])
+
+          build(out/'Analysator_Beta_Test_Guide_EN.pdf', 'ANALYSATOR macOS BETA TEST GUIDE', 'Universal VST3 - 125A Systems', [
+              ('System Information', [
+                  'Please report your Mac model, processor architecture (Intel or Apple Silicon), macOS version, DAW name and DAW version.'
+              ]),
+              ('Basic Function Test', [
+                  'Confirm that the VST3 is detected by the DAW, loads without a crash, opens the complete GUI, passes audio normally, starts and stops analysis correctly, updates the main and detail results, and restores its state after saving and reopening the project.'
+              ]),
+              ('Stress and Edge Cases', [
+                  'Close and reopen the plug-in window several times. Stop and restart playback. Jump to another song position. Save, close and reopen the project. If convenient, test another sample rate as well.'
+              ]),
+              ('What to Report', [
+                  'Please report crashes, freezes, graphical corruption, scaling problems, missing controls, audio glitches, incorrect state recall, suspicious analysis behavior or anything else that does not work as expected.',
+                  'For reproducible bugs, include the exact steps. Screenshots are especially useful for GUI problems.'
+              ]),
+              ('Important', [
+                  'This is an untested macOS beta build. Use at your own risk.'
+              ])
+          ])
+          PY
 
       - name: Ad-hoc sign VST3 bundle
         run: codesign --force --deep --sign - package/Analysator.vst3
@@ -97,6 +233,8 @@ jobs:
         run: |
           codesign --verify --deep --strict --verbose=2 package/Analysator.vst3
           lipo -info package/Analysator.vst3/Contents/MacOS/Analysator
+          test -f package/Documentation/Analysator_Manual_EN.pdf
+          test -f package/Documentation/Analysator_Beta_Test_Guide_EN.pdf
 
       - name: Upload complete beta package
         uses: actions/upload-artifact@v4
