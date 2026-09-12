@@ -156,14 +156,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet reportlab
-          python3 - <<'PY'
+          python3 -m venv .venv-docs
+          .venv-docs/bin/python -m pip install --quiet --upgrade pip
+          .venv-docs/bin/python -m pip install --quiet reportlab
+          .venv-docs/bin/python - <<'PY'
           from pathlib import Path
           from reportlab.lib.pagesizes import A4
           from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
           from reportlab.lib.enums import TA_CENTER
           from reportlab.lib.units import mm
-          from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+          from reportlab.platypus import SimpleDocTemplate, Paragraph
 
           out = Path('package/Documentation')
           styles = getSampleStyleSheet()
@@ -177,7 +179,7 @@ jobs:
                                       title=heading, author='125A Systems')
               story = [Paragraph(heading, title), Paragraph(subheading, subtitle)]
               for sec_title, paras in sections:
-                  story += [Paragraph(sec_title, h1)]
+                  story.append(Paragraph(sec_title, h1))
                   for p in paras:
                       story.append(Paragraph(p, body))
               doc.build(story)
