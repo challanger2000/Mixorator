@@ -1,0 +1,106 @@
+name: Build macOS Final Beta Package
+
+on:
+  push:
+    branches:
+      - mac-final-beta
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure universal macOS build
+        run: >-
+          cmake -S . -B build -G Xcode
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build plugin
+        run: cmake --build build --config Release --target Analysator --parallel
+
+      - name: Stage package
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugin="$(find build -type d -name 'Analysator.vst3' -print -quit)"
+          if [[ -z "$plugin" ]]; then
+            echo "Analysator.vst3 bundle not found"
+            exit 1
+          fi
+
+          mkdir -p package
+          cp -R "$plugin" package/
+
+          cat > package/README-MAC-BETA.txt <<'EOF'
+          Analysator macOS Beta
+          =====================
+
+          This package is built from the final Analysator codebase for macOS testing.
+
+          Build:
+          - VST3
+          - Universal Binary: Intel x86_64 + Apple Silicon arm64
+          - Minimum macOS deployment target: 11.0
+          - Ad-hoc signed
+
+          Installation:
+          1. Copy Analysator.vst3 to:
+             ~/Library/Audio/Plug-Ins/VST3/
+             or
+             /Library/Audio/Plug-Ins/VST3/
+          2. Restart the DAW and rescan VST3 plug-ins if necessary.
+
+          Important:
+          - This macOS build is an untested beta.
+          - Use at your own risk.
+          - Please report whether the plug-in is detected, opens correctly, displays correctly,
+            processes audio, saves/restores state, and whether any crashes, glitches or GUI issues occur.
+
+          125A Systems
+          EOF
+
+          cat > package/TEST-CHECKLIST.txt <<'EOF'
+          Analysator macOS Beta - Test Checklist
+          ======================================
+
+          Please report:
+          [ ] Mac model and macOS version
+          [ ] Intel or Apple Silicon
+          [ ] DAW and DAW version
+          [ ] Plug-in is detected as VST3
+          [ ] Plug-in opens without crash
+          [ ] GUI is complete and correctly scaled
+          [ ] Audio passes through correctly
+          [ ] Analysis starts/stops correctly
+          [ ] Main results update correctly
+          [ ] Detail view opens and updates correctly
+          [ ] Project save/reload restores plug-in state
+          [ ] No clicks, glitches, freezes or crashes
+
+          If something fails, please describe the exact steps needed to reproduce it.
+          Screenshots are very helpful for GUI problems.
+          EOF
+
+          test -d package/Analysator.vst3/Contents
+          file package/Analysator.vst3/Contents/MacOS/Analysator
+          lipo -info package/Analysator.vst3/Contents/MacOS/Analysator
+
+      - name: Ad-hoc sign VST3 bundle
+        run: codesign --force --deep --sign - package/Analysator.vst3
+
+      - name: Verify signature and architectures
+        run: |
+          codesign --verify --deep --strict --verbose=2 package/Analysator.vst3
+          lipo -info package/Analysator.vst3/Contents/MacOS/Analysator
+
+      - name: Upload complete beta package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Analysator-macOS-Final-Beta-Universal
+          path: package
+          if-no-files-found: error
